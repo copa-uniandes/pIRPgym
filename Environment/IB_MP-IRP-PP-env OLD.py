@@ -119,8 +119,7 @@ class steroid_IRP(gym.Env):
             self.upload_params(file_name)
         
         self.h, self.O_k, self.c = self.gen_det_params()
-        
-        
+    
         
         ### State space ###
         # Physical state

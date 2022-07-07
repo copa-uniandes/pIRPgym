@@ -219,17 +219,16 @@ class steroid_IRP(gym.Env):
     # Step 
     def step(self, action, validate_action):
         
-        routes, purchase, demand_complience = action
         valid = True
         if validate_action:
-            valid, error_msg = self.action_validity(routes, purchase, demand_complience)
+            valid, error_msg = self.action_validity(action)
 
         if valid:
             # Inventory dynamics
-            s_tprime, reward = self.transition_function(purchase, demand_complience)
+            s_tprime, reward = self.transition_function(action)
 
             # Reward
-            transport_cost, purchase_cost, holding_cost = self.compute_costs(routes, purchase, s_tprime)
+            transport_cost, purchase_cost, holding_cost = self.compute_costs(action, s_tprime)
             reward += transport_cost + purchase_cost + holding_cost
     
             # Time step update and termination check
