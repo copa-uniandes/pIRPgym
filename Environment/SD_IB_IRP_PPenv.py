@@ -5,11 +5,15 @@
 !TODO:
 !!! SAMPLE PATHS
 - Back-orders
-- Continuous
+
 - Instance_file uploading
 - Historic_file uploading
 - Renderizing
 - MIP ADAPTATION
+
+FUTURE WORK - Not completely developed:
+- Continuous
+
 """
 
 ################################## Modules ##################################
@@ -34,6 +38,7 @@ from or_gym import utils
 State (S): The state according to Powell (three components): 
     - Physical State (R_t):
         state: Current available inventory (!*):  (dict) - Inventory of k \in K of age o \in O_k
+                                                           Age 'B' when back-logs
     - Other deterministic info (Z_t):
         p: Prices: (dict) Price of k \in K at i \in M
         q: Available quantities: (dict) Available quantities of k \in K at i \in M
@@ -98,11 +103,18 @@ class steroid_IRP(gym.Env):
     Related parameter:
         - hist_window: Initial log size (time periods)
     
+    Back-orders: Catch unsatisfied demand (back_orders = False):
+    1. 'back-orders': Demand can be not fully satisfied. Non-complied orders will be automatically fullfilled at an extra-cost
+    2. 'back-logs': Demand can be not fully satisfied. Non-complied orders will be registered and kept track of on age 'B'
+    3. False: All demand must be fullfilled
+    Related parameter:
+        - back_o_cost = 20 
     
     PARAMETERS
     env_init = 'episodic': Time horizon type {episodic, continouos} 
     look_ahead = ['d']: Generate sample paths for look-ahead approximation
     historic_data = ['d']: Use of historical data
+    back_orders = False: Back orders
     rd_seed = 0: Seed for random number generation
     wd = True: Working directory path
     file_name = True: File name when uploading instances from .txt
@@ -127,7 +139,7 @@ class steroid_IRP(gym.Env):
     '''
     
     # Initialization method
-    def __init__(self, horizon_type = 'episodic', look_ahead = ['d'], historic_data = ['d'],
+    def __init__(self, horizon_type = 'episodic', look_ahead = ['d'], historic_data = ['d'], back_orders = False,
                  rd_seed = 0, wd = True, file_name = True, *args, **kwargs):
 
 
@@ -156,7 +168,13 @@ class steroid_IRP(gym.Env):
         ### Historic log parameters ###
         if type(historic_data) == list:        
             self.hist_window = 40       # Historic window
-            
+
+        ### Back-orders parameters ###
+        if back_orders == 'back-orders':
+            self.back_o_cost = 20
+        elif back_orders == 'back-logs':
+            self.back_l_cost = 20
+
         ### Custom configurations ###
         if file_name:
             utils.assign_env_config(self, kwargs)
@@ -167,7 +185,8 @@ class steroid_IRP(gym.Env):
         self.state = {}     # Inventory
         
         ### Extra information ###
-        self.others = {'look_ahead':look_ahead, 'historic': historic_data, 'wd': wd, 'file_name': file_name}
+        self.others = {'look_ahead':look_ahead, 'historic': historic_data, 'wd': wd, 'file_name': file_name, 
+                        'back_orders': back_orders}
 
 
     # Reseting the environment
@@ -182,6 +201,7 @@ class steroid_IRP(gym.Env):
         if self.others['file_name']:  
             # General parameters
             self.gen_det_params()
+            self.Ages = {k: range(1,self.O_k[k] + 1) for k in self.Products}
             self.gen_instance_data()
             
             # Episodic horizon
@@ -190,12 +210,18 @@ class steroid_IRP(gym.Env):
                 self.t = 0
 
             ## State ##
-            self.state = {(k,o):0 for k in self.Products for o in range(1, self.O_k[k] + 1)}
+            self.state = {(k,o):0 for k in self.Products for o in self.Ages[k]}
+            if self.others['back_orders'] == 'back-logs':
+                for k in self.Products:
+                    self.state[k,'B'] = 0
 
-            self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-            self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-            self.h = {k: self.h_t[k,self.t] for k in self.Products}
-            self.d = {k: self.d_t[k,self.t] for k in self.Products}
+            if self.hor_typ:
+                self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
+                self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
+                self.h = {k: self.h_t[k,self.t] for k in self.Products}
+                self.d = {k: self.d_t[k,self.t] for k in self.Products}
+            else:
+                self.gen_realization()
 
             # Look-ahead, sample paths
             if self.others['look_ahead']:
@@ -217,8 +243,7 @@ class steroid_IRP(gym.Env):
         
     
     # Step 
-    def step(self, action, validate_action):
-        
+    def step(self, action, validate_action = False):
         valid = True
         if validate_action:
             valid, error_msg = self.action_validity(action)
@@ -228,8 +253,8 @@ class steroid_IRP(gym.Env):
             s_tprime, reward = self.transition_function(action)
 
             # Reward
-            transport_cost, purchase_cost, holding_cost = self.compute_costs(action, s_tprime)
-            reward += transport_cost + purchase_cost + holding_cost
+            transport_cost, purchase_cost, holding_cost, back_orders_cost = self.compute_costs(action, s_tprime)
+            reward += transport_cost + purchase_cost + holding_cost + back_orders_cost
     
             # Time step update and termination check
             self.t += 1
@@ -252,7 +277,9 @@ class steroid_IRP(gym.Env):
             print(colored('Time-step transition ERROR! The action is not valid. ' + error_msg, 'red'))
     
     
-    def action_validity(self, routes, purchase, demand_complience):
+    def action_validity(self, action):
+        routes, purchase, demand_complience = action[:3]
+        if self.others['back_orders'] == 'back-logs':   back_o_complience = action[3]
         valid = True
         error_msg = ''
         
@@ -278,27 +305,52 @@ class steroid_IRP(gym.Env):
         
         # Demand_complience
         for k in self.Products:
-            if demand_complience[k,0] > sum(purchase[i,k] for i in self.Suppliers):
+            if self.others['back_orders'] != 'back-logs' and demand_complience[k,0] > sum(purchase[i,k] for i in self.Suppliers):
                 valid = False
                 error_msg = 'Demand complience with purchased items exceed the purchase'
                 return valid, error_msg
-        
+            elif self.others['back_orders'] == 'back-logs' and demand_complience[k,0] + back_o_complience[k,0] > sum(purchase[i,k] for i in self.Suppliers):
+                valid = False
+                error_msg = 'Demand/Back-logs complience with purchased items exceed the purchase'
+                return valid, error_msg
+
             if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
                 valid = False
                 error_msg = 'Trying to comply a non-existing demand'
                 return valid, error_msg
             
             for o in range(1, self.O_k[k] + 1):
-                if demand_complience[k,o] > self.state[k,o]:
+                if self.others['back_orders'] != 'back-logs' and demand_complience[k,o] > self.state[k,o]:
                     valid = False
                     error_msg = 'Demand complience with inventory items exceed the stored items'
+                    return valid, error_msg
+
+                elif self.others['back_orders'] == 'back-logs' and demand_complience[k,o] + back_o_complience[k,o] > self.state[k,o]:
+                    valid = False
+                    error_msg = 'Demand/Back-logs complience with inventory items exceed the stored items'
+                    return valid, error_msg
+        # Back-logs
+        if self.others['back_orders'] == 'back-logs':
+            for k in self.Products:
+                if sum(back_o_complience[k,o] for o in self.Ages[k]) < self.state[k,'B']:
+                    valid = False
+                    error_msg = 'Trying to comply a non-existing back-log'
+                    return valid, error_msg
+        
+        elif self.others['back_orders'] == False:
+            if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
+                valid = False
+                error_msg = 'Demand was not fullfiled'
+                return valid, error_msg
 
         return valid, error_msg
 
 
     # Compute costs of a given procurement plan for a given day
-    def compute_costs(self, routes, purchase, s_tprime):
-        
+    def compute_costs(self, action, s_tprime):
+        routes, purchase, demand_complience = action[:3]
+        if self.others['back_orders'] == 'back-logs':   back_o_complience = action[3]
+
         transport_cost = 0
         for route in routes:
             transport_cost += sum(self.c[route[i], route[i + 1]] for i in range(len(route) - 1))
@@ -307,11 +359,23 @@ class steroid_IRP(gym.Env):
         
         holding_cost = sum(sum(s_tprime[k,o] for o in range(1, self.O_k[k] + 1)) * self.h[k] for k in self.Products)
 
-        return transport_cost, purchase_cost, holding_cost 
+        back_orders_cost = 0
+        if self.others['back_orders'] == 'back-orders':
+            back_orders_cost = sum(max(self.d[k] - sum(demand_complience[k,o] for o in self.Ages[k]),0) * self.back_o_cost for k in self.Products) \
+                * self.back_o_cost
+        
+        elif self.others['back_orders'] == 'back-logs':
+            back_orders_cost = sum(s_tprime[k,'B'] for k in self.Products) * self.back_l_cost
+
+
+        return transport_cost, purchase_cost, holding_cost, back_orders_cost 
             
     
     # Inventory dynamics of the environment
-    def transition_function(self, purchase, demand_complience):
+    def transition_function(self, action):
+        purchase, demand_complience = action[1:3]
+        # Back-logs
+        if self.others['back_orders'] == 'back-logs':   back_o_complience = action[3]
         inventory = deepcopy(self.state)
         reward  = 0
 
@@ -346,9 +410,9 @@ class steroid_IRP(gym.Env):
         if self.hor_typ:
             done = self.t >= self.T
          
-        # Exceedes wharehouse capacitiy
-        if sum(s_tprime[k,o] for k in self.Products for o in range(1, self.O_k[k] + 1)) >= self.wh_cap:
-            done = True
+        # # Exceedes wharehouse capacitiy
+        # if sum(s_tprime[k,o] for k in self.Products for o in range(1, self.O_k[k] + 1)) >= self.wh_cap:
+        #     done = True
 
         return done
 
@@ -366,10 +430,13 @@ class steroid_IRP(gym.Env):
                 self.historic_data['d'][k].append(self.d[k])
 
         # Update state
-        self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-        self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-        self.h = {k: self.h_t[k,self.t] for k in self.Products}
-        self.d = {k: self.d_t[k,self.t] for k in self.Products}
+        if self.hor_typ:
+            self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
+            self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
+            self.h = {k: self.h_t[k,self.t] for k in self.Products}
+            self.d = {k: self.d_t[k,self.t] for k in self.Products}
+        else:
+            self.gen_realization()
 
         self.state = s_tprime
 
@@ -569,7 +636,11 @@ class steroid_IRP(gym.Env):
             # Set of vehicles, based on estimated required vehicles
             # if 'F' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
             #     self.sample_paths[('F',s)] = int(sum(self.sample_paths[('d',s)].values())/self.sample_paths[('Q',s)]+1)
-            
+
+    # TODO! Generate a realization of random variables for continuous time-horizon
+    def gen_realization(self):
+        pass
+
     
     # Load parameters from a .txt file
     def upload_instance(self, nombre, path = ''):
@@ -619,7 +690,7 @@ class steroid_IRP(gym.Env):
         self.T = Periods;  self.Horizon = range(self.T)
  
         self.F, I_0, c  = self.extra_processing(coor)
-        self.Vehicles = range(self.F) 
+        self.Vehicles = range(self.F)
         
         return O_k, c, Q, h, Mk, Km, q, p, d, I_0
 
