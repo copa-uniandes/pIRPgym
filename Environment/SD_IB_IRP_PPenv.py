@@ -1,18 +1,16 @@
 
 """
 @author: juanbeta
-    a
-!TODO:
-!!! SAMPLE PATHS
-- Back-orders
 
-- Instance_file uploading
-- Historic_file uploading
-- Renderizing
-- MIP ADAPTATION
+TODO:
+! FIX SAMPLE PATHS
+! Check documentation
 
 FUTURE WORK - Not completely developed:
-- Continuous
+- Instance_file uploading
+- Continuous time horizon
+- Historic_file uploading
+- Instance_file exporting
 
 """
 
@@ -494,7 +492,6 @@ class steroid_IRP(gym.Env):
     
     # Auxiliary function to manage historic and simulated data 
     def gen_instance_data(self):
-
         if type(self.others['historic']) == list: 
             self.gen_simulated_data()
    
@@ -650,6 +647,7 @@ class steroid_IRP(gym.Env):
             # if 'F' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
             #     self.sample_paths[('F',s)] = int(sum(self.sample_paths[('d',s)].values())/self.sample_paths[('Q',s)]+1)
 
+
     # TODO! Generate a realization of random variables for continuous time-horizon
     def gen_realization(self):
         pass
@@ -707,6 +705,7 @@ class steroid_IRP(gym.Env):
         
         return O_k, c, Q, h, Mk, Km, q, p, d, I_0
 
+
     # Auxiliary method: Processing data from txt file 
     def extra_processing(self, coor):
         
@@ -736,315 +735,6 @@ class steroid_IRP(gym.Env):
         '''
 
 
-    # # Generate vehicle's capacity
-    # def gen_Q(self):
-    #     """
-    #     Vehicle capacity parameter generator
-    #     Returns feasible vehicle capacity to use in rolling horizon model. 
-    #     """ 
-    #     m = gu.Model("Q")
-        
-    #     z = {(i,k,t):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"z_{i,k,t}") for k in self.Products for t in range(self.LA_horizon) for i in self.M_kt[k,t]}
-    #     Q = m.addVar(vtype=gu.GRB.CONTINUOUS)
-        
-    #     for k in self.Products:
-    #         for t in range(self.LA_horizon):
-    #             # Demand constraint - must buy from suppliers same demanded quantity
-    #             m.addConstr(gu.quicksum(z[i,k,t] for i in self.M_kt[k,t]) == self.d_t[k,t])
-            
-    #     for t in range(self.LA_horizon):
-    #         for i in self.Suppliers:
-    #             m.addConstr(gu.quicksum(z[i,k,t] for k in self.Products if (i,k,t) in z) <= Q)
-        
-    #     m.setObjective(Q);  m.update();   m.setParam("OutputFlag",0)
-    #     m.optimize()
-        
-    #     if m.Status == 2:
-    #         return Q.X
-    #     else:
-    #         print("Infeasible")
-    #         return 0 
-
-    
-    # # Solution Approach: MIP embedded on a rolling horizon
-    # def MIP_rolling_horizon(self, verbose = False):
-        
-    #     start = time.time()
-
-    #     today = self.Historical - self.T - 1
-    #     self.target = range(today, today + self.T)
-    #     # Days to simulate (including today)
-    #     self.base = today + 0.
-
-    #     self.res = {}
-    #     for tau in self.target:
-            
-    #         # Time window adjustment
-    #         adj_horizon = min(self.horizon_T, self.Historical - today - 1)
-    #         T = range(adj_horizon)
-            
-    #         q_s, p_s, d_s, M_kts, K_its, Q_s, F_s = self.gen_sim_paths(today)
-            
-    #         for s in range(len(Q_s)):
-    #             Q_s[s] *= 5
-    #             F_s[s] = range(int(len(F_s[s])/4))
-    #         F_s = {s:range(max([len(F_s[ss]) for ss in self.Samples])) for s in self.Samples}
-            
-    #         m = gu.Model('TPP+IM_perishable')
-            
-    #         ''' Decision Variables '''
-            
-    #         ###### TPP variables
-            
-    #         # If vehicle v \in F uses arc (i,j) on T, for vsample path s \in Sam
-    #         x = {(i,j,t,v,s):m.addVar(vtype=gu.GRB.BINARY, name=f"x_{i,j,t,v,s}") for s in self.Samples for i in self.V for j in self.V for t in T for v in F_s[s] if i!=j}
-    #         # If supplier i \in M is visited by vehicle v \in F on t \in T, for sample path s \in Sam
-    #         w = {(i,t,v,s):m.addVar(vtype=gu.GRB.BINARY, name=f"w_{i,t,v,s}") for s in self.Samples for i in self.Suppliers for t in T for v in F_s[s]}
-    #         # Quantity of product k \in K bought from supplier i \in M on t \in T, transported in vehicle v \in F, for sample path s \in Sam
-    #         z = {(i,k,t,v,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"z_{i,k,t,v,s}") for s in self.Samples for k in self.Products for t in T for i in M_kts[s][k,t] for v in F_s[s]}
-    #         # Auxiliar variable for routing modeling
-    #         u = {(i,t,v,s):m.addVar(vtype=gu.GRB.BINARY, name=f"u_{i,t,v,s}") for s in self.Samples for i in self.Suppliers for t in T for v in F_s[s]}
-            
-    #         ###### Inventory variables
-            
-    #         # Quantity of product k \in K aged o \in O_k shipped to final customer on t, for sample path s \in Sam
-    #         y = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"y_{k,t,o,s}") for k in self.Products for t in T for o in range(1, self.O_k[k]+1) for s in self.Samples}
-            
-    #         ''' State Variables '''
-            
-    #         # Quantity of product k \in K that is replenished on t \in T, for sample path s \in Sam
-    #         r = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"r_{k,t,s}") for k in self.Products for t in T for s in self.Samples}
-    #         # Inventory level of product k \in K aged o \in O_k on t \in T, for sample path s \in Sam
-    #         ii = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"i_{k,t,o,s}") for k in self.Products for t in T for o in range(1, self.O_k[k]+1) for s in self.Samples}
-            
-    #         ''' Constraints '''
-    #         for s in self.Samples:
-    #             #Inventory constraints
-    #             ''' For each product k aged o, the inventory level on the first time period is
-    #             the initial inventory level minus what was shipped of it in that same period'''
-    #             for k in self.Products:
-    #                 for o in range(1, self.O_k[k]+1):
-    #                     if o > 1:
-    #                         m.addConstr(ii[k,0,o,s] == self.I_0[k,o]-y[k,0,o,s])
-                
-    #             ''' For each product k on t, its inventory level aged 0 is what was replenished on t (r)
-    #             minus what was shipped (y)'''
-    #             for k in self.Products:
-    #                 for t in T:
-    #                     m.addConstr(ii[k,t,1,s] == r[k,t,s]-y[k,t,1,s])
-                        
-    #             ''' For each product k, aged o, on t, its inventory level is the inventory level
-    #             aged o-1 on the previous t, minus the amount of it that's shipped '''
-    #             for k in self.Products:
-    #                 for t in T:
-    #                     for o in range(1, self.O_k[k]+1):
-    #                         if t>0 and o>1:
-    #                             m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s]-y[k,t,o,s])                
-                
-    #             ''' The amount of product k that is shipped to the final customer on t is equal to its demand'''
-    #             for k in self.Products:
-    #                 for t in T:
-    #                     m.addConstr(gu.quicksum(y[k,t,o,s] for o in range(1, self.O_k[k]+1)) == d_s[s][k,t])
-                        
-    #             #TPP constrains
-    #             ''' Modeling of state variable r_kt. For each product k, on each t, its replenishment 
-    #             is the sum of what was bought from all the suppliers'''
-    #             for t in T:
-    #                 for k in self.Products:
-    #                     m.addConstr(gu.quicksum(z[i,k,t,v,s] for i in M_kts[s][k,t] for v in F_s[s]) == r[k,t,s])
-                        
-    #             ''' Cannot buy from supplier i more than their available quantity of product k on t '''
-    #             for t in T:
-    #                 for k in self.Products:
-    #                     for i in M_kts[s][k,t]:
-    #                         m.addConstr(gu.quicksum(z[i,k,t,v,s] for v in F_s[s]) <= q_s[s][i,k,t])
-                            
-    #             ''' Can only buy product k from supplier i on t and pack it in vehicle v IF
-    #              vehicle v is visiting the supplier on t'''        
-    #             for t in T:
-    #                 for v in F_s[s]:
-    #                     for k in self.Products:
-    #                         for i in M_kts[s][k,t]:
-    #                             m.addConstr(z[i,k,t,v,s] <= q_s[s][i,k,t]*w[i,t,v,s])
-                
-    #             ''' At most, one vehicle visits each supplier each day'''
-    #             for t in T:
-    #                 for i in self.Suppliers:
-    #                     m.addConstr(gu.quicksum(w[i,t,v,s] for v in F_s[s]) <= 1)
-                
-    #             ''' Must respect vehicle's capacity '''
-    #             for t in T:
-    #                 for v in F_s[s]:
-    #                     m.addConstr(gu.quicksum(z[i,k,t,v,s] for k in self.Products for i in M_kts[s][k,t] ) <= Q_s[s])
-                
-    #             ''' Modeling of variable w_itv: if supplier i is visited by vehicle v on t'''
-    #             for v in F_s[s]:
-    #                 for t in T:
-    #                     for hh in self.Suppliers:
-    #                         m.addConstr(gu.quicksum(x[hh,j,t,v,s] for j in self.V if hh!=j) ==  w[hh,t,v,s])
-    #                         m.addConstr(gu.quicksum(x[i,hh,t,v,s] for i in self.V if i!=hh) ==  w[hh,t,v,s])
-                
-    #             ''' Routing modeling - no subtours created'''          
-    #             for t in T:
-    #                 for i in self.Suppliers:
-    #                     for v in F_s[s]:
-    #                         for j in self.Suppliers:
-    #                             if i!=j:
-    #                                 m.addConstr(u[i,t,v,s] - u[j,t,v,s] + len(self.V) * x[i,j,t,v,s] <= len(self.V)-1 )
-            
-    #             ''' Non-Anticipativity Constraints'''
-    #             for v in F_s[s]:
-    #                 for i in self.V:
-    #                     for j in self.V:
-    #                         if i!=j:
-    #                             m.addConstr(x[i,j,0,v,s] == gu.quicksum(x[i,j,0,v,s1] for s1 in self.Samples)/self.S)
-                
-    #             for v in F_s[s]:
-    #                 for i in self.Suppliers:
-    #                     m.addConstr(w[i,0,v,s] == gu.quicksum(w[i,0,v,s1] for s1 in self.Samples)/self.S)
-                
-    #             for v in F_s[s]:
-    #                 for k in self.Products:
-    #                     for i in M_kts[s][k,0]:
-    #                         m.addConstr(z[i,k,0,v,s] == gu.quicksum(z[i,k,0,v,s1] for s1 in self.Samples)/self.S)
-                
-    #             for i in self.Suppliers:
-    #                 for v in F_s[s]:
-    #                     m.addConstr(u[i,0,v,s] == gu.quicksum(u[i,0,v,s1] for s1 in self.Samples)/self.S)
-                
-    #             for k in self.Products:
-    #                 for o in range(1, self.O_k[k]+1):
-    #                     m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,s1] for s1 in self.Samples)/self.S)
-            
-            
-    #         ''' Costs '''
-    #         routes = gu.quicksum(self.c[i,j] * x[i,j,t,v,s] for s in self.Samples for i in self.V for j in self.V for t in T for v in F_s[s] if i!=j)
-    #         acquisition = gu.quicksum(p_s[s][i,k,t]*z[i,k,t,v,s] for s in self.Samples for k in self.Products for t in T for v in F_s[s] for i in M_kts[s][k,t])
-    #         holding = gu.quicksum(self.h[k,t]*ii[k,t,o,s] for s in self.Samples for k in self.Products for t in T for o in range(1, self.O_k[k]+1))
-                            
-    #         m.setObjective((routes+acquisition+holding)/self.S)
-            
-    #         m.update()
-    #         m.setParam("OutputFlag", verbose)
-    #         m.setParam("MIPGap",0.01)
-    #         m.setParam("TimeLimit", 3600)
-    #         m.optimize()
-           
-    #         self.tiempoOpti = time.time() - start
-    #         print(f"Done {tau}")
-            
-            
-    #         ''' Initial inventory level updated for next iteration '''
-    #         self.I_0 = {(k,o):ii[k,0,o-1,0].X if o > 1 else 0 for k in self.Products for o in range(1, self.O_k[k]+1)}
-            
-    #         ''' Saves results for dashboard '''
-    #         self.ii = {(k,o):ii[k,0,o,0].X for k in self.Products for o in range(1, self.O_k[k]+1)}
-    #         self.r = {k:r[k,0,0].X for k in self.Products}
-    #         self.z = {(i,k,v):z[i,k,0,v,0].X for k in self.Products for i in M_kts[0][k,0] for v in F_s[0]}
-    #         self.x = {(i,j,v):x[i,j,0,v,0].X for i in self.V for j in self.V for v in F_s[0] if i!=j}
-    #         self.p_s = {(i,k):sum(p_s[s][i,k,0] for s in self.Samples)/self.S for i in self.Suppliers for k in self.Products}
-    #         self.res[tau] = (ii,r,x,d_s,F_s[0],adj_horizon,p_s,z)
-            
-    #         today += 1
-        
-    #     print(self.tiempoOpti)
-    
-    # def result_renderization(self, path, save = True, show = True):
-        
-    #     images = []
-    #     ''' Rolling Horizon visualization'''
-
-    #     M_kt, K_it, q, p, d = self.Historic_log
-
-    #     def unique(lista):
-    #         li = []
-    #         for i in lista:
-    #             if i not in li:
-    #                 li.append(i)
-    #         return li
-
-    #     for tau in self.target:
-    #         cols = {0:"darkviolet",1:"darkorange",2:"lightcoral",3:"seagreen", 4:"dimgrey", 5:"teal", 6:"olive", 7:"darkmagenta"}
-    #         fig, (ax1,ax2,ax3,ax4) = plt.subplots(nrows=4,ncols=1,figsize=(13,20))
-    #         T = range(self.res[tau][5])
-            
-    #         ''' Demand Time Series and Sample Paths '''
-    #         for s in self.Samples:
-    #             ax1.plot([tt for tt in range(tau - self.Historical + self.T + 1, 
-    #                                          tau - self.Historical + self.T + 1 + self.res[tau][5])],
-    #                      [sum(self.res[tau][3][s][k,t] for k in self.Products) for t in T],color=cols[s])
-    #         for tt in range(tau-self.Historical+self.T+2):
-    #             ax1.plot(tt,sum(d[k, self.base+tt] for k in self.Products),"*",color="black",markersize=12)
-    #         ax1.plot([tt for tt in range(tau - self.Historical + self.T + 2)],
-    #                  [sum(d[k, self.base+tt] for k in self.Products) for tt in range(tau-self.Historical+self.T+2)],
-    #                  color="black")
-    #         ax1.set_xlabel("Time period")
-    #         ax1.set_ylabel("Total Demand")
-    #         ax1.set_xticks(ticks=[t for t in range(self.T)])
-    #         ax1.set_xlim(-0.5,self.T-0.5)
-    #         ax1.set_ylim(min([sum(d[k,t] for k in self.Products) for t in range(self.Historical)])-20,max([sum(d[k,t] for k in self.Products) for t in range(self.Historical)])+20)
-            
-    #         ''' Total Cost Bars '''
-    #         xx = [tt for tt in range(tau-self.Historical+self.T+2)]
-    #         compra = [sum(self.res[tt+self.Historical-self.T-1][6][i,k]*self.res[tt+self.Historical-self.T-1][7][i,k,v] for i in self.Suppliers for k in self.Products for v in self.res[tt+self.Historical-self.T-1][4] if (i,k,v) in self.res[tt+self.Historical-self.T-1][7]) for tt in xx]
-    #         invent = [sum(self.h[k,tt]*self.res[tt+self.Historical-self.T-1][0][k,o] for k in self.Products for o in range(1, self.O_k[k]+1)) for tt in xx]
-    #         rutas = [sum(self.c[i,j]*self.res[tt+self.Historical-self.T-1][2][i,j,v] for i in self.V for j in self.V for v in self.res[tt+self.Historical-self.T-1][4] if i!=j) for tt in xx]
-    #         ax2.bar(x=xx,height=rutas,bottom=[compra[tt]+invent[tt] for tt in xx],label="Routing",color="sandybrown")
-    #         ax2.bar(x=xx,height=invent,bottom=compra,label="Holding",color="slateblue")
-    #         ax2.bar(x=xx,height=compra,label="Purchase",color="lightseagreen")
-    #         ax2.set_xlabel("Time period")
-    #         ax2.set_ylabel("Total Cost")
-    #         ax2.set_xticks(ticks=[t for t in range(self.T)])
-    #         ax2.set_xlim(-0.5,self.T-0.5)
-    #         a1 = [sum(self.res[tt+self.Historical-self.T-1][6][i,k]*self.res[tt+self.Historical-self.T-1][7][i,k,v] for i in self.Suppliers for k in self.Products for v in self.res[tt+self.Historical-self.T-1][4] if (i,k,v) in self.res[tt+self.Historical-self.T-1][7]) for tt in range(self.T)]
-    #         a2 = [sum(self.h[k,tt]*self.res[tt+self.Historical-self.T-1][0][k,o] for k in self.Products for o in range(1,self.O_k[k]+1)) for tt in range(self.T)]
-    #         a3 = [sum(self.c[i,j]*self.res[tt+self.Historical-self.T-1][2][i,j,v] for i in self.V for j in self.V for v in self.res[tt+self.Historical-self.T-1][4] if i!=j) for tt in range(self.T)]
-    #         lim_cost = max(a1[tt]+a2[tt]+a3[tt] for tt in range(self.T))
-    #         ax2.set_ylim(0,lim_cost+5e3)
-    #         ticks = [i for i in range(0,int(int(lim_cost/1e4+1)*1e4),int(1e4))]
-    #         ax2.set_yticklabels(["${:,.0f}".format(int(i)) for i in ticks])
-    #         ax2.legend(loc="upper right")
-            
-    #         ''' Inventory Level by Product '''
-    #         cols_t = {0:(224/255,98/255,88/255),1:(224/255,191/255,76/255),2:(195/255,76/255,224/255),3:(54/255,224/255,129/255),4:(65/255,80/255,224/255),5:(224/255,149/255,103/255),6:(131/255,224/255,114/255),7:(224/255,103/255,91/255),8:(70/255,223/255,224/255),9:(224/255,81/255,183/255)}
-    #         for tt in range(tau-self.Historical+self.T+2):
-    #             list_inv = [round(sum(self.res[tt+self.Historical-self.T-1][0][k,o] for o in range(1,self.O_k[k]+1))) for k in self.Products]
-    #             un_list = unique(list_inv)
-    #             ax3.scatter(x=[tt for i in un_list],y=[i for i in un_list],s=[1e2+(1e4-1e2)*(sum([1 for j in list_inv if j==i])-1)/(self.K-1) for i in un_list],alpha=0.5,color=cols_t[tt])
-    #         ax3.set_xticks(ticks=[t for t in range(self.T)])
-    #         ax3.set_xlabel("Time period")
-    #         ax3.set_ylabel("Inventory Level by product")
-    #         ax3.set_xlim(-0.5,self.T-0.5)
-    #         lim_inv = max([round(sum(self.res[tt+self.Historical-self.T-1][0][k,o] for o in range(1,self.O_k[k]+1))) for k in self.Products for tt in range(int(self.T))])
-    #         ax3.set_ylim(0,lim_inv+1)
-            
-    #         ''' Purchased Quantity, by Product '''
-    #         b_purc = []
-    #         for tt in range(tau-self.Historical+self.T+2):
-    #             aver = [round(self.res[tt+self.Historical-self.T-1][1][k]) for k in self.Products]
-    #             b_purc.append(ax4.boxplot(aver,positions=[tt],widths=[0.5],patch_artist=True,flierprops={"marker":'o', "markerfacecolor":cols_t[tt],"markeredgecolor":cols_t[tt]}))
-    #             for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-    #                 if item != 'medians':
-    #                     plt.setp(b_purc[-1][item], color=cols_t[tt])
-    #                 else:
-    #                     plt.setp(b_purc[-1][item], color="white")
-    #         ax4.set_xlim(-0.5,self.T-0.5)
-    #         ax4.set_xticks(ticks=[t for t in range(self.T)])
-    #         ax4.set_xlabel("Time period")
-    #         ax4.set_ylabel("Purchased Quantity, by product")
-    #         lim_purc = max([round(self.res[tt+self.Historical-self.T-1][1][k]) for k in self.Products for tt in range(int(self.T))])
-    #         ax4.set_ylim(0,lim_purc+5)
-            
-    #         plt.savefig(path+f"RH_d{tau}.png", dpi=300)
-    #         if show:
-    #             plt.show()
-            
-    #         if save:
-    #             images.append(imageio.imread(path+f"RH_d{tau}.png"))
-        
-    #     if save:
-    #         imageio.mimsave(path+"RH1.gif", images,duration=0.5)
-    
     def __repr__(self):
 
         return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
