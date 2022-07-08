@@ -736,7 +736,6 @@ class steroid_IRP(gym.Env):
 
 
     def __repr__(self):
-
         return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
     
         
