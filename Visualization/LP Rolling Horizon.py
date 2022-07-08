@@ -378,9 +378,13 @@ def Purchasing_greedy(r,T,p_s,q_s):
 
 
 ''' Routing tour generator
-
+    Returns:
+        - x: (dict) whether supplier j \in V is visited after supplier i \in V on t \in T on sample path s \in S
+    Parameters:
+        - T: (iter) set of decision periods of the lookahead model on the current decision period of the Rolling Horizon model
 '''
 def Routing_random(T):
+    ''' Tour creating function '''
     def create_tour():
         M1 = list(M).copy()
         M1 = list(M).copy()
@@ -391,6 +395,7 @@ def Routing_random(T):
             M1.pop(i)
         return tour
     
+    ''' Routing decisions setting function '''
     def routing_decisions(x,tour):
         for i in range(len(tour)-1):
             x[tour[i],tour[i+1],t,s] = 1
