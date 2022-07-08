@@ -243,14 +243,14 @@ class steroid_IRP(gym.Env):
         
     
     # Step 
-    def step(self, action, validate_action = False):
+    def step(self, action, validate_action = False, warnings = True):
         valid = True
         if validate_action:
             valid, error_msg = self.action_validity(action)
 
         if valid:
             # Inventory dynamics
-            s_tprime, reward = self.transition_function(action)
+            s_tprime, reward = self.transition_function(action, warnings)
 
             # Reward
             transport_cost, purchase_cost, holding_cost, back_orders_cost = self.compute_costs(action, s_tprime)
@@ -284,6 +284,11 @@ class steroid_IRP(gym.Env):
         error_msg = ''
         
         # Route check
+        if len(routes) > self.F:
+            valid = False
+            error_msg = 'The number of routes exceedes the number of vehicles'
+            return valid, error_msg
+
         for route in routes:
             if route[0] != 0 or route[len(route) - 1] != 0:
                 valid = False
@@ -300,48 +305,50 @@ class steroid_IRP(gym.Env):
             for k in self.Products:
                 if purchase[i,k] > self.q[i,k]:
                     valid = False
-                    error_msg = "Purchased quantities exceed suppliers' available quantities"
+                    error_msg = f"Purchased quantities exceed suppliers' available quantities  ({i},{k})"
                     return valid, error_msg
         
         # Demand_complience
         for k in self.Products:
             if self.others['back_orders'] != 'back-logs' and demand_complience[k,0] > sum(purchase[i,k] for i in self.Suppliers):
                 valid = False
-                error_msg = 'Demand complience with purchased items exceed the purchase'
+                error_msg = f'Demand complience with purchased of product {k}items exceed the purchase'
                 return valid, error_msg
             elif self.others['back_orders'] == 'back-logs' and demand_complience[k,0] + back_o_complience[k,0] > sum(purchase[i,k] for i in self.Suppliers):
                 valid = False
-                error_msg = 'Demand/Back-logs complience with purchased items exceed the purchase'
+                error_msg = f'Demand/Back-logs complience with purchased items of product {k} exceed the purchase'
                 return valid, error_msg
 
             if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
                 valid = False
-                error_msg = 'Trying to comply a non-existing demand'
+                error_msg = f'Trying to comply a non-existing demand of product {k}'
                 return valid, error_msg
             
             for o in range(1, self.O_k[k] + 1):
                 if self.others['back_orders'] != 'back-logs' and demand_complience[k,o] > self.state[k,o]:
                     valid = False
-                    error_msg = 'Demand complience with inventory items exceed the stored items'
+                    error_msg = f'Demand complience with inventory items exceed the stored items  ({k},{o})'
                     return valid, error_msg
 
                 elif self.others['back_orders'] == 'back-logs' and demand_complience[k,o] + back_o_complience[k,o] > self.state[k,o]:
                     valid = False
-                    error_msg = 'Demand/Back-logs complience with inventory items exceed the stored items'
+                    error_msg = f'Demand/Back-logs complience with inventory items exceed the stored items ({k},{o})'
                     return valid, error_msg
+
         # Back-logs
         if self.others['back_orders'] == 'back-logs':
             for k in self.Products:
-                if sum(back_o_complience[k,o] for o in self.Ages[k]) < self.state[k,'B']:
+                if sum(back_o_complience[k,o] for o in range(self.O_k[k])) > self.state[k,'B']:
                     valid = False
-                    error_msg = 'Trying to comply a non-existing back-log'
+                    error_msg = f'Trying to comply a non-existing back-log of product {k}'
                     return valid, error_msg
         
         elif self.others['back_orders'] == False:
-            if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
-                valid = False
-                error_msg = 'Demand was not fullfiled'
-                return valid, error_msg
+            for k in self.Products:
+                if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
+                    valid = False
+                    error_msg = f'Demand of product {k} was not fullfiled'
+                    return valid, error_msg
 
         return valid, error_msg
 
@@ -361,18 +368,18 @@ class steroid_IRP(gym.Env):
 
         back_orders_cost = 0
         if self.others['back_orders'] == 'back-orders':
-            back_orders_cost = sum(max(self.d[k] - sum(demand_complience[k,o] for o in self.Ages[k]),0) * self.back_o_cost for k in self.Products) \
-                * self.back_o_cost
+            back_orders = round(sum(max(self.d[k] - sum(demand_complience[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products),1)
+            print(f'Back-orders: {back_orders}')
+            back_orders_cost = back_orders * self.back_o_cost
         
         elif self.others['back_orders'] == 'back-logs':
             back_orders_cost = sum(s_tprime[k,'B'] for k in self.Products) * self.back_l_cost
-
 
         return transport_cost, purchase_cost, holding_cost, back_orders_cost 
             
     
     # Inventory dynamics of the environment
-    def transition_function(self, action):
+    def transition_function(self, action, warnings):
         purchase, demand_complience = action[1:3]
         # Back-logs
         if self.others['back_orders'] == 'back-logs':   back_o_complience = action[3]
@@ -381,20 +388,26 @@ class steroid_IRP(gym.Env):
 
         # Inventory update
         for k in self.Products:
-            inventory[k,1] = sum(purchase[i,k] for i in self.Suppliers) - demand_complience[k,0]
+            inventory[k,1] = round(sum(purchase[i,k] for i in self.Suppliers) - demand_complience[k,0],1)
 
             max_age = self.O_k[k]
             if max_age > 1:
                 for o in range(2, max_age + 1):
-                        inventory[k,o] = self.state[k,o - 1] - demand_complience[k,o - 1]
+                        inventory[k,o] = round(self.state[k,o - 1] - demand_complience[k,o - 1],1)
+            
+            if self.others['back_orders'] == 'back-logs':
+                new_back_logs = round(max(self.d[k] - sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)),0),1)
+                inventory[k,'B'] = round(self.state[k,'B'] + new_back_logs - sum(back_o_complience[k,o] for o in range(self.O_k[k]+1)),1)
+                 
 
             # Factibility checks         
-            if self.state[k, max_age] - demand_complience[k,max_age] > 0:
-                reward += self.penalization_cost
-                print(colored(f'Warning! {self.state[k, max_age]} units of {k} were lost due to perishability','yellow'))
+            if warnings:
+                if self.state[k, max_age] - demand_complience[k,max_age] > 0:
+                    reward += self.penalization_cost
+                    print(colored(f'Warning! {self.state[k, max_age]} units of {k} were lost due to perishability','yellow'))
 
-            if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
-                print(colored(f'Warning! Demand of product {k} was not fullfiled', 'yellow'))
+                if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
+                    print(colored(f'Warning! Demand of product {k} was not fullfiled', 'yellow'))
 
             # if sum(inventory[k,o] for k in self.Products for o in range(self.O_k[k] + 1)) > self.wh_cap:
             #     reward += self.penalization_cost
@@ -539,7 +552,7 @@ class steroid_IRP(gym.Env):
         # Demand estimation based on quantities - ensuring feasibility, no backlogs
         if 'd' in self.others['historic'] or  '*' in self.others['historic']:
             self.historic_data['d'] = {(k):[(self.lambda1 * max([self.historic_data['q'][i,k][t] for i in self.Suppliers]) + (1-self.lambda1)*sum([self.historic_data['q'][i,k][t] for i in self.Suppliers])) for t in self.Historic] for k in self.Products}
-        self.d_t = {(k,t):(self.lambda1 * max([self.q_t[i,k,t] for i in self.Suppliers]) + (1-self.lambda1)*sum([self.q_t[i,k,t] for i in self.Suppliers])) for k in self.Products for t in self.Horizon}
+        self.d_t = {(k,t):round((self.lambda1 * max([self.q_t[i,k,t] for i in self.Suppliers]) + (1-self.lambda1)*sum([self.q_t[i,k,t] for i in self.Suppliers])),1) for k in self.Products for t in self.Horizon}
     
    
     # Auxuliary sample value generator function
