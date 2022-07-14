@@ -33,28 +33,30 @@ from or_gym import utils
 
 ################################ Description ################################
 '''
-State (S): The state according to Powell (three components): 
+State (S_t): The state according to Powell (three components): 
     - Physical State (R_t):
-        state: Current available inventory (!*): (dict)  Inventory of k \in K of age o \in O_k
+        state:  Current available inventory (!*): (dict)  Inventory of product k \in K of age o \in O_k
                 When back-logs are activated, will appear under age 'B'
     - Other deterministic info (Z_t):
-        p: Prices: (dict) Price of k \in K at i \in M
-        q: Available quantities: (dict) Available quantities of k \in K at i \in M
-        h: Holding cost: (dict) Holding cost of k \in K
+        p: Prices: (dict) Price of product k \in K at supplier i \in M
+        q: Available quantities: (dict) Available quantity of product k \in K at supplier i \in M
+        h: Holding cost: (dict) Holding cost of product k \in K
         historic_data: (dict) Historic log of information (optional)
     - Belief State (B_t):
-        sample_paths: Sample paths (optional)
+        sample_paths: Simulated sample paths (optional)
 
-Action (X): The action can be seen as a three level-decision. These are the three layers:
-    1. Routes to visit selected suppliers
-    2. Quantity to purchase on each supplier
-    3. Demand complience plan, dispatch decision
+Action (X_t): The action can be seen as a three level-decision. These are the three layers:
+    1. Routes to visit the selected suppliers
+    2. Quantities to purchase on each supplier
+    3. Demand compliance plan, dispatch decision
+    4. (Optional) Back-logs compliance
     
     Accordingly, the action will be a list composed as follows:
-    X = [routes, purchase, demand_complience]
-        - routes (list): list of list with the nodes visited on a route (including departure and arriving to the depot)
-        - purchase (dict): Units to purchase of k \in K at i \in M
-        - demand_complience (dict): Units to use of k in K of age o \in O_k
+    X = [routes, purchase, demand_compliance, back_orders]
+        - routes: (list) list of lists, each with the nodes visited on the route (including departure and arriving to the depot)
+        - purchase: (dict) Units to purchase of product k \in K at supplier i \in M
+        - demand_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the demand 
+        - back_logs_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the back-logs
 
 
 Exogenous information (W): The stochastic factors considered on the environment:
@@ -76,17 +78,17 @@ class steroid_IRP(gym.Env):
     
     INITIALIZATION
     Time Horizon: Two time horizon types (horizon_type = 'episodic')
-    1. 'episodic': Every episode (simulation) has a finite number of steps
+    1. 'episodic': Every episode (simulation) has a finite number of time steps
         Related parameters:
             - T: Decision periods (time-steps)
-    2. 'continuous': Neverending episodes
+    2. !!!NOT DEVELOPED!!! 'continuous': Never-ending episodes
         Related parameters: 
             - gamma: Discount factor
-    (For internal environment's processes: 1 for episodic, 0 for continouos)
+    (For internal environment's processes: 1 for episodic, 0 for continuous)
     
     Look-ahead approximation: Generation of sample paths (look_ahead = ['d']):
-    1. List of parameters to be forcasted on the look-ahead approximation ['d', 'p', ...]
-    2. List with '*' to generate forecasts for all parameters
+    1. List of parameters to be forecasted on the look-ahead approximation ['d', 'p', ...]
+    2. List with '*' to generate foreecasts for all parameters
     3. False for no sample path generation
     Related parameters:
         - S: Number of sample paths
@@ -96,17 +98,18 @@ class steroid_IRP(gym.Env):
     Three historic data options:
     1.  ['d', 'p', ...]: List with the parameters the historic info will be generated for
     2.  ['*']: Historic info generated for all parameters
-    3.  !!! NOT DEVELOPED path: File path to be processed by upload_historic_data() 
+    3.  !!!NOT DEVELOPED!!! path: File path to be processed by upload_historic_data() 
     4.  False: No historic data will be used
     Related parameter:
         - hist_window: Initial log size (time periods)
     
     Back-orders: Catch unsatisfied demand (back_orders = False):
-    1. 'back-orders': Demand can be not fully satisfied. Non-complied orders will be automatically fullfilled at an extra-cost
-    2. 'back-logs': Demand can be not fully satisfied. Non-complied orders will be registered and kept track of on age 'B'
+    1. 'back-orders': Demand may be not fully satisfied. Non-complied orders will be automatically fullfilled at an extra-cost
+    2. 'back-logs': Demand may be not fully satisfied. Non-complied orders will be registered and kept track of on age 'B'
     3. False: All demand must be fullfilled
     Related parameter:
-        - back_o_cost = 20 
+        - back_o_cost = 20
+        - back_l_cost = 20 
     
     PARAMETERS
     env_init = 'episodic': Time horizon type {episodic, continouos} 
@@ -119,7 +122,7 @@ class steroid_IRP(gym.Env):
     **kwargs: 
         M = 10: Number of suppliers
         K = 10: Number of Products
-        F = 2:  Number of vehicles on the fleete
+        F = 2:  Number of vehicles on the fleet
         T = 6:  Number of decision periods
         
         wh_cap = 1e9: Warehouse capacity
@@ -146,7 +149,7 @@ class steroid_IRP(gym.Env):
         ### Main parameters ###
         self.M = 10                                     # Suppliers
         self.K = 10                                     # Products
-        self.F = 4                                      # Fleete
+        self.F = 4                                      # Fleet
         
         ### Other parameters ### 
         self.wh_cap = 1e9                               # Warehouse capacity
@@ -276,8 +279,8 @@ class steroid_IRP(gym.Env):
     
     
     def action_validity(self, action):
-        routes, purchase, demand_complience = action[:3]
-        if self.others['back_orders'] == 'back-logs':   back_o_complience = action[3]
+        routes, purchase, demand_compliance = action[:3]
+        if self.others['back_orders'] == 'back-logs':   back_o_compliance = action[3]
         valid = True
         error_msg = ''
         
@@ -306,44 +309,44 @@ class steroid_IRP(gym.Env):
                     error_msg = f"Purchased quantities exceed suppliers' available quantities  ({i},{k})"
                     return valid, error_msg
         
-        # Demand_complience
+        # Demand_compliance
         for k in self.Products:
-            if self.others['back_orders'] != 'back-logs' and demand_complience[k,0] > sum(purchase[i,k] for i in self.Suppliers):
+            if self.others['back_orders'] != 'back-logs' and demand_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers):
                 valid = False
-                error_msg = f'Demand complience with purchased of product {k}items exceed the purchase'
+                error_msg = f'Demand compliance with purchased of product {k}items exceed the purchase'
                 return valid, error_msg
-            elif self.others['back_orders'] == 'back-logs' and demand_complience[k,0] + back_o_complience[k,0] > sum(purchase[i,k] for i in self.Suppliers):
+            elif self.others['back_orders'] == 'back-logs' and demand_compliance[k,0] + back_o_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers):
                 valid = False
-                error_msg = f'Demand/Back-logs complience with purchased items of product {k} exceed the purchase'
+                error_msg = f'Demand/Back-logs compliance with purchased items of product {k} exceed the purchase'
                 return valid, error_msg
 
-            if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
+            if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
                 valid = False
                 error_msg = f'Trying to comply a non-existing demand of product {k}'
                 return valid, error_msg
             
             for o in range(1, self.O_k[k] + 1):
-                if self.others['back_orders'] != 'back-logs' and demand_complience[k,o] > self.state[k,o]:
+                if self.others['back_orders'] != 'back-logs' and demand_compliance[k,o] > self.state[k,o]:
                     valid = False
-                    error_msg = f'Demand complience with inventory items exceed the stored items  ({k},{o})'
+                    error_msg = f'Demand compliance with inventory items exceed the stored items  ({k},{o})'
                     return valid, error_msg
 
-                elif self.others['back_orders'] == 'back-logs' and demand_complience[k,o] + back_o_complience[k,o] > self.state[k,o]:
+                elif self.others['back_orders'] == 'back-logs' and demand_compliance[k,o] + back_o_compliance[k,o] > self.state[k,o]:
                     valid = False
-                    error_msg = f'Demand/Back-logs complience with inventory items exceed the stored items ({k},{o})'
+                    error_msg = f'Demand/Back-logs compliance with inventory items exceed the stored items ({k},{o})'
                     return valid, error_msg
 
         # Back-logs
         if self.others['back_orders'] == 'back-logs':
             for k in self.Products:
-                if sum(back_o_complience[k,o] for o in range(self.O_k[k])) > self.state[k,'B']:
+                if sum(back_o_compliance[k,o] for o in range(self.O_k[k])) > self.state[k,'B']:
                     valid = False
                     error_msg = f'Trying to comply a non-existing back-log of product {k}'
                     return valid, error_msg
         
         elif self.others['back_orders'] == False:
             for k in self.Products:
-                if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
+                if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
                     valid = False
                     error_msg = f'Demand of product {k} was not fullfiled'
                     return valid, error_msg
@@ -353,8 +356,8 @@ class steroid_IRP(gym.Env):
 
     # Compute costs of a given procurement plan for a given day
     def compute_costs(self, action, s_tprime):
-        routes, purchase, demand_complience = action[:3]
-        if self.others['back_orders'] == 'back-logs':   back_o_complience = action[3]
+        routes, purchase, demand_compliance = action[:3]
+        if self.others['back_orders'] == 'back-logs':   back_o_compliance = action[3]
 
         transport_cost = 0
         for route in routes:
@@ -366,7 +369,7 @@ class steroid_IRP(gym.Env):
 
         back_orders_cost = 0
         if self.others['back_orders'] == 'back-orders':
-            back_orders = round(sum(max(self.d[k] - sum(demand_complience[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products),1)
+            back_orders = round(sum(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products),1)
             print(f'Back-orders: {back_orders}')
             back_orders_cost = back_orders * self.back_o_cost
         
@@ -378,33 +381,33 @@ class steroid_IRP(gym.Env):
     
     # Inventory dynamics of the environment
     def transition_function(self, action, warnings):
-        purchase, demand_complience = action[1:3]
+        purchase, demand_compliance = action[1:3]
         # Back-logs
-        if self.others['back_orders'] == 'back-logs':   back_o_complience = action[3]
+        if self.others['back_orders'] == 'back-logs':   back_o_compliance = action[3]
         inventory = deepcopy(self.state)
         reward  = 0
 
         # Inventory update
         for k in self.Products:
-            inventory[k,1] = round(sum(purchase[i,k] for i in self.Suppliers) - demand_complience[k,0],1)
+            inventory[k,1] = round(sum(purchase[i,k] for i in self.Suppliers) - demand_compliance[k,0],1)
 
             max_age = self.O_k[k]
             if max_age > 1:
                 for o in range(2, max_age + 1):
-                        inventory[k,o] = round(self.state[k,o - 1] - demand_complience[k,o - 1],1)
+                        inventory[k,o] = round(self.state[k,o - 1] - demand_compliance[k,o - 1],1)
             
             if self.others['back_orders'] == 'back-logs':
-                new_back_logs = round(max(self.d[k] - sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)),0),1)
-                inventory[k,'B'] = round(self.state[k,'B'] + new_back_logs - sum(back_o_complience[k,o] for o in range(self.O_k[k]+1)),1)
+                new_back_logs = round(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),1)
+                inventory[k,'B'] = round(self.state[k,'B'] + new_back_logs - sum(back_o_compliance[k,o] for o in range(self.O_k[k]+1)),1)
                  
 
             # Factibility checks         
             if warnings:
-                if self.state[k, max_age] - demand_complience[k,max_age] > 0:
+                if self.state[k, max_age] - demand_compliance[k,max_age] > 0:
                     reward += self.penalization_cost
                     print(colored(f'Warning! {self.state[k, max_age]} units of {k} were lost due to perishability','yellow'))
 
-                if sum(demand_complience[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
+                if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
                     print(colored(f'Warning! Demand of product {k} was not fullfiled', 'yellow'))
 
             # if sum(inventory[k,o] for k in self.Products for o in range(self.O_k[k] + 1)) > self.wh_cap:
