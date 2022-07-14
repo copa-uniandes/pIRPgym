@@ -35,15 +35,15 @@ from or_gym import utils
 '''
 State (S): The state according to Powell (three components): 
     - Physical State (R_t):
-        state: Current available inventory (!*):  (dict) - Inventory of k \in K of age o \in O_k
-                                                           Age 'B' when back-logs
+        state: Current available inventory (!*): (dict)  Inventory of k \in K of age o \in O_k
+                When back-logs are activated, will appear under age 'B'
     - Other deterministic info (Z_t):
         p: Prices: (dict) Price of k \in K at i \in M
         q: Available quantities: (dict) Available quantities of k \in K at i \in M
         h: Holding cost: (dict) Holding cost of k \in K
         historic_data: (dict) Historic log of information (optional)
     - Belief State (B_t):
-        sample_paths: Sample paths
+        sample_paths: Sample paths (optional)
 
 Action (X): The action can be seen as a three level-decision. These are the three layers:
     1. Routes to visit selected suppliers
@@ -137,8 +137,8 @@ class steroid_IRP(gym.Env):
     '''
     
     # Initialization method
-    def __init__(self, horizon_type = 'episodic', look_ahead = ['d'], historic_data = ['d'], back_orders = False,
-                 rd_seed = 0, wd = True, file_name = True, *args, **kwargs):
+    def __init__(self, horizon_type = 'episodic', look_ahead = ['*'], historic_data = ['*'], back_orders = False,
+                 rd_seed = 0, wd = True, file_name = True, **kwargs):
 
 
         seed(rd_seed)
