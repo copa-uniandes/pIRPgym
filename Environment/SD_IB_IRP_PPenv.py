@@ -157,6 +157,8 @@ class steroid_IRP(gym.Env):
         self.min_hprice = 1;  self.max_hprice = 500
         self.penalization_cost = 1e9
         self.lambda1 = 0.5
+
+        self.Q = 50 #!!!!!!!!
         
         self.hor_typ = horizon_type == 'episodic'
         if self.hor_typ:    self.T = 6
