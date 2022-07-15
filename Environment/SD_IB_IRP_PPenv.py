@@ -283,13 +283,20 @@ class steroid_IRP(gym.Env):
         assert not len(routes) > self.F, 'The number of routes exceedes the number of vehicles'
 
         for route in routes:
-            assert not route[0] != 0 or route[len(route) - 1] != 0, \
+            assert not (route[0] != 0 or route[-1] != 0), \
                 'Routes not valid, must start and end at the depot'
 
-            for node in route:
-                assert not node not in self.V, \
-                    'Route must be made for nodes the set'
+            route_capacity = sum(purchase[node,k] for k in self.Products for node in route[1:-2])
+            assert not route_capacity > self.Q, \
+                "Purchased items exceed vehicle's capacity"
 
+            assert not len(set(route)) != len(route) - 1, \
+                'Suppliers can only be visited once by a route'
+
+            for i in range(len(route)):
+                assert not route[i] not in self.V, \
+                    'Route must be made for nodes the set' 
+            
         # Purchase
         for i in self.Suppliers:
             for k in self.Products:
@@ -298,20 +305,20 @@ class steroid_IRP(gym.Env):
         
         # Demand_compliance
         for k in self.Products:
-            assert not self.others['back_orders'] != 'back-logs' and demand_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers), \
+            assert not (self.others['back_orders'] != 'back-logs' and demand_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers)), \
                 f'Demand compliance with purchased items of product {k} exceed the purchase'
 
-            assert not self.others['back_orders'] == 'back-logs' and demand_compliance[k,0] + back_o_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers), \
+            assert not (self.others['back_orders'] == 'back-logs' and demand_compliance[k,0] + back_o_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers)), \
                 f'Demand/Back-logs compliance with purchased items of product {k} exceed the purchase'
 
             assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k], \
                 f'Trying to comply a non-existing demand of product {k}' 
             
             for o in range(1, self.O_k[k] + 1):
-                assert not self.others['back_orders'] != 'back-logs' and demand_compliance[k,o] > self.state[k,o], \
+                assert not (self.others['back_orders'] != 'back-logs' and demand_compliance[k,o] > self.state[k,o]), \
                     f'Demand compliance with inventory items exceed the stored items  ({k},{o})' 
                 
-                assert not self.others['back_orders'] == 'back-logs' and demand_compliance[k,o] + back_o_compliance[k,o] > self.state[k,o], \
+                assert not (self.others['back_orders'] == 'back-logs' and demand_compliance[k,o] + back_o_compliance[k,o] > self.state[k,o]), \
                     f'Demand/Back-logs compliance with inventory items exceed the stored items ({k},{o})'
 
         # Back-logs
@@ -716,7 +723,7 @@ class steroid_IRP(gym.Env):
         df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in self.Products], name='Products'),
         columns=pd.Index([str(o) for o in range(1, max_O + 1)], name='Ages'))
 
-        print(df)
+        return df
 
 
     # Printing a representation of the environment (repr(env))
