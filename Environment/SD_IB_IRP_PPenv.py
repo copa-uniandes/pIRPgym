@@ -211,7 +211,7 @@ class steroid_IRP(gym.Env):
                 self.t = 0
 
             ## State ##
-            self.state = {(k,o):0 for k in self.Products for o in self.Ages[k]}
+            self.state = {(k,o):0   for k in self.Products for o in self.Ages[k]}
             if self.others['back_orders'] == 'back-logs':
                 for k in self.Products:
                     self.state[k,'B'] = 0
@@ -245,37 +245,32 @@ class steroid_IRP(gym.Env):
     
     # Step 
     def step(self, action, validate_action = False, warnings = True):
-        valid = True
         if validate_action:
-            valid, error_msg = self.action_validity(action)
+            self.action_validity(action)
 
-        if valid:
-            # Inventory dynamics
-            s_tprime, reward = self.transition_function(action, warnings)
+        # Inventory dynamics
+        s_tprime, reward = self.transition_function(action, warnings)
 
-            # Reward
-            transport_cost, purchase_cost, holding_cost, back_orders_cost = self.compute_costs(action, s_tprime)
-            reward += transport_cost + purchase_cost + holding_cost + back_orders_cost
+        # Reward
+        transport_cost, purchase_cost, holding_cost, back_orders_cost = self.compute_costs(action, s_tprime)
+        reward += transport_cost + purchase_cost + holding_cost + back_orders_cost
+
+        # Time step update and termination check
+        self.t += 1
+        done = self.check_termination(s_tprime)
+
+        # State update
+        if not done:
+            self.update_state(s_tprime)
     
-            # Time step update and termination check
-            self.t += 1
-            done = self.check_termination(s_tprime)
-
-            # State update
-            if not done:
-                self.update_state(s_tprime)
+        # EXTRA INFORMATION TO BE RETURNED
+        _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d}
+        if self.others['historic']:
+            _['historic_info'] = self.historic_data
+        if self.others['look_ahead']:
+            _['sample_paths'] = self.sample_paths
         
-            # EXTRA INFORMATION TO BE RETURNED
-            _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d}
-            if self.others['historic']:
-                _['historic_info'] = self.historic_data
-            if self.others['look_ahead']:
-                _['sample_paths'] = self.sample_paths
-            
-            return self.state, reward, done, _
-        
-        else:
-            print(colored('Time-step transition ERROR! The action is not valid. ' + error_msg, 'red'))
+        return self.state, reward, done, _
     
     
     def action_validity(self, action):
@@ -284,74 +279,51 @@ class steroid_IRP(gym.Env):
         valid = True
         error_msg = ''
         
-        # Route check
-        if len(routes) > self.F:
-            valid = False
-            error_msg = 'The number of routes exceedes the number of vehicles'
-            return valid, error_msg
+        # Routing check
+        assert not len(routes) > self.F, 'The number of routes exceedes the number of vehicles'
 
         for route in routes:
-            if route[0] != 0 or route[len(route) - 1] != 0:
-                valid = False
-                error_msg = 'Routes not valid, must start and end at the depot'
-                return valid, error_msg
+            assert not route[0] != 0 or route[len(route) - 1] != 0, \
+                'Routes not valid, must start and end at the depot'
+
             for node in route:
-                if node not in self.V:
-                    valid = False
-                    error_msg = 'Route must be made for nodes the set'
-                    return valid, error_msg
+                assert not node not in self.V, \
+                    'Route must be made for nodes the set'
 
         # Purchase
         for i in self.Suppliers:
             for k in self.Products:
-                if purchase[i,k] > self.q[i,k]:
-                    valid = False
-                    error_msg = f"Purchased quantities exceed suppliers' available quantities  ({i},{k})"
-                    return valid, error_msg
+                assert not purchase[i,k] > self.q[i,k], \
+                    f"Purchased quantities exceed suppliers' available quantities  ({i},{k})"
         
         # Demand_compliance
         for k in self.Products:
-            if self.others['back_orders'] != 'back-logs' and demand_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers):
-                valid = False
-                error_msg = f'Demand compliance with purchased of product {k}items exceed the purchase'
-                return valid, error_msg
-            elif self.others['back_orders'] == 'back-logs' and demand_compliance[k,0] + back_o_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers):
-                valid = False
-                error_msg = f'Demand/Back-logs compliance with purchased items of product {k} exceed the purchase'
-                return valid, error_msg
+            assert not self.others['back_orders'] != 'back-logs' and demand_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers), \
+                f'Demand compliance with purchased items of product {k} exceed the purchase'
 
-            if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
-                valid = False
-                error_msg = f'Trying to comply a non-existing demand of product {k}'
-                return valid, error_msg
+            assert not self.others['back_orders'] == 'back-logs' and demand_compliance[k,0] + back_o_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers), \
+                f'Demand/Back-logs compliance with purchased items of product {k} exceed the purchase'
+
+            assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k], \
+                f'Trying to comply a non-existing demand of product {k}' 
             
             for o in range(1, self.O_k[k] + 1):
-                if self.others['back_orders'] != 'back-logs' and demand_compliance[k,o] > self.state[k,o]:
-                    valid = False
-                    error_msg = f'Demand compliance with inventory items exceed the stored items  ({k},{o})'
-                    return valid, error_msg
-
-                elif self.others['back_orders'] == 'back-logs' and demand_compliance[k,o] + back_o_compliance[k,o] > self.state[k,o]:
-                    valid = False
-                    error_msg = f'Demand/Back-logs compliance with inventory items exceed the stored items ({k},{o})'
-                    return valid, error_msg
+                assert not self.others['back_orders'] != 'back-logs' and demand_compliance[k,o] > self.state[k,o], \
+                    f'Demand compliance with inventory items exceed the stored items  ({k},{o})' 
+                
+                assert not self.others['back_orders'] == 'back-logs' and demand_compliance[k,o] + back_o_compliance[k,o] > self.state[k,o], \
+                    f'Demand/Back-logs compliance with inventory items exceed the stored items ({k},{o})'
 
         # Back-logs
         if self.others['back_orders'] == 'back-logs':
             for k in self.Products:
-                if sum(back_o_compliance[k,o] for o in range(self.O_k[k])) > self.state[k,'B']:
-                    valid = False
-                    error_msg = f'Trying to comply a non-existing back-log of product {k}'
-                    return valid, error_msg
+                assert not sum(back_o_compliance[k,o] for o in range(self.O_k[k])) > self.state[k,'B'], \
+                    f'Trying to comply a non-existing back-log of product {k}'
         
         elif self.others['back_orders'] == False:
             for k in self.Products:
-                if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
-                    valid = False
-                    error_msg = f'Demand of product {k} was not fullfiled'
-                    return valid, error_msg
-
-        return valid, error_msg
+                assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k], \
+                    f'Demand of product {k} was not fullfiled'
 
 
     # Compute costs of a given procurement plan for a given day
@@ -737,9 +709,22 @@ class steroid_IRP(gym.Env):
         self.d_t =
         '''
 
+    # Simple function to visualize the inventory
+    def print_inventory(self):
+        max_O = max([self.O_k[k] for k in self.Products])
+        listamax = [[self.state[k,o] for o in self.Ages[k]] for k in self.Products]
+        df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in self.Products], name='Products'),
+        columns=pd.Index([str(o) for o in range(1, max_O + 1)], name='Ages'))
 
+        print(df)
+
+
+    # Printing a representation of the environment (repr(env))
     def __repr__(self):
         return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
+
+
+    
     
         
         
