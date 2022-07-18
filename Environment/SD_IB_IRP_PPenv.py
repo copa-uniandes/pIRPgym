@@ -307,7 +307,7 @@ class steroid_IRP(gym.Env):
 
             for i in range(len(route)):
                 assert not route[i] not in self.V, \
-                    'Route must be made for nodes the set' 
+                    'Route must be composed of existing suppliers' 
             
         # Purchase
         for i in self.Suppliers:
