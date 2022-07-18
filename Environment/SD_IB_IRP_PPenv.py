@@ -4,7 +4,9 @@
 
 TODO:
 ! FIX SAMPLE PATHS
-! Check documentation
+! Check Q parameter
+! Check 
+
 
 FUTURE WORK - Not completely developed:
 - Instance_file uploading
@@ -158,7 +160,7 @@ class steroid_IRP(gym.Env):
         self.penalization_cost = 1e9
         self.lambda1 = 0.5
 
-        self.Q = 50 #!!!!!!!!
+        self.Q = 100 #!!!!!!!!
         
         self.hor_typ = horizon_type == 'episodic'
         if self.hor_typ:    self.T = 6
@@ -228,6 +230,7 @@ class steroid_IRP(gym.Env):
 
             # Look-ahead, sample paths
             if self.others['look_ahead']:
+                self.sample_path_window_size = copy(self.LA_horizon)
                 self.gen_sample_paths()                        
             
         # TODO! Data file upload 
@@ -242,7 +245,14 @@ class steroid_IRP(gym.Env):
             # State
             self.state = inventory
         
-        if return_state:    return self.state
+        if return_state:    
+            # EXTRA INFORMATION TO BE RETURNED
+            _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d}
+            if self.others['historic']:
+                _['historic_info'] = self.historic_data
+            if self.others['look_ahead']:
+                _['sample_paths'] = self.sample_paths
+            return self.state, _
         
     
     # Step 
@@ -580,17 +590,21 @@ class steroid_IRP(gym.Env):
             - hist_T: (int) number of periods that the historical datasets have information of
             - today: (int) current time period
         '''
+
+        if self.hor_typ and self.t + self.LA_horizon > self.T:
+                self.sample_path_window_size = self.T - self.t
+
         self.sample_paths = {}
         
         for s in self.Samples:
             # For each product, on each period chooses a random subset of suppliers that the product has had
-            self.sample_paths[('M_k',s)] = {(k,t): [self.M_kt[k,tt] for tt in range(-self.hist_window + 1, self.t)][randint(-self.hist_window + 1, self.t - 1)] for k in self.Products for t in range(1, self.LA_horizon)}
+            self.sample_paths[('M_k',s)] = {(k,t): [self.M_kt[k,tt] for tt in range(-self.hist_window + 1, self.t)][randint(-self.hist_window + 1, self.t - 1)] for k in self.Products for t in range(1, self.sample_path_window_size)}
             for k in self.Products:
                 self.sample_paths[('M_k',s)][(k,0)] = self.M_kt[k, self.t]
             
             # Products offered by each supplier on each time period, based on M_kts
             self.sample_paths[('K_i',s)] = {(i,t): [k for k in self.Products if i in self.sample_paths[('M_k',s)][(k,t)]] \
-                for i in self.Suppliers for t in range(1, self.LA_horizon)}
+                for i in self.Suppliers for t in range(1, self.sample_path_window_size)}
             for i in self.Suppliers:
                self.sample_paths[('K_i',s)][(k,0)] = self.K_it[i, self.t]
             
@@ -598,7 +612,7 @@ class steroid_IRP(gym.Env):
             # For each supplier and product, on each period chooses a quantity to offer using the sample value generator function
             #if 'q' in self.others['look_ahead']:
             self.sample_paths[('q',s)] = {(i,k,t): self.sim(self.historic_data['q'][i,k]) if i in self.sample_paths[('M_k',s)][(k,t)] else 0 \
-                for i in self.Suppliers for k in self.Products for t in range(1, self.LA_horizon)}
+                for i in self.Suppliers for k in self.Products for t in range(1, self.sample_path_window_size)}
             for i in self.Suppliers:
                 for k in self.Products:
                     self.sample_paths[('q',s)][(i,k,0)] = self.q[i,k]
@@ -606,20 +620,20 @@ class steroid_IRP(gym.Env):
             # For each supplier and product, on each period chooses a price using the sample value generator function
             if 'p' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
                 self.sample_paths[('p',s)] = {(i,k,t): self.sim(self.historic_data['p'][i,k]) if i in self.sample_paths[('M_k',s)][(k,t)] else 1000 \
-                    for i in self.Suppliers for k in self.Products for t in range(1, self.LA_horizon)}
+                    for i in self.Suppliers for k in self.Products for t in range(1, self.sample_path_window_size)}
                 for i in self.Suppliers:
                     for k in self.Products:
                         self.sample_paths[('p',s)][i,k,0] = self.p[i,k]
             
             if 'h' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
-                self.sample_paths[('h',s)] = {(k,t): self.sim(self.historic_data['h'][k]) for k in self.Products for t in range(1, self.LA_horizon)}
+                self.sample_paths[('h',s)] = {(k,t): self.sim(self.historic_data['h'][k]) for k in self.Products for t in range(1, self.sample_path_window_size)}
                 for k in self.Products:
                     self.sample_paths[('h',s)][k,0] = self.h[k]
             
             # Estimates demand for each product, on each period, based on q_s
             if 'd' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
                 self.sample_paths[('d',s)] = {(k,t): (self.lambda1 * max([self.sample_paths[('q',s)][(i,k,t)] for i in self.Suppliers]) + (1 - self.lambda1) * sum([self.sample_paths[('q',s)][(i,k,t)] \
-                    for i in  self.Suppliers])) for k in self.Products for t in range(1, self.LA_horizon)}
+                    for i in  self.Suppliers])) for k in self.Products for t in range(1, self.sample_path_window_size)}
                 for k in self.Products:
                     self.sample_paths[('d',s)][k,0] = self.d[k]
             
@@ -732,8 +746,4 @@ class steroid_IRP(gym.Env):
     def __repr__(self):
         return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
 
-
-    
-    
-        
         
