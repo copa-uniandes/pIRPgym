@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-
-"""
-
 import gurobipy as gu
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,22 +7,27 @@ from random import random, seed, randint, shuffle
 import imageio
 path1 = "C:/Users/juan_/OneDrive - Universidad de los Andes/1. MIIND/Dani/"
 
-seed(20)
-
 #%% Instance Generator
 
-#This is the instance setting
-Vertex = 10
-Products = 10
-Periods = 7
-lambda1 = 0.5
-replica = 2
-Historical = 40
+seed(20)
 
+#This is the instance setting
+today_is_known = True
+Vertex = 10; Products = 10; Periods = 7; Historical = 40
+lambda1 = 0.5; replica = 2
+
+# Lookahead periods on each sample path (including today)
+horizon_T = 5; samples = 3
+
+# Iterables
+Sam = range(samples) # Sample Paths
 V = range(Vertex) # Nodes (vertices) in network: suppliers + warehouse (0)
 M = range(1,Vertex) # Set of suppliers
 T = range(Periods) # Set of time periods
 K = range(Products) # Set of products
+
+
+#%% Parameters Generator
 
 ''' Simulated historical data generator for quantities, prices and demand of products in each period.
     Returns:
@@ -159,11 +160,11 @@ def sim(hist):
         - d: (dict) historical data of demand of k \in K on t \in T
         - M_kt: (dict) historical data of subset of suppliers that offer k \in K on t \in T
         - K_it: (dict) historical data of subset of products offered by i \in M on t \in T
-        - horizon: (int) number of periods to simulate in sample paths
         - today: (int) current time period on the Rolling Horizon model
         - K: (iter) set of products
         - M: (iter) set of suppliers
         - Sam: (int) number of sample paths to create
+        - horizon: (int) number of periods to simulate in sample paths
         - today_is_known: (bool) whether today's parameters are known beforehand or not'''
 def gen_sim_paths(q, p, d, M_kt, K_it, today, K, M, Sam, horizon, today_is_known):
     
@@ -171,6 +172,7 @@ def gen_sim_paths(q, p, d, M_kt, K_it, today, K, M, Sam, horizon, today_is_known
         TW = horizon[1:]
         Hist_T = range(-Historical,today+1)
     else:
+        TW = horizon
         Hist_T = range(-Historical,today)
     
     M_kts,K_its = {},{}
@@ -282,15 +284,15 @@ def Inventory_LP(dec_p,TW,d_s,q_s,M_kts,I0):
         for k in K:
             m.addConstr(r[k,0,s] == gu.quicksum(r[k,0,s1] for s1 in Sam)/len(Sam))
         
-        for k in K:
-            m.addConstr(b[k,0,s] == gu.quicksum(b[k,0,s1] for s1 in Sam)/len(Sam))
-        
-        for k in K:
-            for o in range(1, O_k[k]+1):
-                m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,s1] for s1 in Sam)/len(Sam))
+        #for k in K:
+        #    m.addConstr(b[k,0,s] == gu.quicksum(b[k,0,s1] for s1 in Sam)/len(Sam))
+        #
+        #for k in K:
+        #    for o in range(1, O_k[k]+1):
+        #        m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,s1] for s1 in Sam)/len(Sam))
     
     ''' Backorders '''
-    m.addConstr(gu.quicksum(b[k,t,s] for k in K for t in TW for s in Sam)/len(Sam) <= 0.5*gu.quicksum(d_s[s][k,t] for k in K for t in TW for s in Sam)/len(Sam))
+    m.addConstr(gu.quicksum(b[k,t,s] for k in K for t in TW for s in Sam)/len(Sam) <= 1000*gu.quicksum(d_s[s][k,t] for k in K for t in TW for s in Sam)/len(Sam))
     
     ''' Costs - Objective Function '''
     holding = gu.quicksum(h[k,t+dec_p]*ii[k,t,o,s] for s in Sam for k in K for t in TW for o in range(1, O_k[k]+1))
@@ -387,11 +389,6 @@ def Routing_random(TW):
 
 #%% Models Implementation
 
-# Lookahead periods on each sample path (including today)
-horizon_T = 5
-samples = 3
-Sam = range(samples)
-
 res = {}
 ''' Rolling '''
 for tau in T:
@@ -402,7 +399,7 @@ for tau in T:
     
     ''' Sample paths generation '''
     M_kts, K_its, q_s, p_s, d_s, Q_s, F_s = gen_sim_paths(q, p, d, M_kt, K_it, tau,
-                                                          K, M, Sam, TT, True)
+                                                          K, M, Sam, TT, today_is_known)
     
     ''' Inventory Management Decisions '''
     ii,r,b,I0 = Inventory_LP(tau, TT, d_s, q_s, M_kts, I0)
@@ -466,7 +463,7 @@ hold = {(s,tau,t):sum(h[k,tau+t]*ii[tau][k,t,o,s] for k in K for o in range(1,O_
 backo = {(s,tau,t):sum(g[k,tau+t]*b[tau][k,t,s] for k in K) for s in Sam for tau in T for t in TW[tau]}
 rout = {(s,tau,t):sum(c[i,j]*x[tau][i,j,t,s] for i in V for j in V if i !=j) for s in Sam for tau in T for t in TW[tau]}
 ub2 = max([purch[s,tau,t]+hold[s,tau,t]+backo[s,tau,t]+rout[s,tau,t] for s in Sam for tau in T for t in TW[tau]])
-ub2 = (int(ub2/2e4)+1)*2e4
+ub2 = (int(ub2/2e4)+2)*2e4
 
 cols = {0:"navy",1:"deeppink",2:"chocolate",3:"seagreen", 4:"dimgrey", 5:"teal", 6:"olive", 7:"darkmagenta"}
 
@@ -478,9 +475,9 @@ for tau in T:
         ax1.plot([t for t in range(tau,tau+len(TW[tau]))],[sum(d_s[tau][s][k,t] for k in K) for t in TW[tau]],color=cols[s])
     
     for t in range(tau+1):
-        initi = sum(I0[t][k,0,o,0] for k in K for o in range(1,O_k[k]+1))
-        repl = sum(z[t][i,k,0,0] for i in M for k in K)
-        backo = sum(b[t][k,0,0] for k in K)
+        initi = sum(I0[t][k,0,o,1] for k in K for o in range(1,O_k[k]+1))
+        repl = sum(z[t][i,k,0,1] for i in M for k in K)
+        backo = sum(b[t][k,0,1] for k in K)
         ax1.bar(x=t-0.2, height=initi, color="darkgoldenrod",width=0.4)
         ax1.bar(x=t-0.2, height=repl, bottom=initi, color="indigo",width=0.4)
         ax1.bar(x=t+0.2, height=backo, color="forestgreen", width=0.4)
@@ -503,14 +500,14 @@ for tau in T:
     ax1.bar(x=tau,height=0,color="forestgreen",label="Backorders")
     ax1.bar(x=tau,height=0,color="indigo",label="Replenishment")
     ax1.bar(x=tau,height=0,color="darkgoldenrod",label="Initial Inv. Level")
-    ax1.plot(tau,0,color="black",linestyle="-",marker="*",markersize=9,label="Demand")
+    ax1.plot(tau+Periods,0,color="black",linestyle="-",marker="*",markersize=9,label="Demand")
     ax1.legend(loc="upper right",ncol=2)
     
     ''' Second chart ''' 
     for t in range(tau+1):
-        purch = sum(p_s[t][0][i,k,0]*z[t][i,k,0,0] for i in M for k in K)
-        hold = sum(h[k,t]*ii[t][k,0,o,0] for k in K for o in range(1,O_k[k]+1))
-        backo = sum(g[k,t]*b[t][k,0,0] for k in K)
+        purch = sum(p_s[t][0][i,k,0]*z[t][i,k,0,1] for i in M for k in K)
+        hold = sum(h[k,t]*ii[t][k,0,o,1] for k in K for o in range(1,O_k[k]+1))
+        backo = sum(g[k,t]*b[t][k,0,1] for k in K)
         rout = sum(c[i,j]*x[t][i,j,0,0] for i in V for j in V if i != j)
         ax2.bar(x=t, height=purch, color="indigo")
         ax2.bar(x=t, height=hold, bottom=purch, color="darkgoldenrod")
@@ -541,18 +538,5 @@ for tau in T:
     ax2.set_yticklabels(["${:,.0f}K".format(int(i/1e3)) for i in ticks])
     ax2.set_ylabel("Total Cost")
     ax2.set_xlabel("Time period")
-
-#%% Checking
-
-
-
-#%%
-
-for tau in T:
-    print(f"\nDay {tau}:")
-    for k in K:
-        a = [i for i in M if z[tau][i,k] > 0]
-        print(f"Product {k}: {a}, bought {r[tau][k]}")
-
 
 
