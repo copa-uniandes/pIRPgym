@@ -5,7 +5,7 @@
 TODO:
 ! FIX SAMPLE PATHS
 ! Check Q parameter
-! Check 
+! Check HOLDING COST (TIMING)
 
 
 FUTURE WORK - Not completely developed:
@@ -356,6 +356,7 @@ class steroid_IRP(gym.Env):
         
         purchase_cost = sum(purchase[i,k] * self.p[i,k]   for i in self.Suppliers for k in self.Products)
         
+        # TODO!!!!!
         holding_cost = sum(sum(s_tprime[k,o] for o in range(1, self.O_k[k] + 1)) * self.h[k] for k in self.Products)
 
         back_orders_cost = 0
@@ -367,7 +368,7 @@ class steroid_IRP(gym.Env):
         elif self.others['back_orders'] == 'back-logs':
             back_orders_cost = sum(s_tprime[k,'B'] for k in self.Products) * self.back_l_cost
 
-        return transport_cost, purchase_cost, holding_cost, back_orders_cost 
+        return transport_cost, purchase_cost, holding_cost, back_orders_cost
             
     
     # Inventory dynamics of the environment
@@ -390,13 +391,13 @@ class steroid_IRP(gym.Env):
             if self.others['back_orders'] == 'back-logs':
                 new_back_logs = round(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),1)
                 inventory[k,'B'] = round(self.state[k,'B'] + new_back_logs - sum(back_o_compliance[k,o] for o in range(self.O_k[k]+1)),1)
-                 
 
             # Factibility checks         
             if warnings:
                 if self.state[k, max_age] - demand_compliance[k,max_age] > 0:
                     reward += self.penalization_cost
-                    print(colored(f'Warning! {self.state[k, max_age]} units of {k} were lost due to perishability','yellow'))
+                    print(colored(f'Warning! {self.state[k, max_age] - demand_compliance[k,max_age]} units of {k} were lost due to perishability','yellow'))
+    
 
                 if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
                     print(colored(f'Warning! Demand of product {k} was not fullfiled', 'yellow'))
