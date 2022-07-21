@@ -6,6 +6,7 @@ TODO:
 ! FIX SAMPLE PATHS
 ! Check Q parameter
 ! Check HOLDING COST (TIMING)
+! Backlogs not functioning under stochastic parameters
 
 
 FUTURE WORK - Not completely developed:
@@ -143,8 +144,7 @@ class steroid_IRP(gym.Env):
     
     # Initialization method
     def __init__(self, horizon_type = 'episodic', look_ahead = ['*'], historical_data = ['*'], backorders = False,
-                 rd_seed = 0, wd = True, file_name = True, **kwargs):
-
+                 stochastic_parameters = [], rd_seed = 0, wd = True, file_name = True, **kwargs):
 
         seed(rd_seed)
         
@@ -161,6 +161,7 @@ class steroid_IRP(gym.Env):
         self.lambda1 = 0.5
 
         self.Q = 100 #!!!!!!!!
+        self.stochastic_parameters = stochastic_parameters
         
         self.hor_typ = horizon_type == 'episodic'
         if self.hor_typ:    self.T = 6
@@ -260,28 +261,33 @@ class steroid_IRP(gym.Env):
         if validate_action:
             self.action_validity(action)
 
+        # Exogenous information realization 
+        W = self.gen_exog_info_W()
+        real_action = self.get_real_actions(action, W)
+
         # Inventory dynamics
-        s_tprime, reward = self.transition_function(action, warnings)
+        s_tprime, reward = self.transition_function(real_action, W, warnings)
 
         # Reward
-        transport_cost, purchase_cost, holding_cost, backorders_cost = self.compute_costs(action, s_tprime)
+        transport_cost, purchase_cost, holding_cost, backorders_cost = self.compute_costs(real_action, s_tprime)
         reward += transport_cost + purchase_cost + holding_cost + backorders_cost
 
         # Time step update and termination check
         self.t += 1
         done = self.check_termination(s_tprime)
+        _ = {}
 
         # State update
         if not done:
             self.update_state(s_tprime)
     
-        # EXTRA INFORMATION TO BE RETURNED
-        _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d}
-        if self.others['historical']:
-            _['historical_info'] = self.historical_data
-        if self.others['look_ahead']:
-            _['sample_paths'] = self.sample_paths
-        
+            # EXTRA INFORMATION TO BE RETURNED
+            _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d}
+            if self.others['historical']:
+                _['historical_info'] = self.historical_data
+            if self.others['look_ahead']:
+                _['sample_paths'] = self.sample_paths
+            
         return self.state, reward, done, _
     
     
@@ -345,6 +351,21 @@ class steroid_IRP(gym.Env):
                     f'Demand of product {k} was not fullfiled'
 
 
+    def get_real_actions(self, action, W):
+        purchase, demand_compliance = action[:3]
+
+        '''
+        Demand compliance must take into account the realized demand, take out the latest inventory
+        '''
+
+        real_purchase = {(i,k): min(purchase[i,k], W['q'][i,k]) for i in self.Suppliers for k in self.Products}
+        real_demand_compliance = {(k,o): min(demand_compliance[k,0], real_purchase[k,o]) for k in self.Suppliers for o in range(self.O_k[k] + 1)}
+
+        real_action = [action[0], real_purchase, real_demand_compliance]
+
+        return real_action
+
+
     # Compute costs of a given procurement plan for a given day
     def compute_costs(self, action, s_tprime):
         routes, purchase, demand_compliance = action[:3]
@@ -372,10 +393,11 @@ class steroid_IRP(gym.Env):
             
     
     # Inventory dynamics of the environment
-    def transition_function(self, action, warnings):
-        purchase, demand_compliance = action[1:3]
+    def transition_function(self, real_action, W, warnings):
+        purchase, demand_compliance = real_action[1:3]
         # backlogs
-        if self.others['backorders'] == 'backlogs':   back_o_compliance = action[3]
+        if self.others['backorders'] == 'backlogs':
+            back_o_compliance = real_action[3]
         inventory = deepcopy(self.state)
         reward  = 0
 
@@ -389,7 +411,7 @@ class steroid_IRP(gym.Env):
                         inventory[k,o] = round(self.state[k,o - 1] - demand_compliance[k,o - 1],1)
             
             if self.others['backorders'] == 'backlogs':
-                new_backlogs = round(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),1)
+                new_backlogs = round(max(self.W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),1)
                 inventory[k,'B'] = round(self.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(self.O_k[k]+1)),1)
 
             # Factibility checks         
@@ -399,7 +421,7 @@ class steroid_IRP(gym.Env):
                     print(colored(f'Warning! {self.state[k, max_age] - demand_compliance[k,max_age]} units of {k} were lost due to perishability','yellow'))
     
 
-                if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k]:
+                if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
                     print(colored(f'Warning! Demand of product {k} was not fullfiled', 'yellow'))
 
             # if sum(inventory[k,o] for k in self.Products for o in range(self.O_k[k] + 1)) > self.wh_cap:
@@ -407,6 +429,7 @@ class steroid_IRP(gym.Env):
             #     print(f'Warning! Capacity of the whareouse exceeded')
 
         return inventory, reward
+
 
     # Checking for episode's termination
     def check_termination(self, s_tprime):
@@ -452,10 +475,40 @@ class steroid_IRP(gym.Env):
         
     # Generates exogenous information vector W (stochastic realizations for each random variable)
     def gen_exog_info_W(self):
+        W = {}
+        tprime = self.t + 1
 
+        if 'h' in self.stochastic_parameters:
+            W['h'] = {k:randint(self.min_hprice, self.max_hprice) for k in self.Products}
+        else:
+            W['h'] = {k:self.h_t[k,self.h[tprime]] for k in self.Products}
         
+        M_k = {}
+        for k in self.Products:
+            sup = randint(1, self.M)
+            M_k[k] = list(self.Suppliers)
+            for ss in range(self.M - sup):
+                a = int(randint(0, len(M_k[k])-1))
+                del M_k[k][a]
+        
+        K_it = {i:[k for k in self.Products if i in M_k[k]] for i in self.Suppliers}
+        
+        if 'q' in self.stochastic_parameters:
+            W['q'] = {(i,k):randint(1,15) if i in self.M_k[k] else 0 for i in self.Suppliers for k in self.Products}
+        else:
+            W['q'] = {(i,k):self.q_t[i,k,tprime] for i in self.Suppliers for k in self.Products}
 
-        pass
+        if 'p' in self.stochastic_parameters:
+            W['p'] = {(i,k):randint(1,500) if i in M_k[k] else 1000 for i in self.Suppliers for k in self.Products}
+        else:
+            W['p'] = {(i,k):self.p_t[i,k,tprime] for i in self.Suppliers for k in self.Products}
+
+        if 'd' in self.stochastic_parameters:
+            W['d'] = {k:round((self.lambda1 * max([W['q'][i,k] for i in self.Suppliers]) + (1-self.lambda1)*sum([W['q'][i,k] for i in self.Suppliers])),1) for k in self.Products} 
+        else:
+            W['d'] = {k:self.d_t[k,tprime] for k in self.Products}
+
+        return W
     
 
     # Auxiliary method: Generate iterables of sets
