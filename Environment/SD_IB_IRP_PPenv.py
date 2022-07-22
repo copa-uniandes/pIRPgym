@@ -3,7 +3,6 @@
 @author: juanbeta
 
 TODO:
-! FIX SAMPLE PATHS
 ! Check Q parameter
 ! Check HOLDING COST (TIMING)
 ! Backlogs not functioning under stochastic parameters
