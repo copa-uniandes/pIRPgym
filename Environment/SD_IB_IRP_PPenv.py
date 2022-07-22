@@ -451,7 +451,7 @@ class steroid_IRP(gym.Env):
             # Factibility checks         
             if warnings:
                 if self.state[k, max_age] - demand_compliance[k,max_age] > 0:
-                    reward += self.penalization_cost
+                    # reward += self.penalization_cost
                     print(colored(f'Warning! {self.state[k, max_age] - demand_compliance[k,max_age]} units of {k} were lost due to perishability','yellow'))
     
 
