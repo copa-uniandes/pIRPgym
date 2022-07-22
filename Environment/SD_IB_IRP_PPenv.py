@@ -668,7 +668,7 @@ class steroid_IRP(gym.Env):
 
             # For each supplier and product, on each period chooses a quantity to offer using the sample value generator function
             #if 'q' in self.others['look_ahead']:
-            self.sample_paths[('q',s)] = {(i,k,t): self.sim(self.historical_data['q'][i,k]) if i in self.sample_paths[('M_k',s)][(k,t)] else 0 \
+            self.sample_paths[('q',s)] = {(i,k,t): self.sim([self.historical_data['q'][i,k][tt] for tt in range(-self.hist_window + 1, self.t) if self.historical_data['q'][i,k][tt] > 0]) if i in self.sample_paths[('M_k',s)][(k,t)] else 0 \
                 for i in self.Suppliers for k in self.Products for t in range(1, self.sample_path_window_size)}
             for i in self.Suppliers:
                 for k in self.Products:
@@ -676,7 +676,7 @@ class steroid_IRP(gym.Env):
             
             # For each supplier and product, on each period chooses a price using the sample value generator function
             if 'p' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
-                self.sample_paths[('p',s)] = {(i,k,t): self.sim(self.historical_data['p'][i,k]) if i in self.sample_paths[('M_k',s)][(k,t)] else 1000 \
+                self.sample_paths[('p',s)] = {(i,k,t): self.sim([self.historical_data['p'][i,k][tt] for tt in range(-self.hist_window + 1, self.t) if self.historical_data['p'][i,k][tt] < 1000]) if i in self.sample_paths[('M_k',s)][(k,t)] else 1000 \
                     for i in self.Suppliers for k in self.Products for t in range(1, self.sample_path_window_size)}
                 for i in self.Suppliers:
                     for k in self.Products:
