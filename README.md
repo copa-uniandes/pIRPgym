@@ -1,12 +1,13 @@
 # Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products
-A compilation of OR tools for the Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products.
+A compilation of OR tools for the Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products (SD-IB-IRP-PP).
 
-## Powelleskian model
+## Powell model
 
 ### State ($S_t$)
 -   **Physical State** ($R_t$):
 
-        state:  Current available inventory: (dict)  Inventory of product k \in K of age o \in O_k. Since the state is the inventory before the decision is taken, there is no age 0 inventory.
+        state:  Current available inventory: (dict)  Inventory of product k \in K of age o \in O_k. 
+        Since the state is the inventory before the decision is taken, there is no age 0 inventory.
                 
         When backlogs are activated, will appear under age 'B'   
                                            
@@ -52,7 +53,7 @@ $$ X = [\text{routes, purchase, demand compliance, backlogs compliance}] $$
         backlogs_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the backlogs
 
 ### Exogenous information ($W_t$)
-The realized values of the parameters of the environment (prices, available quantities, demand and holding costs). 
+The realized values of the parameters of the environment (prices, available quantities, demand and holding costs). This are the real observed values used on the transition function.
 
         p: Prices: (dict) Realized price of product k \in K at supplier i \in M
     
@@ -64,10 +65,17 @@ The realized values of the parameters of the environment (prices, available quan
 
 
 ### Transition Function ($S_M^X$)
-The transition function takes as input the current state, the action and the stochastic realization and returns the next state. I.e., updating the inventories, updating the historical values and the sample paths. 
+The transition function takes as input the current state, the action and the stochastic realization and returns the next state. I.e., updating the inventories, the forecasted parameters, the historical values and the sample paths. 
 
 $$
 S_M^X(S_t, X_t, W_t)=S_{t+1}
 $$
 
 ### Cost Function ($C_t$)
+The cost function computes the following costs of a given action:
+
+1. Routing cost
+2. Purchasing cost
+3. Holding cost
+4. Backorders cost
+
