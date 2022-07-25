@@ -1,4 +1,4 @@
-# SD-IB-IRP-PP
+# Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products
 A compilation of OR tools for the Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products.
 
 ## Powelleskian model
@@ -13,11 +13,13 @@ A compilation of OR tools for the Stochastic-Dynamic Inventory-Routing-Problem w
 
 -   **Other deterministic info** ($Z_t$):
 
-        p: Prices: (dict) Price of product k \in K at supplier i \in M
+        p: Prices: (dict) Forecasted rice of product k \in K at supplier i \in M
     
-        q: Available quantities: (dict) Available quantity of product k \in K at supplier i \in M
+        q: Available quantities: (dict) Forecasted available quantity of product k \in K at supplier i \in M
+        
+        d: Demand: (Dict) Forecasted demand of product k \in K
     
-        h: Holding cost: (dict) Holding cost of product k \in K
+        h: Holding cost: (dict) Forecasted holding cost of product k \in K
     
         historical_data: (dict) Historical log of information (optional)
     
@@ -49,9 +51,23 @@ $$ X = [\text{routes, purchase, demand compliance, backlogs compliance}] $$
 
         backlogs_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the backlogs
 
-### Exogenous information ($W_t$)!!!!!!
+### Exogenous information ($W_t$)
+The realized values of the parameters of the environment (prices, available quantities, demand and holding costs). 
+
+        p: Prices: (dict) Realized price of product k \in K at supplier i \in M
+    
+        q: Available quantities: (dict) Realized available quantity of product k \in K at supplier i \in M
+        
+        d: Demand: (Dict) Realized demand of product k \in K
+    
+        h: Holding cost: (dict) Realized holding cost of product k \in K
 
 
 ### Transition Function ($S_M^X$)
+The transition function takes as input the current state, the action and the stochastic realization and returns the next state. I.e., updating the inventories, updating the historical values and the sample paths. 
+
+$$
+S_M^X(S_t, X_t, W_t)=S_{t+1}
+$$
 
 ### Cost Function ($C_t$)
