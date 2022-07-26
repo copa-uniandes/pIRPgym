@@ -164,7 +164,7 @@ class steroid_IRP(gym.Env):
         self.penalization_cost = 1e9
         self.lambda1 = 0.5
 
-        self.Q = 100 #!!!!!!!!
+        self.Q = 1000 #!!!!!!!!
         self.stochastic_parameters = stochastic_parameters
         
         self.hor_typ = horizon_type == 'episodic'

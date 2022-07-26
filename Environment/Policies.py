@@ -25,7 +25,7 @@ class policies():
     def Genera_ruta_at_t(self, solucionTTP, t, max_cij, c, Q):
 
         Info_Route, solucionTTP = self.Crea_grafo_aumentado_at_t(t, solucionTTP, max_cij, c)
-        FO_Routing, Rutas_finales = self.Genera_Rutas_CVRP_at_t(Info_Route, solucionTTP, t, c, Q) 
+        FO_Routing, Rutas_finales = self.Genera_Rutas_CVRP_at_t(Info_Route, solucionTTP, t, c, Q)
 
         return Rutas_finales, solucionTTP, FO_Routing
 
@@ -140,7 +140,12 @@ class policies():
 
         Rutas_finales, solucionTTP, solucionTTP[0][8]  = self.Genera_ruta_at_t(solucionTTP, 0, max(env.c.values())*2, env.c, env.Q)
 
-        return Rutas_finales, purchase, demand_compliance, double_check, I_1
+        #print(Rutas_finales)
+        rutas = []
+        for key in Rutas_finales[0].keys():
+            rutas.append(Rutas_finales[0][key][0])
+
+        return [rutas, purchase, demand_compliance]#, double_check, I_1
 
     def Crea_grafo_aumentado_at_t(self, t, solucionTTP, max_cij, c):
         Info_Route = {}
