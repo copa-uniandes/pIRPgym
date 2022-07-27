@@ -358,7 +358,7 @@ class steroid_IRP(gym.Env):
         elif self.others['backorders'] == False:
             for k in self.Products:
                 assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k], \
-                    f'Demand of product {k} was not fullfiled'
+                    f'Demand of product {k} was not fulfilled'
 
 
     def get_real_actions(self, action):
@@ -456,7 +456,7 @@ class steroid_IRP(gym.Env):
     
 
                 if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
-                    print(colored(f'Warning! Demand of product {k} was not fullfiled', 'yellow'))
+                    print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
 
             # if sum(inventory[k,o] for k in self.Products for o in range(self.O_k[k] + 1)) > self.wh_cap:
             #     reward += self.penalization_cost
