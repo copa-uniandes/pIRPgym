@@ -30,5 +30,4 @@ par['h']['distribution'] = 'normal'
 par['h']['mean'] = 1
 par['h']['stdev'] = 500
 
-instance.conf_int_gen(data = par)
-print(instance.h_t)
+instance.gen_availabilities()

@@ -57,12 +57,12 @@ class instance_generator():
                 self.M_kt[k,t] = list(self.Suppliers)
                 # Random suppliers are removed from subset, regarding {sup}
                 for ss in range(self.M - sup):
-                    print(len(self.M_kt[k,t])-1)
                     a = int(randint(0, len(self.M_kt[k,t])-1))
                     del self.M_kt[k,t][a]
         
         # Products offered by each supplier on each time period, based on M_kt
         self.K_it = {(i,t):[k for k in self.Products if i in self.M_kt[k,t]] for i in self.Suppliers for t in self.TW}
+
 
     def gen_quantities(self, distribution = 'normal', **kwargs):
         self.q_t = {}
@@ -91,6 +91,7 @@ class instance_generator():
             self.historical_data['d'] = {(k):[randint(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
             self.d_t = {(k,t): randint(kwargs['min'], kwargs['max']) for k in self.Products for t in self.Horizon}
 
+
     def gen_p_price(self, distribution = 'normal', **kwargs):
         self.p_t = {}
         
@@ -118,6 +119,7 @@ class instance_generator():
             self.historical_data['h'] = {k: [randint(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
             self.h_t = {(k,t): randint(kwargs['min'], kwargs['max']) for k in self.Products for t in self.Horizon}
     
+
     def conf_int_gen(self, **kwargs):
 
         self.gen_availabilities()

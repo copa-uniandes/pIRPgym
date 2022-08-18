@@ -2,8 +2,6 @@
 """
 @author: juanbeta
 
-
-
 TODO
 ! stochastic parameters
 
@@ -37,6 +35,9 @@ import imageio
 ### Gym & OR-Gym
 import gym; #from gym import spaces
 from or_gym import utils
+
+### Instance generation
+from InstanceGenerator import instance_generator
 
 ################################ Description ################################
 '''
