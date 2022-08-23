@@ -188,7 +188,6 @@ class steroid_IRP(gym.Env):
             self.historical = range(-self.hist_window, 0)
         else:
             self.TW = self.Horizon
-        
 
 
     # Reseting the environment
@@ -210,9 +209,20 @@ class steroid_IRP(gym.Env):
         self.h_t = generator.gen_h_costs()
 
         self.M_kt, self.K_it = generator.gen_availabilities()
+        self.q_t = generator.gen_quantities()
+        self.p_t = generator.gen_p_prices()
+        self.d_t = generator.gen_demand()
 
+        ## State ##
+        self.state = {(k,o):0   for k in self.Products for o in self.Ages[k]}
+        if self.others['backorders'] == 'backlogs':
+            for k in self.Products:
+                self.state[k,'B'] = 0  
         
-
+        self.h = {k: self.h_t[k,self.t] for k in self.Products}
+        self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
+        self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
+        self.d = {k: self.d_t[k,self.t] for k in self.Products}
 
 
 
@@ -222,28 +232,12 @@ class steroid_IRP(gym.Env):
 
             # General parameter
             self.gen_instance_data()
-            
-
-            ## State ##
-            self.state = {(k,o):0   for k in self.Products for o in self.Ages[k]}
-            if self.others['backorders'] == 'backlogs':
-                for k in self.Products:
-                    self.state[k,'B'] = 0
-
-            if self.hor_typ:
-                self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-                self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-                self.h = {k: self.h_t[k,self.t] for k in self.Products}
-                self.d = {k: self.d_t[k,self.t] for k in self.Products}
-            else:
-                self.gen_realization()
 
             # Look-ahead, sample paths
             if self.others['look_ahead']:
                 self.sample_path_window_size = copy(self.LA_horizon)
                 self.gen_sample_paths()                        
-            
-        # TODO! Data file upload 
+
 
         
     
