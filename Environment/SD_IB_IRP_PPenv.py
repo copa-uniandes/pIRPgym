@@ -9,14 +9,6 @@ WARNINGS:
 ! Q parameter: Not well defined
 ! Check HOLDING COST (TIMING)
 
-
-
-FUTURE WORK - Not completely developed:
-- Instance_file uploading
-- Continuous time horizon
-- historical_file uploading
-- Instance_file exporting
-
 """
 
 ################################## Modules ##################################
@@ -85,15 +77,6 @@ class steroid_IRP(gym.Env):
     Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products environment
     
     INITIALIZATION
-    Time Horizon: Two time horizon types (horizon_type = 'episodic')
-    1. 'episodic': Every episode (simulation) has a finite number of time steps
-        Related parameters:
-            - T: Decision periods (time-steps)
-    2. !!!NOT DEVELOPED!!! 'continuous': Never-ending episodes
-        Related parameters: 
-            - gamma: Discount factor
-    (For internal environment's processes: 1 for episodic, 0 for continuous)
-    
     Look-ahead approximation: Generation of sample paths (look_ahead = ['d']):
     1. List of parameters to be forecasted on the look-ahead approximation ['d', 'p', ...]
     2. List with '*' to generate foreecasts for all parameters
@@ -106,27 +89,28 @@ class steroid_IRP(gym.Env):
     Three historical data options:
     1.  ['d', 'p', ...]: List with the parameters the historical info will be generated for
     2.  ['*']: historical info generated for all parameters
-    3.  !!!NOT DEVELOPED!!! path: File path to be processed by upload_historical_data() 
-    4.  False: No historical data will be used
+    3.  False: No historical data will be stored or used
     Related parameter:
         - hist_window: Initial log size (time periods)
     
-    Backorders: Catch unsatisfied demand (backorders = False):
+    backorders: Catch unsatisfied demand (backorders = 'backorders'):
     1. 'backorders': Demand may be not fully satisfied. Non-complied orders will be automatically fullfilled at an extra-cost
     2. 'backlogs': Demand may be not fully satisfied. Non-complied orders will be registered and kept track of on age 'B'
     3. False: All demand must be fullfilled
     Related parameter:
-        - back_o_cost = 20
+        - back_o_cost = 600
         - back_l_cost = 20 
     
+    stochastic_parameters: Which of the parameters are not known when the action is performed
+    1.  ['d', 'p', ...]: List with the parameters that are stochastic
+    2.  ['*']: All parameters are stochastic (h,p,d,q)
+    3.  False: All parameters are deterministic
+    
     PARAMETERS
-    env_init = 'episodic': Time horizon type {episodic, continouos} 
-    look_ahead = ['d']: Generate sample paths for look-ahead approximation
-    historical_data = ['d']: Use of historicalal data
+    look_ahead = ['*']: Generate sample paths for look-ahead approximation
+    historical_data = ['*']: Use of historicalal data
     backorders = False: Backorders
     rd_seed = 0: Seed for random number generation
-    wd = True: Working directory path
-    file_name = True: File name when uploading instances from .txt
     **kwargs: 
         M = 10: Number of suppliers
         K = 10: Number of Products
@@ -134,8 +118,6 @@ class steroid_IRP(gym.Env):
         T = 6:  Number of decision periods
         
         wh_cap = 1e9: Warehouse capacity
-        min/max_sprice: Max and min selling prices (per m and k)
-        min/max_hprice: Max and min holding cost (per k)
         penalization_cost: Penalization costs for RL
         
         S = 4:  Number of sample paths 
@@ -148,77 +130,99 @@ class steroid_IRP(gym.Env):
     '''
     
     # Initialization method
-    def __init__(self, horizon_type = 'episodic', look_ahead = ['*'], historical_data = ['*'], backorders = False,
-                 stochastic_parameters = False, rd_seed = 0, wd = True, file_name = True, **kwargs):
-
-        seed(rd_seed)
+    def __init__(self, look_ahead = ['*'], historical_data = ['*'], backorders = False,
+                 stochastic_parameters = False, **kwargs):
         
         ### Main parameters ###
         self.M = 10                                     # Suppliers
         self.K = 10                                     # Products
         self.F = 4                                      # Fleet
+        self.T = 7                                  
         
         ### Other parameters ### 
         self.wh_cap = 1e9                               # Warehouse capacity
-        self.min_sprice = 1;  self.max_sprice = 500
-        self.min_hprice = 1;  self.max_hprice = 500
-        self.penalization_cost = 1e9
-        self.lambda1 = 0.5
 
         self.Q = 1000 # TODO !!!!!!!!
         self.stochastic_parameters = stochastic_parameters
         
-        self.hor_typ = horizon_type == 'episodic'
-        if self.hor_typ:    self.T = 6
-        
         ### Look-ahead parameters ###
         if look_ahead:    
             self.S = 4              # Number of sample paths
-            self.LA_horizon = 5     # Look-ahead time window's size
+            self.LA_horizon = 5     # Look-ahead time window's size (includes current period)
         
         ### historical log parameters ###
-        if type(historical_data) == list:        
+        if historical_data:        
             self.hist_window = 40       # historical window
 
         ### Backorders parameters ###
         if backorders == 'backorders':
-            self.back_o_cost = 20
+            self.back_o_cost = 600
         elif backorders == 'backlogs':
-            self.back_l_cost = 20
+            self.back_l_cost = 500
 
         ### Custom configurations ###
-        if file_name:
-            utils.assign_env_config(self, kwargs)
-            self.gen_sets()
+        utils.assign_env_config(self, kwargs)
+        self.gen_sets()
 
         ### State space ###
         # Physical state
         self.state = {}     # Inventory
         
         ### Extra information ###
-        self.others = {'look_ahead':look_ahead, 'historical': historical_data, 'wd': wd, 'file_name': file_name, 
-                        'backorders': backorders}
+        self.other_env_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
+
+
+    # Auxiliary method: Generate iterables of sets
+    def gen_sets(self):
+    
+        self.Suppliers = range(1,self.M + 1);  self.V = range(self.M + 1)
+        self.Products = range(self.K)
+        self.Vehicles = range(self.F)
+        self.Horizon = range(self.T)
+
+        if self.other_env_params['look_ahead']:
+            self.Samples = range(self.S)
+
+        if self.other_env_params['historical']:
+            self.TW = range(-self.hist_window, self.T)
+            self.historical = range(-self.hist_window, 0)
+        else:
+            self.TW = self.Horizon
+        
 
 
     # Reseting the environment
-    def reset(self, return_state = False):
+    def reset(self, return_state = False, rd_seed = 0, **kwargs):
         '''
         Reseting the environment. Genrate or upload the instance.
         PARAMETER:
         return_state: Indicates whether the state is returned
          
         '''   
-        # Environment generated data
-        if self.others['file_name']:  
-            # General parameters
-            self.gen_det_params()
-            self.Ages = {k: range(1,self.O_k[k] + 1) for k in self.Products}
+        self.t = 0
+        
+        # Generate parameters with the instance generator
+        generator = instance_generator(self, self.rd_seed)
+
+        self.O_k = generator.gen_ages()
+        self.c = generator.gen_routing_costs()
+
+        self.h_t = generator.gen_h_costs()
+
+        self.M_kt, self.K_it = generator.gen_availabilities()
+
+        
+
+
+
+
+
+
+
+
+            # General parameter
             self.gen_instance_data()
             
-            # Episodic horizon
-            if self.hor_typ:
-                # Cuerrent time-step
-                self.t = 0
 
             ## State ##
             self.state = {(k,o):0   for k in self.Products for o in self.Ages[k]}
@@ -240,25 +244,7 @@ class steroid_IRP(gym.Env):
                 self.gen_sample_paths()                        
             
         # TODO! Data file upload 
-        else:
-            # Cuerrent time-step
-            self.t = 0
-            
-            # Upload parameters from file
-            self.O_k, self.c, self.Q, self.h_t, self.M_kt, self.K_it, self.q_t, self.p_t, 
-            self.d_t, inventory = self.upload_instance(self.file_name, self.wd)
-            
-            # State
-            self.state = inventory
-        
-        if return_state:    
-            # EXTRA INFORMATION TO BE RETURNED
-            _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d}
-            if self.others['historical']:
-                _['historical_info'] = self.historical_data
-            if self.others['look_ahead']:
-                _['sample_paths'] = self.sample_paths
-            return self.state, _
+
         
     
     # Step 
@@ -543,36 +529,6 @@ class steroid_IRP(gym.Env):
 
         return W
     
-
-    # Auxiliary method: Generate iterables of sets
-    def gen_sets(self):
-    
-        self.Suppliers = range(1,self.M);  self.V = range(self.M)
-        self.Products = range(self.K)
-        self.Vehicles = range(self.F)
-        self.Samples = range(self.S)
-        self.Horizon = range(self.T)
-        self.TW = range(-self.hist_window, self.T)
-        self.historical = range(-self.hist_window, 0)
-            
-
-    # Generate deterministic parameters 
-    def gen_det_params(self):
-        ''' 
-        Rolling horizon model parameters generation function
-        Generates:
-            - O_k: (dict) maximum days that k \in K can be held in inventory
-            - c: (dict) transportation cost between nodes i \in V and j \in V
-        '''
-        # Maximum days that product k can be held in inventory before rotting
-        self.O_k = {k:randint(1, self.T) for k in self.Products}
-        
-        # Suppliers locations in grid
-        size_grid = 1000
-        coor = {i:(randint(0, size_grid), randint(0, size_grid)) for i in self.V}
-        # Transportation cost between nodes i and j, estimated using euclidean distance
-        self.c = {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in self.V for j in self.V if i!=j} 
-    
     
     # Auxiliary function to manage historical and simulated data 
     def gen_instance_data(self):
@@ -736,12 +692,25 @@ class steroid_IRP(gym.Env):
             #     self.sample_paths[('F',s)] = int(sum(self.sample_paths[('d',s)].values())/self.sample_paths[('Q',s)]+1)
 
 
-    # TODO! Generate a realization of random variables for continuous time-horizon
-    def gen_realization(self):
-        pass
+    # Simple function to visualize the inventory
+    def print_inventory(self):
+        max_O = max([self.O_k[k] for k in self.Products])
+        listamax = [[self.state[k,o] for o in self.Ages[k]] for k in self.Products]
+        df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in self.Products], name='Products'),
+        columns=pd.Index([str(o) for o in range(1, max_O + 1)], name='Ages'))
 
+        return df
+
+
+    # Printing a representation of the environment (repr(env))
+    def __repr__(self):
+        return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
+
+
+    ##################### EXTRA Non-funcitonal features #####################
+    '''
+    1. Uploading instance from .txt file
     
-    # Load parameters from a .txt file
     def upload_instance(self, nombre, path = ''):
         
         #sys.path.insert(1, path)
@@ -793,8 +762,6 @@ class steroid_IRP(gym.Env):
         
         return O_k, c, Q, h, Mk, Km, q, p, d, I_0
 
-
-    # Auxiliary method: Processing data from txt file 
     def extra_processing(self, coor):
         
         F = int(np.ceil(sum(self.d.values())/self.Q)); self.Vehicles = range(self.F)
@@ -804,36 +771,17 @@ class steroid_IRP(gym.Env):
         c = {(i,j,t,v):round(np.sqrt(((coor[i][0]-coor[j][0])**2)+((coor[i][1]-coor[j][1])**2)),0) for v in self.Vehicles for t in self.Horizon for i in self.V for j in self.V if i!=j }
         
         return F, I_0, c
+    
 
+    2. Upload file with historical information 
 
-    # TODO! Uploading historical data  
     def upload_historical_data(self):  
-        '''
-        Method uploads information from file     
-        
-        '''
-        file = self.others['historical']
-        print('Method must be coded')
 
-        '''
         self.h_t =
         self.q_t =
         self.p_t =
         self.d_t =
-        '''
-
-    # Simple function to visualize the inventory
-    def print_inventory(self):
-        max_O = max([self.O_k[k] for k in self.Products])
-        listamax = [[self.state[k,o] for o in self.Ages[k]] for k in self.Products]
-        df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in self.Products], name='Products'),
-        columns=pd.Index([str(o) for o in range(1, max_O + 1)], name='Ages'))
-
-        return df
-
-
-    # Printing a representation of the environment (repr(env))
-    def __repr__(self):
-        return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
-
-        
+    
+    
+    
+    '''

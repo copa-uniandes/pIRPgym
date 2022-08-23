@@ -1,33 +1,32 @@
-import InstanceGenerator as Gen
+from SD_IB_IRP_PPenv import steroid_IRP
 
+### Parameters
+look_ahead = ['*']
 
-instance_config = { 'M': 20, 
-                    'K': 20, 
-                    'T': 7, 
-                    'F': 4}
-    
+S = 4
+LA_horizon = 3
 
-instance = Gen.instance_generator(env_config = instance_config)
+historical_data = ['*']
 
-par = {}
-par['q'] = {}
-par['q']['distribution'] = 'normal'
-par['q']['mean'] = 20
-par['q']['stdev'] = 50
+hist_window = 10
 
-par['d'] = {}
-par['d']['distribution'] = 'log-normal'
-par['d']['mean'] = 20
-par['d']['stdev'] = 50
+backorders =  'backorders'
 
-par['p'] = {}
-par['p']['distribution'] = 'normal'
-par['p']['mean'] = 1
-par['p']['stdev'] = 500
+env_config = {  'M': 10, 
+                'K': 10, 
+                'T': 7, 
+                'F': 4, 
+                
+                
+                'S': S, 
+                'LA_horizon': LA_horizon, 
+            }
+            
 
-par['h'] = {}
-par['h']['distribution'] = 'normal'
-par['h']['mean'] = 1
-par['h']['stdev'] = 500
+rd_seed = 0
+env = steroid_IRP( look_ahead = look_ahead, 
+                   historical_data = historical_data, 
+                   backorders = backorders,
+                   rd_seed = rd_seed, 
+                   env_config = env_config)
 
-instance.gen_availabilities()
