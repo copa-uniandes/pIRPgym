@@ -3,7 +3,7 @@
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
 import time; from termcolor import colored
-from numpy.random import seed, normal, lognormal, randint, uniform
+from numpy.random import seed, normal, lognormal, randint, uniform, random
 
 ### Optimizer
 import gurobipy as gu
@@ -32,21 +32,22 @@ class instance_generator():
         self.s_params = env.stochastic_parameters
         self.others = env.other_env_params
         
-        self.W_t = {}
+        self.W_t = {t:{} for t in self.Horizon}
 
         if self.others['look_ahead']:
-            self.S = env.S                       # Number of sample paths
-            self.LA_horizon = env.LA_horizon     # Look-ahead time window's size (includes current period)
-            self.sample_paths = {}
+            self.S = env.S                                          # Number of sample paths
+            self.samples = env.Samples
+            self.LA_horizon = env.LA_horizon                        # Look-ahead time window's size (includes current period)
+            self.sample_paths = {t:{} for t in self.Horizon}
         
         ### historical log parameters ###
         if self.others['historical']:  
-            self.hist_window = env.hist_window       # historical window 
+            self.hist_window = env.hist_window      # historical window 
             self.TW = env.TW
             self.historical = env.historical
-            self.historical_data = {}
+            self.historical_data = {t:{} for t in self.Horizon}
         else:
-            self.TW == self.Horizon
+            self.TW = self.Horizon
 
 
     def gen_ages(self):
@@ -74,25 +75,42 @@ class instance_generator():
         return c
 
 
-    def gen_h_cost(self, distribution = 'd_uniform', **kwargs):
+    def gen_h_cost(self, distribution:str='d_uniform',**kwargs):
         '''
         h_t: (dict) holding cost of k \in K on t \in T
         '''
         if distribution == 'd_uniform':
-            h_t = {(k,t):randint(kwargs['min'], kwargs['max']) for k in self.Products for t in self.Horizon}
 
-            if self.s_params != False and ('h' in self.s_params or '*' in self.s_params):
-                self.W_t['h'] = {(k,t+1): randint(kwargs['min'], kwargs['max']) for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['h'] = {(k,t+1): h_t[k,t] for k in self.Suppliers for t in self.Horizon}
-            
+            # Historic values
             if self.others['historical'] != False and ('h' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['h'] = {k:[randint(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('h' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-            
-        return h_t
+                self.historical_data[0]['h'] = {k:[randint(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
+
+            sample_path_window_size = copy(self.LA_horizon)
+            for t in self.Horizon:   
+                self.sample_paths[t]['h'] = {}
+                values_day_0 = {k:self.sim(self.historical_data[t]['h']) for k in self.Products}
+
+                if t + self.LA_horizon > self.T:
+                    self.sample_path_window_size = self.T - self.t
+
+                # Generating sample-paths
+                for day in range(sample_path_window_size):
+                    for sample in self.Samples:
+                        if day == 0 and (self.s_params == False or ('h' not in self.s_params and '*' not in self.s_params)):
+                            self.sample_paths[t]['h'][day,sample] = values_day_0
+                        else:
+                            self.sample_paths[t]['h'][day,sample] = {k:self.sim(self.historical_data[t]['h']) for k in self.Products}
+                        
+                # Generating random variable realization
+                if self.s_params != False and ('h' in self.s_params or '*' in self.s_params):
+                    self.W_t[t]['h'] = {k:randint(kwargs['min'], kwargs['max']) for k in self.Products}
+                else:
+                    self.W_t[t]['h'] = values_day_0
+                
+                # Updating historical values
+                for k in self.Products:
+                        self.historical_data[t+1]['h'][k].append(self.W_t[t]['h'][k])
+                        
             
 
     def gen_availabilities(self):
@@ -241,7 +259,7 @@ class instance_generator():
             if self.others['look_ahead'] != False and ('p' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
                 pass
         
-        return self.p_t    
+        return self.p_t
 
 
     def gen_demand(self, distribution = 'normal', **kwargs):
@@ -305,6 +323,33 @@ class instance_generator():
                 pass
         
         return self.d_t    
+
+
+    # Auxuliary sample value generator function
+    def sim(self, hist):
+        ''' 
+        Sample value generator function.
+        Returns a generated random number using acceptance-rejection method.
+        Parameters:
+        - hist: (list) historical dataset that is used as an empirical distribution for
+                the random number generation
+        '''
+        Te = len(hist)
+        sorted_data = sorted(hist)
+        
+        prob, value = [], []
+        for t in range(Te):
+            prob.append((t+1)/Te)
+            value.append(sorted_data[t])
+        
+        # Generates uniform random value for acceptance-rejection testing
+        U = random()
+        # Tests if the uniform random falls under the empirical distribution
+        test = [i>U for i in prob]    
+        # Takes the first accepted value
+        sample = value[test.index(True)]
+        
+        return sample
 
 
 

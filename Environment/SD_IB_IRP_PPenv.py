@@ -199,30 +199,38 @@ class steroid_IRP(gym.Env):
          
         '''   
         self.t = 0
-        
+
         # Generate parameters with the instance generator
-        generator = instance_generator(self, self.rd_seed)
+        generator = instance_generator(self, rd_seed)
 
         self.O_k = generator.gen_ages()
         self.c = generator.gen_routing_costs()
 
-        self.h_t = generator.gen_h_costs()
+        self.h_t = generator.gen_h_cost()
 
         self.M_kt, self.K_it = generator.gen_availabilities()
         self.q_t = generator.gen_quantities()
-        self.p_t = generator.gen_p_prices()
+        self.p_t = generator.gen_p_price()
         self.d_t = generator.gen_demand()
+
+        if self.other_env_params['look_ahead']:
+            self.sample_paths = generator.sample_paths[self.t]
+        if self.other_env_params['historical']:
+            self.historical_data = generator.historical_data[self.t]
 
         ## State ##
         self.state = {(k,o):0   for k in self.Products for o in self.Ages[k]}
         if self.others['backorders'] == 'backlogs':
             for k in self.Products:
-                self.state[k,'B'] = 0  
+                self.state[k,'B'] = 0
         
         self.h = {k: self.h_t[k,self.t] for k in self.Products}
         self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
         self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
         self.d = {k: self.d_t[k,self.t] for k in self.Products}
+
+        if return_state:
+            return self.state
 
 
 
@@ -632,7 +640,7 @@ class steroid_IRP(gym.Env):
         '''
 
         if self.hor_typ and self.t + self.LA_horizon > self.T:
-                self.sample_path_window_size = self.T - self.t
+            self.sample_path_window_size = self.T - self.t
 
         self.sample_paths = {}
         
