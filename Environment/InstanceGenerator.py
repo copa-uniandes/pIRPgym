@@ -32,20 +32,20 @@ class instance_generator():
         self.s_params = env.stochastic_parameters
         self.others = env.other_env_params
         
-        self.W_t = {t:{} for t in self.Horizon}
+        self.W_t = {t:{'q':{}, 'p': {}, 'd': {}, 'h': {}} for t in self.Horizon}
 
         if self.others['look_ahead']:
             self.S = env.S                                          # Number of sample paths
-            self.samples = env.Samples
+            self.Samples = env.Samples
             self.LA_horizon = env.LA_horizon                        # Look-ahead time window's size (includes current period)
-            self.sample_paths = {t:{} for t in self.Horizon}
+            self.sample_paths = {t:{'q':{}, 'p': {}, 'd': {}, 'h': {}} for t in self.Horizon}
         
         ### historical log parameters ###
         if self.others['historical']:  
             self.hist_window = env.hist_window      # historical window 
             self.TW = env.TW
             self.historical = env.historical
-            self.historical_data = {t:{} for t in self.Horizon}
+            self.historical_data = {t:{'q':{}, 'p': {}, 'd': {}, 'h': {}} for t in self.Horizon}
         else:
             self.TW = self.Horizon
 
@@ -75,44 +75,6 @@ class instance_generator():
         return c
 
 
-    def gen_h_cost(self, distribution:str='d_uniform',**kwargs):
-        '''
-        h_t: (dict) holding cost of k \in K on t \in T
-        '''
-        if distribution == 'd_uniform':
-
-            # Historic values
-            if self.others['historical'] != False and ('h' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['h'] = {k:[randint(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
-
-            sample_path_window_size = copy(self.LA_horizon)
-            for t in self.Horizon:   
-                self.sample_paths[t]['h'] = {}
-                values_day_0 = {k:self.sim(self.historical_data[t]['h']) for k in self.Products}
-
-                if t + self.LA_horizon > self.T:
-                    self.sample_path_window_size = self.T - self.t
-
-                # Generating sample-paths
-                for day in range(sample_path_window_size):
-                    for sample in self.Samples:
-                        if day == 0 and (self.s_params == False or ('h' not in self.s_params and '*' not in self.s_params)):
-                            self.sample_paths[t]['h'][day,sample] = values_day_0
-                        else:
-                            self.sample_paths[t]['h'][day,sample] = {k:self.sim(self.historical_data[t]['h']) for k in self.Products}
-                        
-                # Generating random variable realization
-                if self.s_params != False and ('h' in self.s_params or '*' in self.s_params):
-                    self.W_t[t]['h'] = {k:randint(kwargs['min'], kwargs['max']) for k in self.Products}
-                else:
-                    self.W_t[t]['h'] = values_day_0
-                
-                # Updating historical values
-                for k in self.Products:
-                        self.historical_data[t+1]['h'][k].append(self.W_t[t]['h'][k])
-                        
-            
-
     def gen_availabilities(self):
         '''
         M_kt: (dict) subset of suppliers that offer k \in K on t \in T
@@ -133,197 +95,190 @@ class instance_generator():
         # Products offered by each supplier on each time period, based on M_kt
         self.K_it = {(i,t):[k for k in self.Products if i in self.M_kt[k,t]] for i in self.Suppliers for t in self.TW}
 
-        return self.M_kt, self.K_it 
+        return self.M_kt, self.K_it
 
 
-    def gen_quantities(self, distribution = 'normal', **kwargs):
+    def gen_quantities(self, **kwargs):
         '''
         q_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
-        if distribution == 'normal':
-            self.q_t = {(i,k,t):normal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
-                self.W_t['q'] = {(i,k,t): normal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['q'] = {(i,k,t+1): self.q_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['q'] = {(i,k):[normal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('q' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
+        if kwargs['distribution'] == 'c_uniform':
 
-        elif distribution == 'log-normal':
-            self.q_t = {(i,k,t):lognormal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
-                self.W_t['q'] = {(i,k,t): lognormal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['q'] = {(i,k,t+1): self.q_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
+            # Historic values
             if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['q'] = {(i,k):[lognormal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('q' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-            
-        elif distribution == 'c_uniform':
-            self.q_t = {(i,k,t):uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
-                self.W_t['q'] = {(i,k,t): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['q'] = {(i,k,t+1): self.q_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['q'] = {(i,k):[uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('q' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
+                self.historical_data[0]['q'] = {(i,k):[uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
 
-        elif distribution == 'd_uniform':
-            self.q_t = {(i,k,t):randint(kwargs['min'],kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
-                self.W_t['q'] = {(i,k,t): randint(kwargs['min'],kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['q'] = {(i,k,t+1): self.q_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['q'] = {(i,k):[randint(kwargs['min'],kwargs['max']) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('q' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
+            sample_path_window_size = copy(self.LA_horizon)
+            for t in self.Horizon:   
+                values_day_0 = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,0] else 0 for i in self.Suppliers for k in self.Products}
+
+                if t + self.LA_horizon > self.T:
+                    sample_path_window_size = self.T - t
+
+                # Generating sample-paths
+                for day in range(sample_path_window_size):
+                    for sample in self.Samples:
+                        if day == 0 and (self.s_params == False or ('q' not in self.s_params and '*' not in self.s_params)):
+                            self.sample_paths[t]['q'][day,sample] = values_day_0
+                        else:
+                            self.sample_paths[t]['q'][day,sample] = {(i,k): self.sim([self.historical_data[t]['q'][i,k][obs] for obs in range(len(self.historical_data[t]['q'][i,k])) if self.historical_data[t]['q'][i,k][i] != 0]) if i in self.M_kt[k,day] else 0 for i in self.Suppliers for k in self.Products}
+                        
+                # Generating random variable realization
+                if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
+                    self.W_t[t]['q'] = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
+                else:
+                    self.W_t[t]['q'] = values_day_0
+                
+                # Updating historical values
+                if t < self.T - 1:
+                    for i in self.Suppliers:
+                        for k in self.Products:
+                            self.historical_data[t+1]['q'][i,k] = self.historical_data[t]['q'][i,k] + [self.W_t[t]['q'][i,k]]
+    
         
-        return self.q_t
-
-
-    def gen_p_price(self, distribution = 'normal', **kwargs):
-        '''
-        p_t: (dict) price of k \in K offered by supplier i \in M on t \in T
-        '''
-        if distribution == 'normal':
-            self.p_t = {(i,k,t):normal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('p' in self.s_params or '*' in self.s_params):
-                self.W_t['p'] = {(i,k,t): normal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['p'] = {(i,k,t+1): self.p_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('p' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['p'] = {(i,k):[normal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('p' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-
-        elif distribution == 'log-normal':
-            self.p_t = {(i,k,t):lognormal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('p' in self.s_params or '*' in self.s_params):
-                self.W_t['p'] = {(i,k,t): lognormal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['p'] = {(i,k,t+1): self.p_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('p' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['p'] = {(i,k):[lognormal(kwargs['mean'], kwargs['stdev']) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('p' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-            
-        elif distribution == 'c_uniform':
-            self.p_t = {(i,k,t):uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('p' in self.s_params or '*' in self.s_params):
-                self.W_t['p'] = {(i,k,t): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['p'] = {(i,k,t+1): self.p_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('p' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['p'] = {(i,k):[uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('p' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-
-        elif distribution == 'd_uniform':
-            self.p_t = {(i,k,t):randint(kwargs['min'],kwargs['max']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('p' in self.s_params or '*' in self.s_params):
-                self.W_t['p'] = {(i,k,t): randint(kwargs['min'],kwargs['max']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['p'] = {(i,k,t+1): self.p_t[i,k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('p' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['p'] = {(i,k):[randint(kwargs['min'],kwargs['max']) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('p' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-        
-        return self.p_t
-
-
-    def gen_demand(self, distribution = 'normal', **kwargs):
+    def gen_demand(self, **kwargs):
         '''
         d_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
-        if distribution == 'normal':
-            self.d_t = {(k,t):normal(kwargs['mean'], kwargs['stdev']) for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
-                self.W_t['d'] = {(k,t): normal(kwargs['mean'], kwargs['stdev']) for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['d'] = {(k,t+1): self.d_t[k,t] for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['d'] = {k:[normal(kwargs['mean'], kwargs['stdev']) for t in self.historical] for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('d' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
+        if kwargs['distribution'] == 'log-normal':
 
-        elif distribution == 'log-normal':
-            self.d_t = {(k,t):lognormal(kwargs['mean'], kwargs['stdev']) for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
-                self.W_t['d'] = {(k,t): lognormal(kwargs['mean'], kwargs['stdev']) for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['d'] = {(k,t+1): self.d_t[k,t] for k in self.Products for t in self.Horizon}
-            
+            # Historic values
             if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['d'] = {k:[lognormal(kwargs['mean'], kwargs['stdev']) for t in self.historical] for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('d' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-            
-        elif distribution == 'c_uniform':
-            self.d_t = {(k,t):uniform(kwargs['min'], kwargs['max']) for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
-                self.W_t['d'] = {(k,t): uniform(kwargs['min'], kwargs['max']) for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['d'] = {(k,t+1): self.d_t[k,t] for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['d'] = {k:[uniform(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('d' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
+                self.historical_data[0]['d'] = {k:[lognormal(kwargs['mean'], kwargs['stdev']) for t in self.historical] for k in self.Products}
 
-        elif distribution == 'd_uniform':
-            self.d_t = {(k,t):randint(kwargs['min'],kwargs['max']) for k in self.Products for t in self.Horizon}
-            
-            if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
-                self.W_t['d'] = {(k,t): randint(kwargs['min'],kwargs['max']) for k in self.Products for t in self.Horizon}
-            else:
-                self.W_t['d'] = {(k,t+1): self.d_t[k,t] for i in self.Suppliers for k in self.Products for t in self.Horizon}
-            
-            if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data['d'] = {k:[randint(kwargs['min'],kwargs['max']) for t in self.historical] for k in self.Products}
-            
-            if self.others['look_ahead'] != False and ('d' in self.others['look_ahead'] or '*' in self.others['look_ahead']):
-                pass
-        
-        return self.d_t    
+            sample_path_window_size = copy(self.LA_horizon)
+            for t in self.Horizon:   
+                values_day_0 = {k: lognormal(kwargs['mean'], kwargs['stdev']) for k in self.Products}
 
+                if t + self.LA_horizon > self.T:
+                    sample_path_window_size = self.T - t
+
+                # Generating sample-paths
+                for day in range(sample_path_window_size):
+                    for sample in self.Samples:
+                        if day == 0 and (self.s_params == False or ('d' not in self.s_params and '*' not in self.s_params)):
+                            self.sample_paths[t]['d'][day,sample] = values_day_0
+                        else:
+                            self.sample_paths[t]['d'][day,sample] = {k: self.sim(self.historical_data[t]['d'][k]) for k in self.Products}
+                        
+                # Generating random variable realization
+                if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
+                    self.W_t[t]['d'] = {k: lognormal(kwargs['mean'], kwargs['stdev']) for k in self.Products}
+                else:
+                    self.W_t[t]['d'] = values_day_0
+                
+                # Updating historical values
+                if t < self.T - 1:
+                    for k in self.Products:
+                        self.historical_data[t+1]['d'][k] = self.historical_data[t]['d'][k] + [self.W_t[t]['d'][k]]
+
+
+
+    def gen_p_price(self, **kwargs):
+        '''
+        p_t: (dict) price of k \in K offered by supplier i \in M on t \in T
+        '''
+        self.p_t = {t:{} for t in self.Horizon}
+
+        if kwargs['distribution'] == 'd_uniform':
+
+            # Historic values
+            if self.others['historical'] != False and ('p' in self.others['historical'] or '*' in self.others['historical']):
+                self.historical_data[0]['p'] = {(i,k):[randint(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
+
+            sample_path_window_size = copy(self.LA_horizon)
+            for t in self.Horizon:
+                '''
+                SAMPLE PATH GENERATION FOR STOCHASTIC VERSION OF HOLDING COSTS
+                values_day_0 = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,0] else 0 for i in self.Suppliers for k in self.Products}
+
+                if t + self.LA_horizon > self.T:
+                    sample_path_window_size = self.T - t
+
+                # Generating sample-paths
+                for day in range(sample_path_window_size):
+                    for sample in self.Samples:
+                        if day == 0 and (self.s_params == False or ('p' not in self.s_params and '*' not in self.s_params)):
+                            self.sample_paths[t]['p'][day,sample] = values_day_0
+                        else:
+                            self.sample_paths[t]['p'][day,sample] = {(i,k): self.sim(self.historical_data[t]['q'][i,k]) if i in self.M_kt[k,day] else 0 for i in self.Suppliers for k in self.Products}
+                        
+                # Generating random variable realization
+                if self.s_params != False and ('p' in self.s_params or '*' in self.s_params):
+                    self.W_t[t]['p'] = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
+                else:
+                    self.W_t[t]['p'] = values_day_0
+                
+                # Updating historical values
+                if t < self.T - 1:
+                    for i in self.Suppliers:
+                        for k in self.Products:
+                            self.historical_data[t+1]['p'][i,k] = self.historical_data[t]['p'][i,k] + [self.W_t[t]['p'][i,k]] 
+                '''
+                # Genrating realizations
+                self.p_t[t] = {(i,k): randint(kwargs['min'], kwargs['max']) if i in self.M_kt[k,0] else 1000 for i in self.Suppliers for k in self.Products}   
+                self.W_t[t]['p'] = self.p_t[t]
+
+                # Updating historical values
+                if t < self.T - 1:
+                    for i in self.Suppliers:
+                        for k in self.Products:
+                            self.historical_data[t+1]['p'][i,k] = self.historical_data[t]['p'][i,k] + [self.W_t[t]['p'][i,k]]
+            
+            return self.p_t
+
+    
+    def gen_h_cost(self, **kwargs):
+        '''
+        h_t: (dict) holding cost of k \in K on t \in T
+        '''
+        self.h_t = {t:{} for t in self.Horizon}
+
+        if kwargs['distribution'] == 'd_uniform':
+
+            # Historic values
+            if self.others['historical'] != False and ('h' in self.others['historical'] or '*' in self.others['historical']):
+                self.historical_data[0]['h'] = {k:[randint(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
+
+            sample_path_window_size = copy(self.LA_horizon)
+            for t in self.Horizon:   
+                '''
+                SAMPLE PATH GENERATION FOR STOCHASTIC VERSION OF HOLDING COSTS
+
+                values_day_0 = {k:self.sim(self.historical_data[t]['h'][k]) for k in self.Products}
+
+                if t + self.LA_horizon > self.T:
+                    sample_path_window_size = self.T - t
+
+                # Generating sample-paths
+                for day in range(sample_path_window_size):
+                    for sample in self.Samples:
+                        if day == 0 and (self.s_params == False or ('h' not in self.s_params and '*' not in self.s_params)):
+                            self.sample_paths[t]['h'][day,sample] = values_day_0
+                        else:
+                            self.sample_paths[t]['h'][day,sample] = {k:self.sim(self.historical_data[t]['h'][k]) for k in self.Products}
+                
+                # Generating random variable realization
+                if self.s_params != False and ('h' in self.s_params or '*' in self.s_params):
+                    self.W_t[t]['h'] = {k:randint(kwargs['min'], kwargs['max']) for k in self.Products}
+                else:
+                    self.W_t[t]['h'] = values_day_0
+                
+                # Updating historical values
+                if t < self.T - 1:
+                    for k in self.Products:
+                        self.historical_data[t+1]['h'][k] = self.historical_data[t]['h'][k] + [self.W_t[t]['h'][k]]
+                '''
+                # Genrating realizations
+                self.h_t[t] = {k:randint(kwargs['min'], kwargs['max']) for k in self.Products} 
+                self.W_t[t]['h'] = self.h_t[t]
+            
+                # Updating historical values
+                if t < self.T - 1:
+                    for k in self.Products:
+                        self.historical_data[t+1]['h'][k] = self.historical_data[t]['h'][k] + [self.W_t[t]['h'][k]]
+            
+            return self.h_t
 
     # Auxuliary sample value generator function
     def sim(self, hist):

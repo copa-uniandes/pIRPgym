@@ -130,7 +130,7 @@ class steroid_IRP(gym.Env):
     '''
     
     # Initialization method
-    def __init__(self, look_ahead = ['*'], historical_data = ['*'], backorders = False,
+    def __init__(self, look_ahead = ['*'], historical_data = ['*'], backorders = 'backorders',
                  stochastic_parameters = False, **kwargs):
         
         ### Main parameters ###
@@ -160,6 +160,9 @@ class steroid_IRP(gym.Env):
         elif backorders == 'backlogs':
             self.back_l_cost = 500
 
+        ### Extra information ###
+        self.other_env_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
+
         ### Custom configurations ###
         utils.assign_env_config(self, kwargs)
         self.gen_sets()
@@ -168,10 +171,6 @@ class steroid_IRP(gym.Env):
         # Physical state
         self.state = {}     # Inventory
         
-        ### Extra information ###
-        self.other_env_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
-
-
     # Auxiliary method: Generate iterables of sets
     def gen_sets(self):
     
@@ -191,7 +190,7 @@ class steroid_IRP(gym.Env):
 
 
     # Reseting the environment
-    def reset(self, return_state = False, rd_seed = 0, **kwargs):
+    def reset(self, return_state:bool = False, rd_seed:int = 0, **kwargs):
         '''
         Reseting the environment. Genrate or upload the instance.
         PARAMETER:
@@ -200,57 +199,53 @@ class steroid_IRP(gym.Env):
         '''   
         self.t = 0
 
-        # Generate parameters with the instance generator
+        # Generate instance generator object
         generator = instance_generator(self, rd_seed)
 
+        # Deterministic parameters
         self.O_k = generator.gen_ages()
+        self.Ages = {k: range(1, self.O_k[k]) for k in self.Products}
         self.c = generator.gen_routing_costs()
 
-        self.h_t = generator.gen_h_cost()
-
+        # Availabilities
         self.M_kt, self.K_it = generator.gen_availabilities()
-        self.q_t = generator.gen_quantities()
-        self.p_t = generator.gen_p_price()
-        self.d_t = generator.gen_demand()
 
+        # Stochastic parameters
+        generator.gen_quantities(**kwargs['q_params'])
+        generator.gen_demand(**kwargs['d_params'])
+
+        # Other deterministic parameters
+        self.p_t = generator.gen_p_price(**kwargs['p_params'])
+        self.h_t = generator.gen_h_cost(**kwargs['h_params'])
+
+        # Recovery of other information
+        self.exog_info = generator.W_t
         if self.other_env_params['look_ahead']:
-            self.sample_paths = generator.sample_paths[self.t]
+            self.hor_sample_paths = generator.sample_paths
         if self.other_env_params['historical']:
-            self.historical_data = generator.historical_data[self.t]
+            self.hor_historical_data = generator.historical_data
 
         ## State ##
         self.state = {(k,o):0   for k in self.Products for o in self.Ages[k]}
-        if self.others['backorders'] == 'backlogs':
+        if self.other_env_params['backorders'] == 'backlogs':
             for k in self.Products:
                 self.state[k,'B'] = 0
         
-        self.h = {k: self.h_t[k,self.t] for k in self.Products}
-        self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-        self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-        self.d = {k: self.d_t[k,self.t] for k in self.Products}
+        # Current values
+        self.p = self.p_t[self.t]
+        self.h = self.h_t[self.t]
+
+        self.W_t = self.exog_info[self.t]
+
+        self.sample_paths = self.hor_sample_paths[self.t]
+        self.historical_data = self.hor_historical_data[self.t]
 
         if return_state:
             return self.state
+                              
 
-
-
-
-
-
-
-            # General parameter
-            self.gen_instance_data()
-
-            # Look-ahead, sample paths
-            if self.others['look_ahead']:
-                self.sample_path_window_size = copy(self.LA_horizon)
-                self.gen_sample_paths()                        
-
-
-        
-    
     # Step 
-    def step(self, action, validate_action = False, warnings = True):
+    def step(self, action:list, validate_action:bool = False, warnings:bool = True):
         if validate_action:
             self.action_validity(action)
 
