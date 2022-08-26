@@ -284,7 +284,33 @@ class policies():
         for key in Rutas_finales[0].keys():
             rutas.append(Rutas_finales[0][key][0])
 
-        return [rutas, purchase, demand_compliance], 
+        action = [rutas, purchase, demand_compliance]
+        
+        I0 = {}
+        for t in T: 
+            I0[t] = {}
+            for s in S:  
+                I0[t][s] = {}
+                for k in K:
+                    for o in env.Ages[k]:
+                        I0[t][s][k,o] = ii[k,t,o,s].x
+        zz = {}
+        for t in T:
+            zz[t] = {}
+            for s in S:
+                zz[t][s] = {}
+                for i in M:
+                    for k in K:
+                       zz[t][s][i,k] = z[i,k,t,s].x 
+        bb = {}
+        for t in T:
+            bb[t] = {}
+            for s in S:
+                bb[t][s] = {}
+                for k in K:
+                    bb[t][s][k] = bo[k,t,s].x
+        la_decisions = [I0, zz, bb]
+        return action, la_decisions
 
 
     def Crea_grafo_aumentado_at_t(self, t, solucionTTP, max_cij, c):
