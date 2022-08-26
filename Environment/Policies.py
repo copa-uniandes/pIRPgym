@@ -178,6 +178,7 @@ class policies():
         # Variables    
         # How much to buy from supplier i of product k at time t 
         z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in env.M_kt[k,env.t + t]}
+        tuples = [(i,k,t,s) for t in T for k in K for s in S for i in env.M_kt[k,env.t + t]]
 
         # 1 if supplier i is selected at time t, 0 otherwise
         w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
@@ -228,7 +229,7 @@ class policies():
                 # Doesn't make any sense given the stochasticity in today's demand, unless Dani is not accounting for it
                 #m.addConstr(bo[k,0,s] == gu.quicksum(bo[k,0,ss] for ss in S)/len(S))
 
-                for i in env.M_kt[(k,env.t + t)]:
+                for i in env.M_kt[k,env.t]:
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S))
                 
                 for o in range(env.O_k[k] + 1):
@@ -253,7 +254,7 @@ class policies():
         purchase = {(i,k): 0 for i in M for k in K}
 
         for k in K:
-            for i in env.M_kt[k,env.t + t]:
+            for i in env.M_kt[k,env.t]:
                 purchase[i,k] = z[i,k,0,0].x
                 if purchase[i,k]>0:
                     solucionTTP[0][0][i] = True
@@ -283,7 +284,33 @@ class policies():
         for key in Rutas_finales[0].keys():
             rutas.append(Rutas_finales[0][key][0])
 
-        return [rutas, purchase, demand_compliance]
+        action = [rutas, purchase, demand_compliance]
+        
+        I0 = {}
+        for t in T: 
+            I0[t] = {}
+            for s in S:  
+                I0[t][s] = {}
+                for k in K:
+                    for o in env.Ages[k]:
+                        I0[t][s][k,o] = ii[k,t,o,s].x
+        zz = {}
+        for t in T:
+            zz[t] = {}
+            for s in S:
+                zz[t][s] = {}
+                for i in M:
+                    for k in K:
+                       zz[t][s][i,k] = z[i,k,t,s].x 
+        bb = {}
+        for t in T:
+            bb[t] = {}
+            for s in S:
+                bb[t][s] = {}
+                for k in K:
+                    bb[t][s][k] = bo[k,t,s].x
+        la_decisions = [I0, zz, bb]
+        return action, la_decisions
 
 
     def Crea_grafo_aumentado_at_t(self, t, solucionTTP, max_cij, c):
