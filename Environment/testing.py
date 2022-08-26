@@ -1,33 +1,42 @@
-import InstanceGenerator as Gen
+from SD_IB_IRP_PPenv import steroid_IRP
+### Instance generation
+from InstanceGenerator import instance_generator
+
+### Parameters
+rd_seed = 0
+look_ahead = ['q','d']
+S = 4
+LA_horizon = 3
+historical_data = ['*']
+hist_window = 10000
+backorders =  'backorders'
+stochastic_parameters = ['q','d']
+env_config = {  'M': 10, 
+                'K': 10, 
+                'T': 7, 
+                'F': 4, 
+                
+                'S': S, 
+                'LA_horizon': LA_horizon, 
+            }         
 
 
-instance_config = { 'M': 20, 
-                    'K': 20, 
-                    'T': 7, 
-                    'F': 4}
-    
+env = steroid_IRP( look_ahead = look_ahead, 
+                   historical_data = historical_data, 
+                   backorders = backorders,
+                   stochastic_parameters = stochastic_parameters, 
+                   env_config = env_config)
 
-instance = Gen.instance_generator(env_config = instance_config)
+q_params = {'distribution': 'c_uniform', 'min': 100, 'max': 200}
+d_params = {'distribution': 'log-normal', 'mean': 500, 'stdev': 20}
 
-par = {}
-par['q'] = {}
-par['q']['distribution'] = 'normal'
-par['q']['mean'] = 20
-par['q']['stdev'] = 50
+p_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
+h_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
 
-par['d'] = {}
-par['d']['distribution'] = 'log-normal'
-par['d']['mean'] = 20
-par['d']['stdev'] = 50
+env.reset(return_state = True, rd_seed = rd_seed, 
+          q_params = q_params, 
+          p_params = p_params,
+          d_params = d_params,
+          h_params = h_params)
 
-par['p'] = {}
-par['p']['distribution'] = 'normal'
-par['p']['mean'] = 1
-par['p']['stdev'] = 500
 
-par['h'] = {}
-par['h']['distribution'] = 'normal'
-par['h']['mean'] = 1
-par['h']['stdev'] = 500
-
-instance.gen_availabilities()
