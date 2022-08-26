@@ -178,6 +178,7 @@ class policies():
         # Variables    
         # How much to buy from supplier i of product k at time t 
         z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in env.M_kt[k,env.t + t]}
+        tuples = [(i,k,t,s) for t in T for k in K for s in S for i in env.M_kt[k,env.t + t]]
 
         # 1 if supplier i is selected at time t, 0 otherwise
         w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
@@ -228,7 +229,7 @@ class policies():
                 # Doesn't make any sense given the stochasticity in today's demand, unless Dani is not accounting for it
                 #m.addConstr(bo[k,0,s] == gu.quicksum(bo[k,0,ss] for ss in S)/len(S))
 
-                for i in env.M_kt[(k,env.t + t)]:
+                for i in env.M_kt[k,env.t]:
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S))
                 
                 for o in range(env.O_k[k] + 1):
