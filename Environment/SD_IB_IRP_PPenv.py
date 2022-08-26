@@ -268,7 +268,7 @@ class steroid_IRP(gym.Env):
         # Time step update and termination check
         self.t += 1
         done = self.check_termination(s_tprime)
-        _ = {}
+        _ = {'backorders': back_orders}
 
         # State update
         if not done:
@@ -287,7 +287,7 @@ class steroid_IRP(gym.Env):
     
     def action_validity(self, action):
         routes, purchase, demand_compliance = action[:3]
-        if self.others['backorders'] == 'backlogs':   back_o_compliance = action[3]
+        if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
         valid = True
         error_msg = ''
         
