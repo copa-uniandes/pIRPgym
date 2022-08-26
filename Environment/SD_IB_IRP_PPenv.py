@@ -393,8 +393,7 @@ class steroid_IRP(gym.Env):
 
         backorders_cost = 0
         if self.other_env_params['backorders'] == 'backorders':
-            backorders = round(sum(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products),1)
-            print(f'backorders: {backorders}')
+            backorders = sum(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products)
             backorders_cost = backorders * self.back_o_cost
         
         elif self.other_env_params['backorders'] == 'backlogs':
@@ -423,7 +422,7 @@ class steroid_IRP(gym.Env):
                         inventory[k,o] = round(self.state[k,o - 1] - demand_compliance[k,o - 1],1)
             
             if self.other_env_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
-                back_orders[k] = W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1))
+                back_orders[k] = round(W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),2)
 
             if self.other_env_params['backorders'] == 'backlogs':
                 new_backlogs = round(max(self.W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),1)
