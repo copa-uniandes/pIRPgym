@@ -268,23 +268,17 @@ class policies():
 
         # Back-orders
         double_check = {(k,t): bo[k,0,0].x for k in K}
-        print(double_check)
-
-        #Updated inventory for next period t
-        I_1 = {}
-        for k in env.Products:
-            for o in range(env.O_k[k] + 1):
-                I_1[k,o] = ii[k,0,o,0].x
         
         Rutas_finales, solucionTTP, solucionTTP[0][8]  = self.Genera_ruta_at_t(solucionTTP, 0, max(env.c.values())*2, env.c, env.Q)
 
-        rutas = []
-        #print(Rutas_finales)
         rutas = []
         for key in Rutas_finales[0].keys():
             rutas.append(Rutas_finales[0][key][0])
 
         action = [rutas, purchase, demand_compliance]
+        for k in K:
+            for i in env.M_kt[k,env.t]:
+                if purchase[i,k]!=0:print('si hay compra')
         
         I0 = {}
         for t in T: 
@@ -310,6 +304,7 @@ class policies():
                 for k in K:
                     bb[t][s][k] = bo[k,t,s].x
         la_decisions = [I0, zz, bb]
+
         return action, la_decisions
 
 

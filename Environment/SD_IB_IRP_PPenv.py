@@ -142,7 +142,7 @@ class steroid_IRP(gym.Env):
         ### Other parameters ### 
         self.wh_cap = 1e9                               # Warehouse capacity
 
-        self.Q = 1000 # TODO !!!!!!!!
+        self.Q = 1e9 # TODO !!!!!!!!
         self.stochastic_parameters = stochastic_parameters
         
         ### Look-ahead parameters ###
