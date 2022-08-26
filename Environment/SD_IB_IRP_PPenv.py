@@ -226,7 +226,7 @@ class steroid_IRP(gym.Env):
             self.hor_historical_data = generator.historical_data
 
         ## State ##
-        self.state = {(k,o):0   for k in self.Products for o in self.Ages[k]}
+        self.state = {(k,o):0   for k in self.Products for o in range(1, self.O_k[k] + 1)}
         if self.other_env_params['backorders'] == 'backlogs':
             for k in self.Products:
                 self.state[k,'B'] = 0
@@ -241,7 +241,7 @@ class steroid_IRP(gym.Env):
         self.historical_data = self.hor_historical_data[self.t]
 
         if return_state:
-            return self.state
+            return self.state, self.sample_paths
                               
 
     # Step 
@@ -249,17 +249,14 @@ class steroid_IRP(gym.Env):
         if validate_action:
             self.action_validity(action)
 
-        # Exogenous information realization 
-        W = self.gen_exog_info_W()
-
         if self.stochastic_parameters != False:
-            self.q = W['q'];    self.p = W['p'];     self.d = W['d'];   self.h = W['h']
+            self.q = self.W_t['q'];  self.p = self.W_t['p'];  self.d = self.W_t['d'];   self.h = self.W_t['h']
             real_action = self.get_real_actions(action)
         else:
             real_action = action
 
         # Inventory dynamics
-        s_tprime, reward, back_orders = self.transition_function(real_action, W, warnings)
+        s_tprime, reward, back_orders = self.transition_function(real_action, self.W_t, warnings)
 
         # Reward
         transport_cost, purchase_cost, holding_cost, backorders_cost = self.compute_costs(real_action, s_tprime)
@@ -276,13 +273,13 @@ class steroid_IRP(gym.Env):
     
             # EXTRA INFORMATION TO BE RETURNED
             _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d, 'backorders': back_orders}
-            if self.others['historical']:
+            if self.other_env_params['historical']:
                 _['historical_info'] = self.historical_data
-            if self.others['look_ahead']:
+            if self.other_env_params['look_ahead']:
                 _['sample_paths'] = self.sample_paths
 
             
-        return self.state, reward, done, _
+        return self.state, reward, done, real_action, _
     
     
     def action_validity(self, action):
@@ -358,7 +355,7 @@ class steroid_IRP(gym.Env):
         real_purchase = {(i,k): min(purchase[i,k], self.q[i,k]) for i in self.Suppliers for k in self.Products}
 
         real_demand_compliance = copy(demand_compliance)
-        for k in self.suppliers:
+        for k in self.Products:
             # The demand is lower than the demand compliance plan 
             if sum(real_demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
                 age = self.O_k[k]
@@ -383,7 +380,7 @@ class steroid_IRP(gym.Env):
     # Compute costs of a given procurement plan for a given day
     def compute_costs(self, action, s_tprime):
         routes, purchase, demand_compliance = action[:3]
-        if self.others['backorders'] == 'backlogs':   back_o_compliance = action[3]
+        if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
 
         transport_cost = 0
         for route in routes:
@@ -395,12 +392,12 @@ class steroid_IRP(gym.Env):
         holding_cost = sum(sum(s_tprime[k,o] for o in range(1, self.O_k[k] + 1)) * self.h[k] for k in self.Products)
 
         backorders_cost = 0
-        if self.others['backorders'] == 'backorders':
+        if self.other_env_params['backorders'] == 'backorders':
             backorders = round(sum(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products),1)
             print(f'backorders: {backorders}')
             backorders_cost = backorders * self.back_o_cost
         
-        elif self.others['backorders'] == 'backlogs':
+        elif self.other_env_params['backorders'] == 'backlogs':
             backorders_cost = sum(s_tprime[k,'B'] for k in self.Products) * self.back_l_cost
 
         return transport_cost, purchase_cost, holding_cost, backorders_cost
@@ -410,7 +407,7 @@ class steroid_IRP(gym.Env):
     def transition_function(self, real_action, W, warnings):
         purchase, demand_compliance = real_action[1:3]
         # backlogs
-        if self.others['backorders'] == 'backlogs':
+        if self.other_env_params['backorders'] == 'backlogs':
             back_o_compliance = real_action[3]
         inventory = deepcopy(self.state)
         reward  = 0
@@ -425,10 +422,10 @@ class steroid_IRP(gym.Env):
                 for o in range(2, max_age + 1):
                         inventory[k,o] = round(self.state[k,o - 1] - demand_compliance[k,o - 1],1)
             
-            if self.others['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
+            if self.other_env_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
                 back_orders[k] = W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1))
 
-            if self.others['backorders'] == 'backlogs':
+            if self.other_env_params['backorders'] == 'backlogs':
                 new_backlogs = round(max(self.W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),1)
                 inventory[k,'B'] = round(self.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(self.O_k[k]+1)),1)
 
@@ -442,10 +439,6 @@ class steroid_IRP(gym.Env):
                 if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
                     print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
 
-            # if sum(inventory[k,o] for k in self.Products for o in range(self.O_k[k] + 1)) > self.wh_cap:
-            #     reward += self.penalization_cost
-            #     print(f'Warning! Capacity of the whareouse exceeded')
-
         return inventory, reward, back_orders
 
 
@@ -453,240 +446,25 @@ class steroid_IRP(gym.Env):
     def check_termination(self, s_tprime):
         done = False
 
-        # Time-step limit
-        if self.hor_typ:
-            done = self.t >= self.T
-         
-        # # Exceedes wharehouse capacitiy
-        # if sum(s_tprime[k,o] for k in self.Products for o in range(1, self.O_k[k] + 1)) >= self.wh_cap:
-        #     done = True
+        done = self.t >= self.T
 
         return done
 
     def update_state(self, s_tprime):
-        # Update historicalals
-        for k in self.Products:
-            for i in self.Suppliers:
-                if 'p' in self.others['historical']  or '*' in self.others['historical']:
-                    self.historical_data['p'][i,k].append(self.p[i,k])
-                if 'q' in self.others['historical']  or '*' in self.others['historical']:
-                    self.historical_data['q'][i,k].append(self.q[i,k])
-            if 'h' in self.others['historical']  or '*' in self.others['historical']:
-                self.historical_data['h'][k].append(self.h[k])
-            if 'd' in self.others['historical']  or '*' in self.others['historical']:
-                self.historical_data['d'][k].append(self.d[k])
+        # Update deterministic parameters
+        self.p = self.p_t[self.t]
+        self.h = self.h_t[self.t]
 
-        # Update state
-        if self.hor_typ:
-            self.p = {(i,k): self.p_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-            self.q = {(i,k): self.q_t[i,k,self.t] for i in self.Suppliers for k in self.Products}
-            self.h = {k: self.h_t[k,self.t] for k in self.Products}
-            self.d = {k: self.d_t[k,self.t] for k in self.Products}
-        else:
-            self.gen_realization()
+        # Update historicalals
+        self.historical_data = self.hor_historical_data[self.t]
+
+        # Update sample pahts
+        self.sample_paths = self.hor_sample_paths[self.t]
+
+        # Update exogenous information
+        self.W_t = self.exog_info[self.t]
 
         self.state = s_tprime
-
-        # Update sample-paths
-        self.gen_sample_paths()
-     
-        
-    # Generates exogenous information vector W (stochastic realizations for each random variable)
-    def gen_exog_info_W(self):
-        W = {}
-        if self.stochastic_parameters != False and 'h' in self.stochastic_parameters:
-            W['h'] = {k:randint(self.min_hprice, self.max_hprice) for k in self.Products}
-        else:
-            W['h'] = self.h
-        
-        M_k = {}
-        for k in self.Products:
-            sup = randint(1, self.M)
-            M_k[k] = list(self.Suppliers)
-            for ss in range(self.M - sup):
-                a = int(randint(0, len(M_k[k])-1))
-                del M_k[k][a]
-        
-        K_it = {i:[k for k in self.Products if i in M_k[k]] for i in self.Suppliers}
-        
-        if self.stochastic_parameters != False and 'q' in self.stochastic_parameters:
-            W['q'] = {(i,k):randint(1,15) if i in self.M_k[k] else 0 for i in self.Suppliers for k in self.Products}
-        else:
-            W['q'] = self.q
-
-        if self.stochastic_parameters != False and 'p' in self.stochastic_parameters:
-            W['p'] = {(i,k):randint(1,500) if i in M_k[k] else 1000 for i in self.Suppliers for k in self.Products}
-        else:
-            W['p'] = self.p
-
-        if self.stochastic_parameters != False and 'd' in self.stochastic_parameters:
-            W['d'] = {k:round((self.lambda1 * max([W['q'][i,k] for i in self.Suppliers]) + (1-self.lambda1)*sum([W['q'][i,k] for i in self.Suppliers])),1) for k in self.Products} 
-        else:
-            W['d'] = self.d
-
-        return W
-    
-    
-    # Auxiliary function to manage historical and simulated data 
-    def gen_instance_data(self):
-        if type(self.others['historical']) == list: 
-            self.gen_simulated_data()
-   
-        elif type(self.others['historical']) == str:  
-            self.upload_historical_data()
-        
-        else:
-            raise ValueError('historical information parameter value not valid')
-                  
-    
-    # Generate historical and simulated stochastic parameters based on the requirement
-    def gen_simulated_data(self):
-        ''' 
-        Simulated historicalal and sumulated data generator for quantities, prices and demand of products in each period.
-        Generates:
-            - h_t: (dict) holding cost of k \in K on t \in T
-            - M_kt: (dict) subset of suppliers that offer k \in K on t \in T
-            - K_it: (dict) subset of products offered by i \in M on t \in T
-            - q_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
-            - p_t: (dict) price of k \in K offered by supplier i \in M on t \in T
-            - d_t: (dict) demand of k \in K on t \in T
-            - historical_data: (dict) with generated historical values
-        '''
-        self.historical_data = {}
-        # Random holding cost of product k on t
-        if 'h' in self.others['historical'] or  '*' in self.others['historical']:   
-            self.historical_data['h'] = {k: [randint(self.min_hprice, self.max_hprice) for t in self.historical] for k in self.Products}
-        self.h_t = {(k,t):randint(self.min_hprice, self.max_hprice) for k in self.Products for t in self.Horizon}
-    
-        self.M_kt = {}
-        # In each time period, for each product
-        for k in self.Products:
-            for t in self.TW:
-                # Random number of suppliers that offer k in t
-                sup = randint(1, self.M)
-                self.M_kt[k,t] = list(self.Suppliers)
-                # Random suppliers are removed from subset, regarding {sup}
-                for ss in range(self.M - sup):
-                    a = int(randint(0, len(self.M_kt[k,t])-1))
-                    del self.M_kt[k,t][a]
-        
-        # Products offered by each supplier on each time period, based on M_kt
-        self.K_it = {(i,t):[k for k in self.Products if i in self.M_kt[k,t]] for i in self.Suppliers for t in self.TW}
-        
-        # Random quantity of available product k, provided by supplier i on t
-        if 'q' in self.others['historical'] or  '*' in self.others['historical']:
-            self.historical_data['q']= {(i,k): [randint(1,15) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
-        self.q_t = {(i,k,t):randint(1,15) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-
-        # Random price of available product k, provided by supplier i on t
-        if 'p' in self.others['historical'] or  '*' in self.others['historical']:
-            self.historical_data['p'] = {(i,k): [randint(1,500) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products for t in self.historical}
-        self.p_t = {(i,k,t):randint(1,500) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products for t in self.Horizon}
-
-        # Demand estimation based on quantities - ensuring feasibility, no backlogs
-        if 'd' in self.others['historical'] or  '*' in self.others['historical']:
-            self.historical_data['d'] = {(k):[(self.lambda1 * max([self.historical_data['q'][i,k][t] for i in self.Suppliers]) + (1-self.lambda1)*sum([self.historical_data['q'][i,k][t] for i in self.Suppliers])) for t in self.historical] for k in self.Products}
-        self.d_t = {(k,t):round((self.lambda1 * max([self.q_t[i,k,t] for i in self.Suppliers]) + (1-self.lambda1)*sum([self.q_t[i,k,t] for i in self.Suppliers])),1) for k in self.Products for t in self.Horizon}
-    
-   
-    # Auxuliary sample value generator function
-    def sim(self, hist):
-        ''' 
-        Sample value generator function.
-        Returns a generated random number using acceptance-rejection method.
-        Parameters:
-        - hist: (list) historicalal dataset that is used as an empirical distribution for
-                the random number generation
-        '''
-        Te = len(hist)
-        sorted_data = sorted(hist)    
-        
-        prob, value = [], []
-        for t in range(Te):
-            prob.append((t+1)/Te)
-            value.append(sorted_data[t])
-        
-        # Generates uniform random value for acceptance-rejection testing
-        U = random()
-        # Tests if the uniform random falls under the empirical distribution
-        test = [i>U for i in prob]    
-        # Takes the first accepted value
-        sample = value[test.index(True)]
-        
-        return sample
-    
-    
-    # Sample paths generator function
-    def gen_sample_paths(self):
-        ''' 
-        Sample paths generator function.
-        Returns:
-            - Q_s: (float) feasible vehicle capacity to use in rolling horizon model in sample path s \in Sam
-            - M_kts: (dict) subset of suppliers that offer k \in K on t \in T in sample path s \in Sam
-            - K_its: (dict) subset of products offered by i \in M on t \in T in sample path s \in Sam
-            - q_s: (dict) quantity of k \in K offered by supplier i \in M on t \in T in sample path s \in Sam
-            - p_s: (dict) price of k \in K offered by supplier i \in M on t \in T in sample path s \in Sam
-            - dem_s: (dict) demand of k \in K on t \in T in sample path s \in Sam
-            - 
-            - F_s: (iter) set of vehicles in sample path s \in Sam
-        Parameters:
-            - hist_T: (int) number of periods that the historicalal datasets have information of
-            - today: (int) current time period
-        '''
-
-        if self.hor_typ and self.t + self.LA_horizon > self.T:
-            self.sample_path_window_size = self.T - self.t
-
-        self.sample_paths = {}
-        
-        for s in self.Samples:
-            # For each product, on each period chooses a random subset of suppliers that the product has had
-            self.sample_paths[('M_k',s)] = {(k,t): [self.M_kt[k,tt] for tt in range(-self.hist_window + 1, self.t)][randint(-self.hist_window + 1, self.t - 1)] for k in self.Products for t in range(1, self.sample_path_window_size)}
-            for k in self.Products:
-                self.sample_paths[('M_k',s)][(k,0)] = self.M_kt[k, self.t]
-            
-            # Products offered by each supplier on each time period, based on M_kts
-            self.sample_paths[('K_i',s)] = {(i,t): [k for k in self.Products if i in self.sample_paths[('M_k',s)][(k,t)]] \
-                for i in self.Suppliers for t in range(1, self.sample_path_window_size)}
-            for i in self.Suppliers:
-               self.sample_paths[('K_i',s)][(k,0)] = self.K_it[i, self.t]
-            
-
-            # For each supplier and product, on each period chooses a quantity to offer using the sample value generator function
-            #if 'q' in self.others['look_ahead']:
-            self.sample_paths[('q',s)] = {(i,k,t): self.sim([self.historical_data['q'][i,k][tt] for tt in range(-self.hist_window + 1, self.t) if self.historical_data['q'][i,k][tt] > 0]) if i in self.sample_paths[('M_k',s)][(k,t)] else 0 \
-                for i in self.Suppliers for k in self.Products for t in range(1, self.sample_path_window_size)}
-            for i in self.Suppliers:
-                for k in self.Products:
-                    self.sample_paths[('q',s)][(i,k,0)] = self.q[i,k]
-            
-            # For each supplier and product, on each period chooses a price using the sample value generator function
-            if 'p' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
-                self.sample_paths[('p',s)] = {(i,k,t): self.sim([self.historical_data['p'][i,k][tt] for tt in range(-self.hist_window + 1, self.t) if self.historical_data['p'][i,k][tt] < 1000]) if i in self.sample_paths[('M_k',s)][(k,t)] else 1000 \
-                    for i in self.Suppliers for k in self.Products for t in range(1, self.sample_path_window_size)}
-                for i in self.Suppliers:
-                    for k in self.Products:
-                        self.sample_paths[('p',s)][i,k,0] = self.p[i,k]
-            
-            if 'h' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
-                self.sample_paths[('h',s)] = {(k,t): self.sim(self.historical_data['h'][k]) for k in self.Products for t in range(1, self.sample_path_window_size)}
-                for k in self.Products:
-                    self.sample_paths[('h',s)][k,0] = self.h[k]
-            
-            # Estimates demand for each product, on each period, based on q_s
-            if 'd' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
-                self.sample_paths[('d',s)] = {(k,t): (self.lambda1 * max([self.sample_paths[('q',s)][(i,k,t)] for i in self.Suppliers]) + (1 - self.lambda1) * sum([self.sample_paths[('q',s)][(i,k,t)] \
-                    for i in  self.Suppliers])) for k in self.Products for t in range(1, self.sample_path_window_size)}
-                for k in self.Products:
-                    self.sample_paths[('d',s)][k,0] = self.d[k]
-            
-            # Vehicle capacity estimation
-            # if 'Q' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
-            #     self.sample_paths[('Q',s)] = 1.2 * self.gen_Q()
-            
-            # Set of vehicles, based on estimated required vehicles
-            # if 'F' in self.others['look_ahead'] or '*' in self.others['look_ahead']:
-            #     self.sample_paths[('F',s)] = int(sum(self.sample_paths[('d',s)].values())/self.sample_paths[('Q',s)]+1)
 
 
     # Simple function to visualize the inventory
@@ -778,7 +556,4 @@ class steroid_IRP(gym.Env):
         self.q_t =
         self.p_t =
         self.d_t =
-    
-    
-    
     '''

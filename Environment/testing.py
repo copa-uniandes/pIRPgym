@@ -8,7 +8,7 @@ look_ahead = ['q','d']
 S = 4
 LA_horizon = 3
 historical_data = ['*']
-hist_window = 50
+hist_window = 10000
 backorders =  'backorders'
 stochastic_parameters = ['q','d']
 env_config = {  'M': 10, 
@@ -39,4 +39,4 @@ env.reset(return_state = True, rd_seed = rd_seed,
           d_params = d_params,
           h_params = h_params)
 
-x = 1 
+

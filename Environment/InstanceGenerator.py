@@ -121,7 +121,7 @@ class instance_generator():
                         if day == 0 and (self.s_params == False or ('q' not in self.s_params and '*' not in self.s_params)):
                             self.sample_paths[t]['q'][day,sample] = values_day_0
                         else:
-                            self.sample_paths[t]['q'][day,sample] = {(i,k): self.sim([self.historical_data[t]['q'][i,k][obs] for obs in range(len(self.historical_data[t]['q'][i,k])) if self.historical_data[t]['q'][i,k][i] != 0]) if i in self.M_kt[k,day] else 0 for i in self.Suppliers for k in self.Products}
+                            self.sample_paths[t]['q'][day,sample] = {(i,k): self.sim([self.historical_data[t]['q'][i,k][obs] for obs in range(len(self.historical_data[t]['q'][i,k])) if self.historical_data[t]['q'][i,k][obs] != 0]) if i in self.M_kt[k,day] else 0 for i in self.Suppliers for k in self.Products}
                         
                 # Generating random variable realization
                 if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
@@ -189,7 +189,7 @@ class instance_generator():
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:
                 '''
-                SAMPLE PATH GENERATION FOR STOCHASTIC VERSION OF HOLDING COSTS
+                SAMPLE PATH GENERATION FOR STOCHASTIC VERSION OF PURCHASING PRICES
                 values_day_0 = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,0] else 0 for i in self.Suppliers for k in self.Products}
 
                 if t + self.LA_horizon > self.T:
