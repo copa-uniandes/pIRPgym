@@ -242,7 +242,8 @@ class steroid_IRP(gym.Env):
         self.historical_data = self.hor_historical_data[self.t]
 
         if return_state:
-            _ = {'sample_paths': self.sample_paths}
+            _ = {'sample_paths': self.sample_paths, 
+                 'sample_paths_window_size': self.window_sizes[self.t]}
             return self.state, _
                               
 
