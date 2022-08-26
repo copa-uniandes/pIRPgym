@@ -164,7 +164,7 @@ class policies():
         sample_paths = _['sample_paths']
 
         # Look ahead window     
-        Num_periods = env.sample_path_window_size
+        Num_periods = _['sample_path_window_size']
         T = range(Num_periods)
 
         # Iterables
