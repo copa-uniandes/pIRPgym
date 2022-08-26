@@ -31,6 +31,8 @@ class instance_generator():
     
         self.s_params = env.stochastic_parameters
         self.others = env.other_env_params
+
+        self.sample_path_window_size = {}
         
         self.W_t = {t:{'q':{}, 'p': {}, 'd': {}, 'h': {}} for t in self.Horizon}
 
@@ -114,6 +116,7 @@ class instance_generator():
 
                 if t + self.LA_horizon > self.T:
                     sample_path_window_size = self.T - t
+                self.sample_path_window_size[t] = sample_path_window_size
 
                 # Generating sample-paths
                 for day in range(sample_path_window_size):

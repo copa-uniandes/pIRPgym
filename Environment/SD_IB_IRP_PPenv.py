@@ -220,6 +220,7 @@ class steroid_IRP(gym.Env):
 
         # Recovery of other information
         self.exog_info = generator.W_t
+        self.window_sizes = generator.sample_path_window_size
         if self.other_env_params['look_ahead']:
             self.hor_sample_paths = generator.sample_paths
         if self.other_env_params['historical']:
@@ -241,6 +242,7 @@ class steroid_IRP(gym.Env):
         self.historical_data = self.hor_historical_data[self.t]
 
         if return_state:
+            _ = {'sample_paths': self.sample_paths}
             return self.state, self.sample_paths
                               
 
@@ -272,13 +274,13 @@ class steroid_IRP(gym.Env):
             self.update_state(s_tprime)
     
             # EXTRA INFORMATION TO BE RETURNED
-            _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d, 'backorders': back_orders}
+            _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d, 'backorders': back_orders, 
+                 'sample_path_window_size': self.window_sizes[self.t]}
             if self.other_env_params['historical']:
                 _['historical_info'] = self.historical_data
             if self.other_env_params['look_ahead']:
                 _['sample_paths'] = self.sample_paths
 
-            
         return self.state, reward, done, real_action, _
     
     

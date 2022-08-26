@@ -29,6 +29,7 @@ class policies():
 
         return Rutas_finales, solucionTTP, FO_Routing
 
+
     def det_rolling_horizon(self,state, _, env):
 
         solucionTTP = {0:[  np.zeros(env.M+1, dtype=bool), 
@@ -146,6 +147,144 @@ class policies():
             rutas.append(Rutas_finales[0][key][0])
 
         return [rutas, purchase, demand_compliance]#, double_check, I_1
+
+
+    def rolling_horizon_stochastic(self, state, _, env):
+    
+        solucionTTP = {0:[  np.zeros(env.M+1, dtype=bool), 
+                                np.zeros(env.M+1, dtype=int), 
+                                np.zeros((env.M+1, env.K), dtype=bool), 
+                                np.zeros((env.M+1, env.K), dtype=int), 
+                                np.full(env.M+1, -1, dtype = int), 
+                                np.zeros(env.M+1, dtype=int), 
+                                np.zeros(env.K, dtype=int), 0, 0]}
+
+        # State
+        I_0 = state.copy()
+        sample_paths = _['sample_paths']
+
+        # Look ahead window     
+        Num_periods = env.sample_path_window_size
+        T = range(Num_periods)
+
+        # Iterables
+        M = env.Suppliers; K = env.Products; S = env.Samples
+
+        # Initialization routing cost
+        C_MIP = {(i,t):env.c[0,i]+env.c[i,0] for t in T for i in env.Suppliers} 
+
+        m = gu.Model('Inventory')
+
+        # Variables    
+        # How much to buy from supplier i of product k at time t 
+        z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in env.M_kt[k,env.t + t]}
+
+        # 1 if supplier i is selected at time t, 0 otherwise
+        w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
+
+        # Final inventory of product k of old o at time t 
+        ii = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="i_"+str((k,t,o,s))) for k in K for t in T for o in range(env.O_k[k] + 1) for s in S}
+
+        # Units sold of product k at time t of old age o
+        y = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="y_"+str((k,t,o,s))) for k in K for t in T for o in range(env.O_k[k] + 1) for s in S}
+
+        # Units in backorders of product k at time t
+        bo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,s))) for t in T for k in K for s in S}
+
+        for s in S:
+            ''' Inventory constraints '''
+            for k in K:
+                for t in T:
+                    m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in env.M_kt[(k,env.t + t)]) - y[k,t,0,s])
+                    
+            for k in K:
+                for o in env.Ages[k]:
+                    m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s])
+                    
+            for k in K:
+                for t in T:
+                    for o in env.Ages[k]:
+                        if t > 0:
+                            m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s])
+
+            for k in K: 
+                for t in T:
+                    m.addConstr(gu.quicksum(y[k,t,o,s] for o in range(env.O_k[k] + 1)) + bo[k,t,s] == sample_paths['d'][t,s][k])   
+
+
+            ''' Purchase constraints '''
+            for t in T:
+                for k in K:
+                    for i in env.M_kt[k,env.t + t]: 
+                        m.addConstr(z[i,k,t,s] <= sample_paths['q'][t,s][i,k]*w[i,t,s])
+                        
+            for t in T:
+                for i in M:
+                    m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= env.Q)
+        
+            '''' NON-ANTICIPATIVITY CONSTRAINTS '''
+            for k in K:
+
+                # Doesn't make any sense given the stochasticity in today's demand, unless Dani is not accounting for it
+                #m.addConstr(bo[k,0,s] == gu.quicksum(bo[k,0,ss] for ss in S)/len(S))
+
+                for i in env.M_kt[(k,env.t + t)]:
+                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S))
+                
+                for o in range(env.O_k[k] + 1):
+                    m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,ss] for ss in S)/len(S))
+            
+            for i in M:
+                m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S))
+
+        compra = gu.quicksum(env.p_t[env.t + 1][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in env.M_kt[k,env.t + t])/len(S) + \
+            env.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S) \
+                + gu.quicksum(ii[k,t,o,s]*env.h_t[env.t + t][k] for k in K for t in T for o in range(env.O_k[k] + 1) for s in S)
+        
+        ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S) 
+        
+        m.setObjective(compra+ruta)
+                
+        m.update()
+        m.setParam('OutputFlag',0)
+        m.optimize()
+
+        # Purchase
+        purchase = {(i,k): 0 for i in M for k in K}
+
+        for k in K:
+            for i in env.M_kt[k,env.t + t]:
+                purchase[i,k] = z[i,k,0,0].x
+                if purchase[i,k]>0:
+                    solucionTTP[0][0][i] = True
+                    solucionTTP[0][1][i]+= purchase[i,k]
+                    solucionTTP[0][2][i][k]=True
+                    solucionTTP[0][3][i][k]=purchase[i,k]
+                    solucionTTP[0][6][k]+=purchase[i,k]
+        
+        # Demand compliance
+        demand_compliance = {(k,o):y[k,0,o,0].x for k in K for o in range(env.O_k[k] + 1)}
+
+        # Back-orders
+        double_check = {(k,t): bo[k,0,0].x for k in K}
+        print(double_check)
+
+        #Updated inventory for next period t
+        I_1 = {}
+        for k in env.Products:
+            for o in range(env.O_k[k] + 1):
+                I_1[k,o] = ii[k,0,o,0].x
+        
+        Rutas_finales, solucionTTP, solucionTTP[0][8]  = self.Genera_ruta_at_t(solucionTTP, 0, max(env.c.values())*2, env.c, env.Q)
+
+        rutas = []
+        #print(Rutas_finales)
+        rutas = []
+        for key in Rutas_finales[0].keys():
+            rutas.append(Rutas_finales[0][key][0])
+
+        return [rutas, purchase, demand_compliance]
+
 
     def Crea_grafo_aumentado_at_t(self, t, solucionTTP, max_cij, c):
         Info_Route = {}
