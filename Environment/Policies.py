@@ -226,9 +226,6 @@ class policies():
             '''' NON-ANTICIPATIVITY CONSTRAINTS '''
             for k in K:
 
-                # Doesn't make any sense given the stochasticity in today's demand, unless Dani is not accounting for it
-                m.addConstr(bo[k,0,s] == gu.quicksum(bo[k,0,ss] for ss in S)/len(S))
-
                 for i in env.M_kt[k,env.t]:
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S))
                 
