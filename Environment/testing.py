@@ -21,8 +21,8 @@ warnings = False
 
 # Other parameters
 num_episodes = 1
-env_config = { 'M': 5, 'K': 5, 'T': 7,  'F': 1, 
-               'S': 2,  'LA_horizon': 3, 'back_o_cost':1e12}
+env_config = { 'M': 5, 'K': 5, 'T': 20,  'F': 1, 
+               'S': 1,  'LA_horizon': 3, 'back_o_cost':1e12}
 
 q_params = {'distribution': 'c_uniform', 'min': 6, 'max': 20}
 d_params = {'distribution': 'log-normal', 'mean': 2, 'stdev': 0.5}

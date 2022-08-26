@@ -227,7 +227,7 @@ class policies():
             for k in K:
 
                 # Doesn't make any sense given the stochasticity in today's demand, unless Dani is not accounting for it
-                #m.addConstr(bo[k,0,s] == gu.quicksum(bo[k,0,ss] for ss in S)/len(S))
+                m.addConstr(bo[k,0,s] == gu.quicksum(bo[k,0,ss] for ss in S)/len(S))
 
                 for i in env.M_kt[k,env.t]:
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S))
@@ -239,16 +239,16 @@ class policies():
                 m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S))
 
         compra = gu.quicksum(env.p_t[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in env.M_kt[k,env.t + t])/len(S) + \
-            env.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S) \
-                + gu.quicksum(ii[k,t,o,s]*env.h_t[env.t + t][k] for k in K for t in T for o in range(env.O_k[k] + 1) for s in S)
+            env.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S)
         
-        ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S) 
+        ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
         
         m.setObjective(compra+ruta)
                 
         m.update()
         m.setParam('OutputFlag',0)
         m.optimize()
+        print(m.Status)
 
         # Purchase
         purchase = {(i,k): 0 for i in M for k in K}
@@ -276,9 +276,6 @@ class policies():
             rutas.append(Rutas_finales[0][key][0])
 
         action = [rutas, purchase, demand_compliance]
-        for k in K:
-            for i in env.M_kt[k,env.t]:
-                if purchase[i,k]!=0:print('si hay compra')
         
         I0 = {}
         for t in T: 
