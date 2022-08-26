@@ -243,7 +243,7 @@ class steroid_IRP(gym.Env):
 
         if return_state:
             _ = {'sample_paths': self.sample_paths}
-            return self.state, self.sample_paths
+            return self.state, _
                               
 
     # Step 
