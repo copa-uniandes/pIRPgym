@@ -149,7 +149,7 @@ class policies():
         return [rutas, purchase, demand_compliance]#, double_check, I_1
 
 
-    def rolling_horizon_stochastic(self, state, _, env):
+    def stochastic_rolling_horizon(self, state, _, env):
     
         solucionTTP = {0:[  np.zeros(env.M+1, dtype=bool), 
                                 np.zeros(env.M+1, dtype=int), 
