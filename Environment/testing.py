@@ -16,13 +16,13 @@ look_ahead = ['q','d']
 historical_data = ['*']
 
 # Action's parameters
-validate_action = True
+validate_action = False
 warnings = False
 
 # Other parameters
-num_episodes = 1
-env_config = { 'M': 10, 'K': 10, 'T': 7,  'F': 4, 
-               'S': 4,  'LA_horizon': 3}
+num_episodes = 1000
+env_config = { 'M': 10, 'K': 10, 'T': 10,  'F': 4, 
+               'S': 25,  'LA_horizon': 4}
 
 q_params = {'distribution': 'c_uniform', 'min': 6, 'max': 20}
 d_params = {'distribution': 'log-normal', 'mean': 2, 'stdev': 0.5}
@@ -72,11 +72,14 @@ def Policy_evaluation(num_episodes = 1000):
             state, reward, done, real_action, _,  = env.step(action, validate_action = validate_action, warnings = warnings)
 
             real_actions[episode,env.t] = real_action
-            backorders[episode,env.t] = _["backorders"]
+            backorders[episode,env.t] = _['backorders']
             rewards[episode,env.t] = reward
             la_decisions[episode,env.t] = la_dec
             realized_dem[episode,env.t] = env.W_t["d"]
-            tws[episode,env.t] = _["sample_path_window_size"]
+            if not done:
+                tws[episode,env.t] = _["sample_path_window_size"]
+            else:
+                tws[episode,env.t] = 1
             
     iterables = (env.Suppliers,env.Products,env.Samples,env.M_kt,env.O_k,env.Horizon)
     costs = (env.c, env.h_t, env.p_t)

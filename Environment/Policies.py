@@ -238,7 +238,7 @@ class policies():
             for i in M:
                 m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S))
 
-        compra = gu.quicksum(env.p_t[env.t + 1][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in env.M_kt[k,env.t + t])/len(S) + \
+        compra = gu.quicksum(env.p_t[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in env.M_kt[k,env.t + t])/len(S) + \
             env.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S) \
                 + gu.quicksum(ii[k,t,o,s]*env.h_t[env.t + t][k] for k in K for t in T for o in range(env.O_k[k] + 1) for s in S)
         
@@ -299,9 +299,9 @@ class policies():
             zz[t] = {}
             for s in S:
                 zz[t][s] = {}
-                for i in M:
-                    for k in K:
-                       zz[t][s][i,k] = z[i,k,t,s].x 
+                for k in K:
+                    for i in env.M_kt[k,env.t + t]:
+                        zz[t][s][i,k] = z[i,k,t,s].x 
         bb = {}
         for t in T:
             bb[t] = {}
