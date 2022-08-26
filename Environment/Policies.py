@@ -254,7 +254,7 @@ class policies():
         purchase = {(i,k): 0 for i in M for k in K}
 
         for k in K:
-            for i in env.M_kt[k,env.t + t]:
+            for i in env.M_kt[k,env.t]:
                 purchase[i,k] = z[i,k,0,0].x
                 if purchase[i,k]>0:
                     solucionTTP[0][0][i] = True
@@ -284,7 +284,7 @@ class policies():
         for key in Rutas_finales[0].keys():
             rutas.append(Rutas_finales[0][key][0])
 
-        return [rutas, purchase, demand_compliance]
+        return [rutas, purchase, demand_compliance], 
 
 
     def Crea_grafo_aumentado_at_t(self, t, solucionTTP, max_cij, c):

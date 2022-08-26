@@ -47,9 +47,10 @@ def Policy_evaluation(num_episodes = 1000):
     tws = {}
     env = steroid_IRP( look_ahead = look_ahead, 
                        historical_data = historical_data, 
-                       backorders = backorders,
+                       backorders = 'backorders',
                        stochastic_parameters = stochastic_parameters, 
                        env_config = env_config)
+    print(env.back_o_cost)
 
     policy = policies()
 
