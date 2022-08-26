@@ -204,7 +204,7 @@ class steroid_IRP(gym.Env):
 
         # Deterministic parameters
         self.O_k = generator.gen_ages()
-        self.Ages = {k: range(1, self.O_k[k]) for k in self.Products}
+        self.Ages = {k: range(1, self.O_k[k] + 1) for k in self.Products}
         self.c = generator.gen_routing_costs()
 
         # Availabilities

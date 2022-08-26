@@ -8,7 +8,7 @@ import scipy.stats as st
 rd_seed = 0
 
 # SD-IB-IRP-PP model's parameters
-backorders = 'backorders'
+backorderss = 'backorders'
 stochastic_parameters = ['q','d']
 
 # Feature's parameters
@@ -20,9 +20,9 @@ validate_action = False
 warnings = False
 
 # Other parameters
-num_episodes = 1000
-env_config = { 'M': 10, 'K': 10, 'T': 10,  'F': 4, 
-               'S': 25,  'LA_horizon': 4}
+num_episodes = 1
+env_config = { 'M': 5, 'K': 5, 'T': 7,  'F': 1, 
+               'S': 2,  'LA_horizon': 3, 'back_o_cost':1e12}
 
 q_params = {'distribution': 'c_uniform', 'min': 6, 'max': 20}
 d_params = {'distribution': 'log-normal', 'mean': 2, 'stdev': 0.5}
@@ -44,17 +44,17 @@ def Policy_evaluation(num_episodes = 1000):
     backorders = {}
     la_decisions = {}
     realized_dem = {}
+    q_sample = {}
     tws = {}
     env = steroid_IRP( look_ahead = look_ahead, 
                        historical_data = historical_data, 
-                       backorders = 'backorders',
+                       backorders = backorderss,
                        stochastic_parameters = stochastic_parameters, 
                        env_config = env_config)
-    print(env.back_o_cost)
 
     policy = policies()
 
-    for episode in range(2):
+    for episode in range(num_episodes):
 
         state, _ = env.reset(return_state = True, rd_seed = rd_seed, 
           q_params = q_params, 
@@ -65,27 +65,28 @@ def Policy_evaluation(num_episodes = 1000):
 
         while not done:
             
+            print(f'############################# {env.t} #############################')
             states[episode,env.t] = state
             action, la_dec = policy.stochastic_rolling_horizon(state, _, env)
-            print(state)
-            print(action)
+            print(action[0])
+            q_sample[episode,env.t] = [_["sample_paths"]["q"][0,s] for s in env.Samples]
             state, reward, done, real_action, _,  = env.step(action, validate_action = validate_action, warnings = warnings)
 
             real_actions[episode,env.t] = real_action
-            backorders[episode,env.t] = _['backorders']
+            backorders[episode,env.t] = _["backorders"]
             rewards[episode,env.t] = reward
             la_decisions[episode,env.t] = la_dec
             realized_dem[episode,env.t] = env.W_t["d"]
-            if not done:
-                tws[episode,env.t] = _["sample_path_window_size"]
-            else:
+            if done:
                 tws[episode,env.t] = 1
+            else:
+                tws[episode,env.t] = _["sample_path_window_size"]
             
-    iterables = (env.Suppliers,env.Products,env.Samples,env.M_kt,env.O_k,env.Horizon)
-    costs = (env.c, env.h_t, env.p_t)
+    iterables = (env.Suppliers, env.Products, env.Samples, env.M_kt, env.O_k, env.Horizon)
+    costs = (env.c, env.h_t, env.p_t, env.back_o_cost)
 
-    return rewards, states, real_actions, backorders, la_decisions, realized_dem, tws, iterables, costs
+    return rewards, states, real_actions, backorders, la_decisions, realized_dem, q_sample, tws, iterables, costs
 
 
-rewards, states, real_actions, backorders, la_decisions, realized_dem, tws, iterables, costs = Policy_evaluation(num_episodes = num_episodes)
+rewards, states, real_actions, backorders, la_decisions, realized_dem, q_sample, tws, iterables, costs = Policy_evaluation(num_episodes = num_episodes)
 
