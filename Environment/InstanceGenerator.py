@@ -108,11 +108,11 @@ class instance_generator():
 
             # Historic values
             if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['q'] = {(i,k):[uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
+                self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
-                values_day_0 = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,0] else 0 for i in self.Suppliers for k in self.Products}
+                values_day_0 = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,0] else 0 for i in self.Suppliers for k in self.Products}
 
                 if t + self.LA_horizon > self.T:
                     sample_path_window_size = self.T - t
@@ -128,7 +128,7 @@ class instance_generator():
                         
                 # Generating random variable realization
                 if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
-                    self.W_t[t]['q'] = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
+                    self.W_t[t]['q'] = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
                 else:
                     self.W_t[t]['q'] = values_day_0
                 
@@ -147,11 +147,11 @@ class instance_generator():
 
             # Historic values
             if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['d'] = {k:[lognormal(kwargs['mean'], kwargs['stdev']) for t in self.historical] for k in self.Products}
+                self.historical_data[0]['d'] = {k:[round(lognormal(kwargs['mean'], kwargs['stdev']),2) for t in self.historical] for k in self.Products}
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
-                values_day_0 = {k: lognormal(kwargs['mean'], kwargs['stdev']) for k in self.Products}
+                values_day_0 = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
 
                 if t + self.LA_horizon > self.T:
                     sample_path_window_size = self.T - t
@@ -166,7 +166,7 @@ class instance_generator():
                         
                 # Generating random variable realization
                 if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
-                    self.W_t[t]['d'] = {k: lognormal(kwargs['mean'], kwargs['stdev']) for k in self.Products}
+                    self.W_t[t]['d'] = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
                 else:
                     self.W_t[t]['d'] = values_day_0
                 

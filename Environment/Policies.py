@@ -19,7 +19,6 @@ from or_gym import utils
 class policies():
 
     def __init__(self) -> None:
-        
         pass
 
     def Genera_ruta_at_t(self, solucionTTP, t, max_cij, c, Q):
@@ -161,7 +160,6 @@ class policies():
 
         # State
         I_0 = state.copy()
-        print(I_0)
         sample_paths = _['sample_paths']
 
         # Look ahead window     
@@ -459,8 +457,3 @@ class Graph: # Class to represent a graph
         #print(FO)
         #print(arcos)
         return FO, arcos
-        
-
-
-
-

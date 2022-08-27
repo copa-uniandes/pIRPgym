@@ -254,7 +254,7 @@ class steroid_IRP(gym.Env):
 
         if self.stochastic_parameters != False:
             self.q = self.W_t['q'];  self.p = self.W_t['p'];  self.d = self.W_t['d'];   self.h = self.W_t['h']
-            real_action = self.get_real_actions(action)
+            real_action = self.get_real_action(action)
         else:
             real_action = action
 
@@ -283,8 +283,128 @@ class steroid_IRP(gym.Env):
                 _['sample_paths'] = self.sample_paths
 
         return self.state, reward, done, real_action, _
+
+
+    def get_real_action(self, action):
+        '''
+        When some parameters are stochastic, the chosen action might not be feasible.
+        Therefore, an aditional intra-step computation must be made and andjustments 
+        on the action might be necessary
+
+        '''
+        purchase, demand_compliance = action [1:3]
+
+        # The purchase exceeds the available quantities of the suppliers
+        real_purchase = {(i,k): min(purchase[i,k], self.q[i,k]) for i in self.Suppliers for k in self.Products}
+
+        real_demand_compliance = copy(demand_compliance)
+        for k in self.Products:
+            # The demand compliance of purchased items differs from the purchase 
+            real_demand_compliance[k,0] = min(real_demand_compliance[k,0], sum(real_purchase[i,k] for i in self.Suppliers))
+            # The demand is lower than the demand compliance plan 
+            if sum(real_demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
+                demand = self.d[k]
+                age = self.O_k[k]
+                while demand > 0:
+                    if demand >= real_demand_compliance[k,age]:
+                        demand -= real_demand_compliance[k,age]
+                        age -= 1
+                    elif demand < real_demand_compliance[k,age]:
+                        real_demand_compliance[k,age] = demand
+                        break
+
+        real_action = [action[0], real_purchase, real_demand_compliance]
+
+        return real_action
+
+
+    # Compute costs of a given procurement plan for a given day
+    def compute_costs(self, action, s_tprime):
+        routes, purchase, demand_compliance = action[:3]
+        if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
+
+        transport_cost = 0
+        for route in routes:
+            transport_cost += sum(self.c[route[i], route[i + 1]] for i in range(len(route) - 1))
+        
+        purchase_cost = sum(purchase[i,k] * self.p[i,k]   for i in self.Suppliers for k in self.Products)
+        
+        # TODO!!!!!
+        holding_cost = sum(sum(s_tprime[k,o] for o in range(1, self.O_k[k] + 1)) * self.h[k] for k in self.Products)
+
+        backorders_cost = 0
+        if self.other_env_params['backorders'] == 'backorders':
+            backorders = sum(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products)
+            backorders_cost = backorders * self.back_o_cost
+        
+        elif self.other_env_params['backorders'] == 'backlogs':
+            backorders_cost = sum(s_tprime[k,'B'] for k in self.Products) * self.back_l_cost
+
+        return transport_cost, purchase_cost, holding_cost, backorders_cost
+            
     
+    # Inventory dynamics of the environment
+    def transition_function(self, real_action, W, warnings):
+        purchase, demand_compliance = real_action[1:3]
+        # backlogs
+        if self.other_env_params['backorders'] == 'backlogs':
+            back_o_compliance = real_action[3]
+        inventory = deepcopy(self.state)
+        reward  = 0
+        back_orders = {}
+
+        # Inventory update
+        for k in self.Products:
+            inventory[k,1] = round(sum(purchase[i,k] for i in self.Suppliers) - demand_compliance[k,0],2)
+
+            max_age = self.O_k[k]
+            if max_age > 1:
+                for o in range(2, max_age + 1):
+                        inventory[k,o] = round(self.state[k,o - 1] - demand_compliance[k,o - 1],2)
+            
+            if self.other_env_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
+                back_orders[k] = round(W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),2)
+
+            if self.other_env_params['backorders'] == 'backlogs':
+                new_backlogs = round(max(self.W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),2)
+                inventory[k,'B'] = round(self.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(self.O_k[k]+1)),2)
+
+            # Factibility checks         
+            if warnings:
+                if self.state[k, max_age] - demand_compliance[k,max_age] > 0:
+                    # reward += self.penalization_cost
+                    print(colored(f'Warning! {self.state[k, max_age] - demand_compliance[k,max_age]} units of {k} were lost due to perishability','yellow'))
     
+
+                if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
+                    print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
+
+        return inventory, reward, back_orders
+
+
+    # Checking for episode's termination
+    def check_termination(self, s_tprime):
+        done = self.t >= self.T
+        return done
+
+
+    def update_state(self, s_tprime):
+        # Update deterministic parameters
+        self.p = self.p_t[self.t]
+        self.h = self.h_t[self.t]
+
+        # Update historicalals
+        self.historical_data = self.hor_historical_data[self.t]
+
+        # Update sample pahts
+        self.sample_paths = self.hor_sample_paths[self.t]
+
+        # Update exogenous information
+        self.W_t = self.exog_info[self.t]
+
+        self.state = s_tprime
+
+
     def action_validity(self, action):
         routes, purchase, demand_compliance = action[:3]
         if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
@@ -343,130 +463,6 @@ class steroid_IRP(gym.Env):
             for k in self.Products:
                 assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k], \
                     f'Demand of product {k} was not fulfilled'
-
-
-    def get_real_actions(self, action):
-        '''
-        When some parameters are stochastic, the chosen action might not be feasible.
-        Therefore, an aditional intra-step computation must be made and andjustments 
-        on the action might be necessary
-
-        '''
-        purchase, demand_compliance = action [1:3]
-
-        # The purchase exceeds the available quantities of the suppliers
-        real_purchase = {(i,k): min(purchase[i,k], self.q[i,k]) for i in self.Suppliers for k in self.Products}
-
-        real_demand_compliance = copy(demand_compliance)
-        for k in self.Products:
-            # The demand is lower than the demand compliance plan 
-            if sum(real_demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
-                age = self.O_k[k]
-                diff = sum(real_demand_compliance[k,o] for o in range(self.O_k[k] + 1)) - self.d[k]
-                while diff > 0:
-                    if real_demand_compliance[k,age] < diff:
-                        diff -= real_demand_compliance[k,age]
-                        real_demand_compliance[k,age] = 0
-                        age -= 1
-                    else:
-                        diff = -5
-                        real_demand_compliance[k,age] -= diff
-
-            # The demand compliance of purchased items differs from the purchase 
-            real_demand_compliance[k,0] = min(real_demand_compliance[k,0], sum(real_purchase[i,k] for i in self.Suppliers))
-
-        real_action = [action[0], real_purchase, real_demand_compliance]
-
-        return real_action
-
-
-    # Compute costs of a given procurement plan for a given day
-    def compute_costs(self, action, s_tprime):
-        routes, purchase, demand_compliance = action[:3]
-        if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
-
-        transport_cost = 0
-        for route in routes:
-            transport_cost += sum(self.c[route[i], route[i + 1]] for i in range(len(route) - 1))
-        
-        purchase_cost = sum(purchase[i,k] * self.p[i,k]   for i in self.Suppliers for k in self.Products)
-        
-        # TODO!!!!!
-        holding_cost = sum(sum(s_tprime[k,o] for o in range(1, self.O_k[k] + 1)) * self.h[k] for k in self.Products)
-
-        backorders_cost = 0
-        if self.other_env_params['backorders'] == 'backorders':
-            backorders = sum(max(self.d[k] - sum(demand_compliance[k,o] for o in range(self.O_k[k]+1)),0) for k in self.Products)
-            backorders_cost = backorders * self.back_o_cost
-        
-        elif self.other_env_params['backorders'] == 'backlogs':
-            backorders_cost = sum(s_tprime[k,'B'] for k in self.Products) * self.back_l_cost
-
-        return transport_cost, purchase_cost, holding_cost, backorders_cost
-            
-    
-    # Inventory dynamics of the environment
-    def transition_function(self, real_action, W, warnings):
-        purchase, demand_compliance = real_action[1:3]
-        # backlogs
-        if self.other_env_params['backorders'] == 'backlogs':
-            back_o_compliance = real_action[3]
-        inventory = deepcopy(self.state)
-        reward  = 0
-        back_orders = {}
-
-        # Inventory update
-        for k in self.Products:
-            inventory[k,1] = round(sum(purchase[i,k] for i in self.Suppliers) - demand_compliance[k,0],1)
-
-            max_age = self.O_k[k]
-            if max_age > 1:
-                for o in range(2, max_age + 1):
-                        inventory[k,o] = round(self.state[k,o - 1] - demand_compliance[k,o - 1],1)
-            
-            if self.other_env_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
-                back_orders[k] = round(W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),2)
-
-            if self.other_env_params['backorders'] == 'backlogs':
-                new_backlogs = round(max(self.W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),1)
-                inventory[k,'B'] = round(self.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(self.O_k[k]+1)),1)
-
-            # Factibility checks         
-            if warnings:
-                if self.state[k, max_age] - demand_compliance[k,max_age] > 0:
-                    # reward += self.penalization_cost
-                    print(colored(f'Warning! {self.state[k, max_age] - demand_compliance[k,max_age]} units of {k} were lost due to perishability','yellow'))
-    
-
-                if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
-                    print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
-
-        return inventory, reward, back_orders
-
-
-    # Checking for episode's termination
-    def check_termination(self, s_tprime):
-        done = False
-
-        done = self.t >= self.T
-
-        return done
-
-    def update_state(self, s_tprime):
-        # Update deterministic parameters
-        self.p = self.p_t[self.t]
-        self.h = self.h_t[self.t]
-
-        # Update historicalals
-        self.historical_data = self.hor_historical_data[self.t]
-
-        # Update sample pahts
-        self.sample_paths = self.hor_sample_paths[self.t]
-
-        # Update exogenous information
-        self.W_t = self.exog_info[self.t]
-
-        self.state = s_tprime
 
 
     # Simple function to visualize the inventory
