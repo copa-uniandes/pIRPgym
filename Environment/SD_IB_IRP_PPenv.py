@@ -352,7 +352,7 @@ class steroid_IRP(gym.Env):
         on the action might be necessary
 
         '''
-        purchase, demand_compliance = action[1:3]
+        purchase, demand_compliance = action [1:3]
 
         # The purchase exceeds the available quantities of the suppliers
         real_purchase = {(i,k): min(purchase[i,k], self.q[i,k]) for i in self.Suppliers for k in self.Products}

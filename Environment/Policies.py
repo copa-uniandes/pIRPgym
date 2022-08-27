@@ -161,6 +161,7 @@ class policies():
 
         # State
         I_0 = state.copy()
+        print(I_0)
         sample_paths = _['sample_paths']
 
         # Look ahead window     
@@ -196,44 +197,44 @@ class policies():
             ''' Inventory constraints '''
             for k in K:
                 for t in T:
-                    m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in env.M_kt[(k,env.t + t)]) - y[k,t,0,s])
+                    m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in env.M_kt[(k,env.t + t)]) - y[k,t,0,s], str(f'Inventario edad 0 {k}{t}{s}'))
                     
             for k in K:
                 for o in env.Ages[k]:
-                    m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s])
+                    m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s], str(f'Inventario periodo 0 k = {k}, o = {o}, s = {s}'))
                     
             for k in K:
                 for t in T:
                     for o in env.Ages[k]:
                         if t > 0:
-                            m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s])
+                            m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s], str(f'Inventario {k}{t}{o}{s}'))
 
             for k in K: 
                 for t in T:
-                    m.addConstr(gu.quicksum(y[k,t,o,s] for o in range(env.O_k[k] + 1)) + bo[k,t,s] == sample_paths['d'][t,s][k])   
+                    m.addConstr(gu.quicksum(y[k,t,o,s] for o in range(env.O_k[k] + 1)) + bo[k,t,s] == sample_paths['d'][t,s][k], f'backorders {k}{t}{s}')   
 
 
             ''' Purchase constraints '''
             for t in T:
                 for k in K:
                     for i in env.M_kt[k,env.t + t]: 
-                        m.addConstr(z[i,k,t,s] <= sample_paths['q'][t,s][i,k]*w[i,t,s])
+                        m.addConstr(z[i,k,t,s] <= sample_paths['q'][t,s][i,k]*w[i,t,s], f'Purchase {i}{k}{t}{s}')
                         
             for t in T:
                 for i in M:
-                    m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= env.Q)
+                    m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= env.Q, f'Vehicle capacity {i}{t}{s}')
         
             '''' NON-ANTICIPATIVITY CONSTRAINTS '''
             for k in K:
 
                 for i in env.M_kt[k,env.t]:
-                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S))
+                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
                 
                 for o in range(env.O_k[k] + 1):
-                    m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,ss] for ss in S)/len(S))
+                    m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,ss] for ss in S)/len(S), f'Anticipativity demand comp {k}{o}{s}')
             
             for i in M:
-                m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S))
+                m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
 
         compra = gu.quicksum(env.p_t[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in env.M_kt[k,env.t + t])/len(S) + \
             env.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S)
@@ -245,7 +246,11 @@ class policies():
         m.update()
         m.setParam('OutputFlag',0)
         m.optimize()
-        print(m.Status)
+        if m.Status == 3:
+            m.computeIIS()
+            for const in m.getConstrs():
+                if const.IISConstr:
+                    print(const.ConstrName)
 
         # Purchase
         purchase = {(i,k): 0 for i in M for k in K}
