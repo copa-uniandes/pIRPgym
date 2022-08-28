@@ -238,6 +238,9 @@ class steroid_IRP(gym.Env):
 
         self.W_t = self.exog_info[self.t]
 
+        self.d = self.W_t['d']
+        self.q = self.W_t['q']
+
         self.sample_paths = self.hor_sample_paths[self.t]
         self.historical_data = self.hor_historical_data[self.t]
 
@@ -253,7 +256,7 @@ class steroid_IRP(gym.Env):
             self.action_validity(action)
 
         if self.stochastic_parameters != False:
-            self.q = self.W_t['q'];  self.p = self.W_t['p'];  self.d = self.W_t['d'];   self.h = self.W_t['h']
+            self.q = self.W_t['q']; self.d = self.W_t['d']
             real_action = self.get_real_action(action)
         else:
             real_action = action
