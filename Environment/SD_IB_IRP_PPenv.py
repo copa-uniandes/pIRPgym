@@ -284,6 +284,8 @@ class steroid_IRP(gym.Env):
                 _['historical_info'] = self.historical_data
             if self.other_env_params['look_ahead']:
                 _['sample_paths'] = self.sample_paths
+        else:
+            self.state = s_tprime
 
         return self.state, reward, done, real_action, _
 
