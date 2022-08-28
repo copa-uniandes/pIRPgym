@@ -262,7 +262,7 @@ class steroid_IRP(gym.Env):
             real_action = action
 
         # Inventory dynamics
-        s_tprime, reward, back_orders = self.transition_function(real_action, self.W_t, warnings)
+        s_tprime, reward, back_orders, perished = self.transition_function(real_action, self.W_t, warnings)
 
         # Reward
         transport_cost, purchase_cost, holding_cost, backorders_cost = self.compute_costs(real_action, s_tprime)
@@ -279,7 +279,7 @@ class steroid_IRP(gym.Env):
     
             # EXTRA INFORMATION TO BE RETURNED
             _ = {'p': self.p, 'q': self.q, 'h': self.h, 'd': self.d, 'backorders': back_orders, 
-                 'sample_path_window_size': self.window_sizes[self.t]}
+                 'sample_path_window_size': self.window_sizes[self.t], 'perished': perished}
             if self.other_env_params['historical']:
                 _['historical_info'] = self.historical_data
             if self.other_env_params['look_ahead']:
@@ -357,6 +357,7 @@ class steroid_IRP(gym.Env):
         inventory = deepcopy(self.state)
         reward  = 0
         back_orders = {}
+        perished = {}
 
         # Inventory update
         for k in self.Products:
@@ -373,6 +374,10 @@ class steroid_IRP(gym.Env):
             if self.other_env_params['backorders'] == 'backlogs':
                 new_backlogs = round(max(self.W['d'][k] - sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)),0),2)
                 inventory[k,'B'] = round(self.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(self.O_k[k]+1)),2)
+            
+            if self.state[k, max_age] - demand_compliance[k,max_age] > 0:
+                    perished[k] = self.state[k, max_age] - demand_compliance[k,max_age]
+    
 
             # Factibility checks         
             if warnings:
@@ -384,7 +389,7 @@ class steroid_IRP(gym.Env):
                 if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
                     print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
 
-        return inventory, reward, back_orders
+        return inventory, reward, back_orders, perished
 
 
     # Checking for episode's termination
