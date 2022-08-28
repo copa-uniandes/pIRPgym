@@ -13,8 +13,8 @@ import gurobipy as gu
 import imageio
 
 ### Gym & OR-Gym
-import gym; #from gym import spaces
-from or_gym import utils
+import gym; from gym import spaces
+import utils
 
 class policies():
 
@@ -283,7 +283,7 @@ class policies():
             for s in S:  
                 I0[t][s] = {}
                 for k in K:
-                    for o in env.Ages[k]:
+                    for o in range(env.O_k[k]+1):
                         I0[t][s][k,o] = ii[k,t,o,s].x
         zz = {}
         for t in T:
@@ -307,98 +307,90 @@ class policies():
 
     def Myopic_heuristic_Just_Demand(Vertex, Products, Q, O_k, Mk, Km, M, V, K, T, q_disp, I_0, c, max_cij, replicas, dist_demand_parm, path):
 
-    #Vertex = env.V
-    Products = env.Products
-    Q = env.Q
-    O_k = env.O_k
-    Mk = env.M_kt
-    Km = env.K_it
-    M = env.M
-    V = M+1
-    K = env.K
-    T = env.T
-    q_dispo = env.
+        #Vertex = env.V
+        Products = env.Products
+        Q = env.Q
+        O_k = env.O_k
+        Mk = env.M_kt
+        Km = env.K_it
+        M = env.M
+        V = M+1
+        K = env.K
+        T = env.T
+
+        costo_total_path = 0 
+        costo_compra_path = 0
+        costo_ruteo_path = 0
+        costo_inventario_path = 0
+        costo_extra_path = 0
+        
+        final_policy = {}    
+        FO_policy = 0
+        
+        ''' Trash '''
+        Good_periods_to_buy_k = {}
+        
+        policy_replenishment = 0
+        policy_purchase = 0
+        
+        solucionTTP = {t:[  np.zeros(len(V), dtype=bool), 
+                            np.zeros(len(V), dtype=int), 
+                            np.zeros((len(V), len(K)), dtype=bool), 
+                            np.zeros((len(V), len(K)), dtype=int), 
+                            np.full(len(V) , -1, dtype = int), 
+                            np.zeros(len(V), dtype=int), 
+                            np.zeros(len(K), dtype=int), 0, 0]   for t in T}
 
 
+        compra_extra = {t:np.zeros(len(K), dtype = int) for t in T}
+        inventario = {t:[[[0 for o in range(O_k[k]+1)] for k in K], [[0 for o in range(O_k[k]+1)] for k in K]]  for t in range(len(T)+1)}
+        ventas = {(k,t,o):0 for k in K for o in range(O_k[k]) for t in T}
+        
+        for t in T: 
 
-
-
-
-
-
-    costo_total_path = 0 
-    costo_compra_path = 0
-    costo_ruteo_path = 0
-    costo_inventario_path = 0
-    costo_extra_path = 0
-    
-    final_policy = {}    
-    FO_policy = 0
-    
-    ''' Trash '''
-    Good_periods_to_buy_k = {}
-    
-    policy_replenishment = 0
-    policy_purchase = 0
-    
-    solucionTTP = {t:[  np.zeros(len(V), dtype=bool), 
-                        np.zeros(len(V), dtype=int), 
-                        np.zeros((len(V), len(K)), dtype=bool), 
-                        np.zeros((len(V), len(K)), dtype=int), 
-                        np.full(len(V) , -1, dtype = int), 
-                        np.zeros(len(V), dtype=int), 
-                        np.zeros(len(K), dtype=int), 0, 0]   for t in T}
-
-
-    compra_extra = {t:np.zeros(len(K), dtype = int) for t in T}
-    inventario = {t:[[[0 for o in range(O_k[k]+1)] for k in K], [[0 for o in range(O_k[k]+1)] for k in K]]  for t in range(len(T)+1)}
-    ventas = {(k,t,o):0 for k in K for o in range(O_k[k]) for t in T}
-    
-    for t in T: 
-
-        ''' Everything starts at 0, so this doesn't matter '''
-        if t == 0:
-            initial_inventory = inventario[t][0].copy()
-        else:
-            initial_inventory = inventario[t+1][0].copy()
+            ''' Everything starts at 0, so this doesn't matter '''
+            if t == 0:
+                initial_inventory = inventario[t][0].copy()
+            else:
+                initial_inventory = inventario[t+1][0].copy()
+                
+            ''' Replenish decision - how much to buy in total'''
+            var_compra = Define_Quantity_Purchased_By_Policy(K, t, T, initial_inventory, dist_demand_parm, policy_replenishment, d, path, policy_purchase, O_k, Good_periods_to_buy_k)
             
-        ''' Replenish decision - how much to buy in total'''
-        var_compra = Define_Quantity_Purchased_By_Policy(K, t, T, initial_inventory, dist_demand_parm, policy_replenishment, d, path, policy_purchase, O_k, Good_periods_to_buy_k)
-        
-        ''' Purchasing decision - who to buy from '''
-        solucionTTP, q_disp, No_compra_total, solucionTTP[t][7] = Purchase_SortByprice(V, M, Mk, K, T,p, q, Q, q_disp, var_compra, t, solucionTTP)
-        
-        ''' Routing decisions '''
-        Rutas_finales, solucionTTP, solucionTTP[t][8]  = Genera_ruta_at_t(solucionTTP, t, max_cij, c, Q)
-        
-        solucionTTP[t].append(Rutas_finales.copy())
-        
-        ''' Updates inventory and demand compliance - FIFO policy'''
-        inventario, compra_extra, ventas = calcula_inventario(t, K, O_k, solucionTTP, inventario, compra_extra,ventas, d, 0)
-        
-        costo_compra_extra_t = sum(compra_extra[t])*1000
-        costo_inventario_t = sum(sum(inventario[t][1][k][o] for o in range(O_k[k]))*h[k,t] for k in K)
-        
-        solucionTTP[t].append(costo_inventario_t)
-        solucionTTP[t].append(costo_compra_extra_t)
-        
-        compra_compra = solucionTTP[t][7]
-        
-        costo_total_t = compra_compra + solucionTTP[t][8] + costo_compra_extra_t + costo_inventario_t
-        
-        solucionTTP[t].append(costo_total_t)
-        
-        costo_total_path+=costo_total_t
-        costo_compra_path+=compra_compra
-        costo_extra_path+=costo_compra_extra_t
-        costo_inventario_path+=costo_inventario_t
-        costo_ruteo_path+=solucionTTP[t][8]
-        
-        
-        final_policy[t]=(solucionTTP[t].copy(), inventario[t].copy(), compra_extra[t], compra_compra, solucionTTP[t][8], compra_compra+solucionTTP[t][8])
-        FO_policy += compra_compra+solucionTTP[t][8]
-             
-    return final_policy, FO_policy
+            ''' Purchasing decision - who to buy from '''
+            solucionTTP, q_disp, No_compra_total, solucionTTP[t][7] = Purchase_SortByprice(V, M, Mk, K, T,p, q, Q, q_disp, var_compra, t, solucionTTP)
+            
+            ''' Routing decisions '''
+            Rutas_finales, solucionTTP, solucionTTP[t][8]  = Genera_ruta_at_t(solucionTTP, t, max_cij, c, Q)
+            
+            solucionTTP[t].append(Rutas_finales.copy())
+            
+            ''' Updates inventory and demand compliance - FIFO policy'''
+            inventario, compra_extra, ventas = calcula_inventario(t, K, O_k, solucionTTP, inventario, compra_extra,ventas, d, 0)
+            
+            costo_compra_extra_t = sum(compra_extra[t])*1000
+            costo_inventario_t = sum(sum(inventario[t][1][k][o] for o in range(O_k[k]))*h[k,t] for k in K)
+            
+            solucionTTP[t].append(costo_inventario_t)
+            solucionTTP[t].append(costo_compra_extra_t)
+            
+            compra_compra = solucionTTP[t][7]
+            
+            costo_total_t = compra_compra + solucionTTP[t][8] + costo_compra_extra_t + costo_inventario_t
+            
+            solucionTTP[t].append(costo_total_t)
+            
+            costo_total_path+=costo_total_t
+            costo_compra_path+=compra_compra
+            costo_extra_path+=costo_compra_extra_t
+            costo_inventario_path+=costo_inventario_t
+            costo_ruteo_path+=solucionTTP[t][8]
+            
+            
+            final_policy[t]=(solucionTTP[t].copy(), inventario[t].copy(), compra_extra[t], compra_compra, solucionTTP[t][8], compra_compra+solucionTTP[t][8])
+            FO_policy += compra_compra+solucionTTP[t][8]
+                
+        return final_policy, FO_policy
 
 
     def Crea_grafo_aumentado_at_t(self, t, solucionTTP, max_cij, c):
