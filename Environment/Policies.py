@@ -305,11 +305,26 @@ class policies():
         return action, la_decisions
 
 
-    def Myopic_heuristic_Just_Demand(Vertex, Products, Q, coor, h, d, O_k, Mk, Km, q, p, M, V, K, T, q_disp, I_0, c, max_cij, replicas, dist_demand_parm, path):
+    def Myopic_heuristic_Just_Demand(Vertex, Products, Q, O_k, Mk, Km, M, V, K, T, q_disp, I_0, c, max_cij, replicas, dist_demand_parm, path):
 
-    Vertex = env.V
+    #Vertex = env.V
     Products = env.Products
-    Periods = 
+    Q = env.Q
+    O_k = env.O_k
+    Mk = env.M_kt
+    Km = env.K_it
+    M = env.M
+    V = M+1
+    K = env.K
+    T = env.T
+    q_dispo = env.
+
+
+
+
+
+
+
 
     costo_total_path = 0 
     costo_compra_path = 0
