@@ -12,7 +12,7 @@ import gurobipy as gu
 import imageio
 
 ### Gym & OR-Gym
-from or_gym import utils
+import utils
 
 
 class instance_generator():
