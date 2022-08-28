@@ -25,8 +25,8 @@ import gurobipy as gu
 import imageio
 
 ### Gym & OR-Gym
-import gym; #from gym import spaces
-from or_gym import utils
+import gym; from gym import spaces
+import utils
 
 ### Instance generation
 from InstanceGenerator import instance_generator
