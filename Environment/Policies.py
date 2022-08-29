@@ -305,7 +305,7 @@ class policies():
         return action, la_decisions
 
 
-    def Myopic_heuristic_Just_Demand(Vertex, Products, Q, O_k, Mk, Km, M, V, K, T, q_disp, I_0, c, max_cij, replicas, dist_demand_parm, path):
+    def Myopic_heuristic_Just_Demand(self, env, q_disp, c, max_cij, dist_demand_parm, path):
 
         #Vertex = env.V
         Products = env.Products
@@ -355,18 +355,18 @@ class policies():
                 initial_inventory = inventario[t+1][0].copy()
                 
             ''' Replenish decision - how much to buy in total'''
-            var_compra = Define_Quantity_Purchased_By_Policy(K, t, T, initial_inventory, dist_demand_parm, policy_replenishment, d, path, policy_purchase, O_k, Good_periods_to_buy_k)
+            var_compra = self.Define_Quantity_Purchased_By_Policy(K, t, T, initial_inventory, dist_demand_parm, policy_replenishment, d, path, policy_purchase, O_k, Good_periods_to_buy_k)
             
             ''' Purchasing decision - who to buy from '''
-            solucionTTP, q_disp, No_compra_total, solucionTTP[t][7] = Purchase_SortByprice(V, M, Mk, K, T,p, q, Q, q_disp, var_compra, t, solucionTTP)
+            solucionTTP, q_disp, No_compra_total, solucionTTP[t][7] = self.Purchase_SortByprice(V, M, Mk, K, T,p, q, Q, q_disp, var_compra, t, solucionTTP)
             
             ''' Routing decisions '''
-            Rutas_finales, solucionTTP, solucionTTP[t][8]  = Genera_ruta_at_t(solucionTTP, t, max_cij, c, Q)
+            Rutas_finales, solucionTTP, solucionTTP[t][8]  = self.Genera_ruta_at_t(solucionTTP, t, max_cij, c, Q)
             
             solucionTTP[t].append(Rutas_finales.copy())
             
             ''' Updates inventory and demand compliance - FIFO policy'''
-            inventario, compra_extra, ventas = calcula_inventario(t, K, O_k, solucionTTP, inventario, compra_extra,ventas, d, 0)
+            inventario, compra_extra, ventas = self.calcula_inventario(t, K, O_k, solucionTTP, inventario, compra_extra,ventas, d, 0)
             
             costo_compra_extra_t = sum(compra_extra[t])*1000
             costo_inventario_t = sum(sum(inventario[t][1][k][o] for o in range(O_k[k]))*h[k,t] for k in K)
@@ -391,6 +391,7 @@ class policies():
             FO_policy += compra_compra+solucionTTP[t][8]
                 
         return final_policy, FO_policy
+
 
 
     def Crea_grafo_aumentado_at_t(self, t, solucionTTP, max_cij, c):
