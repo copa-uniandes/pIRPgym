@@ -305,7 +305,7 @@ class policies():
         return action, la_decisions
 
 
-    def Myopic_heuristic_Just_Demand(self, env, q_disp, c, max_cij, dist_demand_parm, path):
+    def Myopic_heuristic_Just_Demand(self, env, p,q, d,h, q_disp, c, max_cij, dist_demand_parm, path):
 
         #Vertex = env.V
         Products = env.Products
