@@ -87,7 +87,7 @@ class instance_generator():
         for k in self.Products:
             for t in self.TW:
                 # Random number of suppliers that offer k in t
-                sup = randint(1, self.M + 1)
+                sup = randint(1, self.M+1)
                 self.M_kt[k,t] = list(self.Suppliers)
                 # Random suppliers are removed from subset, regarding {sup}
                 for ss in range(self.M - sup):
@@ -108,11 +108,11 @@ class instance_generator():
 
             # Historic values
             if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
+                self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,0] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
-                values_day_0 = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,0] else 0 for i in self.Suppliers for k in self.Products}
+                values_day_0 = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
 
                 if t + self.LA_horizon > self.T:
                     sample_path_window_size = self.T - t
@@ -124,8 +124,8 @@ class instance_generator():
                         if day == 0 and (self.s_params == False or ('q' not in self.s_params and '*' not in self.s_params)):
                             self.sample_paths[t]['q'][day,sample] = values_day_0
                         else:
-                            self.sample_paths[t]['q'][day,sample] = {(i,k): self.sim([self.historical_data[t]['q'][i,k][obs] for obs in range(len(self.historical_data[t]['q'][i,k])) if self.historical_data[t]['q'][i,k][obs] != 0]) if i in self.M_kt[k,day] else 0 for i in self.Suppliers for k in self.Products}
-                        
+                            self.sample_paths[t]['q'][day,sample] = {(i,k): self.sim([self.historical_data[t]['q'][i,k][obs] for obs in range(len(self.historical_data[t]['q'][i,k])) if self.historical_data[t]['q'][i,k][obs] > 0]) if i in self.M_kt[k,t+day] else 0 for i in self.Suppliers for k in self.Products}
+                
                 # Generating random variable realization
                 if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
                     self.W_t[t]['q'] = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
@@ -219,7 +219,7 @@ class instance_generator():
                             self.historical_data[t+1]['p'][i,k] = self.historical_data[t]['p'][i,k] + [self.W_t[t]['p'][i,k]] 
                 '''
                 # Genrating realizations
-                self.p_t[t] = {(i,k): randint(kwargs['min'], kwargs['max']) if i in self.M_kt[k,0] else 1000 for i in self.Suppliers for k in self.Products}   
+                self.p_t[t] = {(i,k): randint(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products}   
                 self.W_t[t]['p'] = self.p_t[t]
 
                 # Updating historical values
@@ -303,7 +303,7 @@ class instance_generator():
         # Generates uniform random value for acceptance-rejection testing
         U = random()
         # Tests if the uniform random falls under the empirical distribution
-        test = [i>U for i in prob]    
+        test = [i>U for i in prob]  
         # Takes the first accepted value
         sample = value[test.index(True)]
         
