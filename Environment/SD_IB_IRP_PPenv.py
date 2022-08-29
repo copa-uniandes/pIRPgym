@@ -271,7 +271,7 @@ class steroid_IRP(gym.Env):
         # Time step update and termination check
         self.t += 1
         done = self.check_termination(s_tprime)
-        _ = {'backorders': back_orders}
+        _ = {'backorders': back_orders, 'perished': perished}
 
         # State update
         if not done:
