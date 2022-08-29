@@ -481,7 +481,7 @@ class policies():
         return final_policy, FO_policy
 
 
-    def Define_Quantity_Purchased_By_Policy(K, t, initial_inventory, d, path, theta, O_k):
+    def Define_Quantity_Purchased_By_Policy(self, K, t, initial_inventory, d, path, theta, O_k):
         ''' replenishment dictionary '''
         var_compra = {}
         for k in K:
@@ -501,14 +501,14 @@ class policies():
         return var_compra
 
 
-    def Purchase_SortByprice(V, M, Mk, K, p, q, Q, q_disp, var_compra, t, solucionTTP):
+    def Purchase_SortByprice(self, M, Mk, K, p, q, Q, q_disp, var_compra, t, solucionTTP):
     
         #Si esta o no en el ruteo, cantidad total a comprar en cada proceedor, si compro o no ese producto, la cantidad a comprar de ese producto.
         ''' Boolean, if product k has been purchased '''
         ya_comprado = np.zeros(len(K) , dtype = bool)
         
         ''' Dict of prices-supplier tuples, sorted by best price'''
-        Sort_k_by_p = Sort_prods_by_price_at_t(M, K, t, p)
+        Sort_k_by_p = self.Sort_prods_by_price_at_t(M, K, t, p)
         
         ''' Dict w booleans: whether product k has backorders or not'''
         No_compra_total = {}
@@ -606,7 +606,16 @@ class policies():
         Costo_compra = sum(solucionTTP[t][3][i][k]*p[i,k,t] for i in M for k in K)
     
         return solucionTTP, q_disp, No_compra_total, Costo_compra
+    
 
+    def Sort_prods_by_price_at_t(self, M, K, t, p):
+        Sort_k_by_p = {}
+        for k in K:
+            Cantidad1 = [(p[i,k,t],i) for i in M]
+            Cantidad1.sort(key=lambda y:y[0])
+            Sort_k_by_p[k,t] = Cantidad1
+                
+        return Sort_k_by_p
     
 #######################    ADDITIONAL ALGORITHMS FOR DETERMINISTIC & ROLLING HORIZON     #######################
 class Graph: # Class to represent a graph
