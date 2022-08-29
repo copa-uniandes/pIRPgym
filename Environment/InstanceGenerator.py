@@ -108,7 +108,7 @@ class instance_generator():
 
             # Historic values
             if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,0] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
+                self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
