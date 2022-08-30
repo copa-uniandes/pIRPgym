@@ -402,24 +402,27 @@ class policies():
         return FO_Routing, Rutas_finales
 
 
-    def Myopic_heuristic_Just_Demand(self, env, p,q, d,h, q_disp, c, max_cij, dist_demand_parm, path):
+    def Myopic_heuristic_Just_Demand(self, state, _, env, q_disp, max_cij):
 
         #Vertex = env.V
         Products = env.Products
         Q = env.Q
         O_k = env.O_k
         Mk = env.M_kt
-        Km = env.K_it
         M = env.M
         V = M+1
         K = env.K
-        T = env.T
+        T = [0]
+        q = _['sample_paths']['q'][0,0]
+        d = _['sample_paths']['d'][0,0]
+        p = env.p
+        h = env.h
+        c = env.c
+
+
         
         final_policy = {}    
         FO_policy = 0
-        
-        policy_replenishment = 0
-        policy_purchase = 0
         
         solucionTTP = {t:[  np.zeros(len(V), dtype=bool), 
                             np.zeros(len(V), dtype=int), 
@@ -430,17 +433,13 @@ class policies():
                             np.zeros(len(K), dtype=int), 0, 0]   for t in T}
 
 
-        compra_extra = {t:np.zeros(len(K), dtype = int) for t in T}
-        inventario = {t:[[[0 for o in range(O_k[k]+1)] for k in K], [[0 for o in range(O_k[k]+1)] for k in K]]  for t in range(len(T)+1)}
-        ventas = {(k,t,o):0 for k in K for o in range(O_k[k]) for t in T}
+        compra_extra = np.zeros(len(K), dtype = int)
+        inventario = [[[0 for o in range(O_k[k]+1)] for k in K], [[0 for o in range(O_k[k]+1)] for k in K]]
+        ventas = {(k,o):0 for k in K for o in range(O_k[k])}
         
-        for t in T: 
+        initial_inventory = state
 
-            ''' Everything starts at 0, so this doesn't matter '''
-            if t == 0:
-                initial_inventory = inventario[t][0].copy()
-            else:
-                initial_inventory = inventario[t+1][0].copy()
+        for t in T: 
                 
             ''' Replenish decision - how much to buy in total'''
             var_compra = self.Define_Quantity_Purchased_By_Policy(K, t, T, initial_inventory, d, path, 1, O_k)
@@ -481,22 +480,22 @@ class policies():
         return final_policy, FO_policy
 
 
-    def Define_Quantity_Purchased_By_Policy(self, K, t, initial_inventory, d, path, theta, O_k):
+    def Define_Quantity_Purchased_By_Policy(self, K, initial_inventory, d, path, theta, O_k):
         ''' replenishment dictionary '''
         var_compra = {}
         for k in K:
             
             ''' Total available inventory of product k '''
-            suma_inventory = sum(initial_inventory[k][o] for o in range(O_k[k]))
+            suma_inventory = sum(initial_inventory[k][o] for o in range(1,O_k[k] + 1))
             
             ''' What's needed to be replenished '''
             dif = suma_inventory - d[k,t,path]
             if dif <0:
                 ''' theta is a previously selected extra percentage of the demand to buy, in this case will always be 0'''
-                var_compra[k,t] = np.ceil((d[k,t,path]- suma_inventory)*(1+theta))
+                var_compra[k] = np.ceil((d[k,t,path]- suma_inventory)*(1+theta))
                 
             else:
-                var_compra[k,t] = 0
+                var_compra[k] = 0
                 
         return var_compra
 
