@@ -423,23 +423,23 @@ class policies():
         final_policy = {}    
         FO_policy = 0
         
-        solucionTTP = {0:[  np.zeros(len(V), dtype=bool), 
-                            np.zeros(len(V), dtype=int), 
-                            np.zeros((len(V), len(K)), dtype=bool), 
-                            np.zeros((len(V), len(K)), dtype=int), 
-                            np.full(len(V) , -1, dtype = int), 
-                            np.zeros(len(V), dtype=int), 
-                            np.zeros(len(K), dtype=int), 0, 0]}
+        solucionTTP = {0:[  np.zeros(V, dtype=bool), 
+                            np.zeros(V, dtype=int), 
+                            np.zeros((V, K), dtype=bool), 
+                            np.zeros((V, K), dtype=int), 
+                            np.full(V , -1, dtype = int), 
+                            np.zeros(V, dtype=int), 
+                            np.zeros(K, dtype=int), 0, 0]}
 
 
-        compra_extra = np.zeros(len(K), dtype = int)
-        inventario = [[[0 for o in range(O_k[k]+1)] for k in K], [[0 for o in range(O_k[k]+1)] for k in K]]
-        ventas = {(k,o):0 for k in K for o in range(O_k[k])}
+        compra_extra = np.zeros(K, dtype = int)
+        inventario = [[[0 for o in range(O_k[k]+1)] for k in Products], [[0 for o in range(O_k[k]+1)] for k in Products]]
+        ventas = {(k,o):0 for k in Products for o in range(O_k[k])}
         
         initial_inventory = state
                 
         ''' Replenish decision - how much to buy in total'''
-        var_compra = self.Define_Quantity_Purchased_By_Policy(K, initial_inventory, d, 1, O_k)
+        var_compra = self.Define_Quantity_Purchased_By_Policy(Products, initial_inventory, d, 1, O_k)
         
         ''' Purchasing decision - who to buy from '''
         solucionTTP, No_compra_total, solucionTTP[0][7] = self.Purchase_SortByprice(M, Mk, K, T,p, q, Q, var_compra, solucionTTP)
@@ -479,10 +479,10 @@ class policies():
         return final_policy, []#, FO_policy
 
 
-    def Define_Quantity_Purchased_By_Policy(self, K, initial_inventory, d, theta, O_k):
+    def Define_Quantity_Purchased_By_Policy(self, Products, initial_inventory, d, theta, O_k):
         ''' replenishment dictionary '''
         var_compra = {}
-        for k in K:
+        for k in Products:
             
             ''' Total available inventory of product k '''
             suma_inventory = sum(initial_inventory[k][o] for o in range(1,O_k[k] + 1))

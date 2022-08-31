@@ -43,7 +43,7 @@ env = steroid_IRP( look_ahead = look_ahead,
 state, _ = env.reset( return_state = True, rd_seed = rd_seed, q_params = q_params, 
                         p_params = p_params, d_params = d_params, h_params = h_params)
 
-policy_generator = policies
+policy_generator = policies()
 
 action, la_dec = policy_generator.Myopic_Heuristic(state, _, env)
 
