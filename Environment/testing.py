@@ -22,7 +22,7 @@ warnings = False
 
 # Other parameters
 num_episodes = 1
-env_config = { 'M': 5, 'K': 5, 'T': 20,  'F': 1, 
+env_config = { 'M': 4, 'K': 4, 'T': 6,  'F': 1, 
                'S': 1,  'LA_horizon': 3, 'back_o_cost':1e12}
 
 q_params = {'distribution': 'c_uniform', 'min': 6, 'max': 20}
@@ -47,8 +47,7 @@ policy_generator = policies()
 
 action, la_dec = policy_generator.Myopic_Heuristic(state, _, env)
 
-
-
+x=1 
 
 
 

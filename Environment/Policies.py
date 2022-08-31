@@ -408,8 +408,8 @@ class policies():
         Q = env.Q
         O_k = env.O_k
         Mk = {k:env.M_kt[k,env.t] for k in Products}
-        M = env.M
-        V = M+1
+        M = env.Suppliers
+        V = len(M)+1
         K = env.K
         T = [0]
         q = _['sample_paths']['q'][0,0]
@@ -442,7 +442,7 @@ class policies():
         var_compra = self.Define_Quantity_Purchased_By_Policy(Products, initial_inventory, d, 1, O_k)
         
         ''' Purchasing decision - who to buy from '''
-        solucionTTP, No_compra_total, solucionTTP[0][7] = self.Purchase_SortByprice(M, Mk, K, T,p, q, Q, var_compra, solucionTTP)
+        solucionTTP, No_compra_total, solucionTTP[0][7] = self.Purchase_SortByprice(M, Mk, Products, p, q, Q, var_compra, solucionTTP)
         
         ''' Routing decisions '''
         Rutas_finales, solucionTTP, solucionTTP[0][8]  = self.Genera_ruta_at_t(solucionTTP, 0, max_cij, c, Q)
@@ -466,14 +466,14 @@ class policies():
         
         solucionTTP[0].append(costo_total_t)
         
-        costo_total_path+=costo_total_t
-        costo_compra_path+=compra_compra
-        costo_extra_path+=costo_compra_extra_t
-        costo_inventario_path+=costo_inventario_t
-        costo_ruteo_path+=solucionTTP[0][8]
+        costo_total_path=costo_total_t
+        costo_compra_path=compra_compra
+        costo_extra_path=costo_compra_extra_t
+        costo_inventario_path=costo_inventario_t
+        costo_ruteo_path=0
         
         
-        final_policy[t]=(solucionTTP[0].copy(), inventario[0].copy(), compra_extra[0], compra_compra, solucionTTP[0][8], compra_compra+solucionTTP[0][8])
+        final_policy=(solucionTTP[0].copy(), inventario[0].copy(), compra_extra[0], compra_compra, solucionTTP[0][8], compra_compra+solucionTTP[0][8])
         FO_policy += compra_compra+solucionTTP[0][8]
                 
         return final_policy, []#, FO_policy
@@ -485,7 +485,7 @@ class policies():
         for k in Products:
             
             ''' Total available inventory of product k '''
-            suma_inventory = sum(initial_inventory[k][o] for o in range(1,O_k[k] + 1))
+            suma_inventory = sum([initial_inventory[k,o] for o in range(1,O_k[k] + 1)])
             
             ''' What's needed to be replenished '''
             dif = suma_inventory - d[k]
@@ -499,20 +499,20 @@ class policies():
         return var_compra
 
 
-    def Purchase_SortByprice(self, M, Mk, K, p, q, Q, var_compra, solucionTTP):
+    def Purchase_SortByprice(self, M, Mk, Products, p, q, Q, var_compra, solucionTTP):
         
         t = 0
 
         #Si esta o no en el ruteo, cantidad total a comprar en cada proceedor, si compro o no ese producto, la cantidad a comprar de ese producto.
         ''' Boolean, if product k has been purchased '''
-        ya_comprado = np.zeros(len(K) , dtype = bool)
+        ya_comprado = np.zeros(len(Products) , dtype = bool)
         
         ''' Dict of prices-supplier tuples, sorted by best price'''
-        Sort_k_by_p = self.Sort_prods_by_price_at_t(M, K, p)
+        Sort_k_by_p = self.Sort_prods_by_price_at_t(M, Products, p)
         
         ''' Dict w booleans: whether product k has backorders or not'''
         No_compra_total = {}
-        for k in K:
+        for k in Products:
             No_compra_total[k] = False
             demand = 0
             while ya_comprado[k] == False and var_compra[k] > 0:
@@ -591,7 +591,7 @@ class policies():
                                     solucionTTP[t][6][k]+=copia_valor
                             
                             ''' If already bought everything needed to be bought of product k at time t '''
-                            if demand == var_compra[k,t]:
+                            if demand == var_compra[k]:
                                 ya_comprado[k] = True
                                 break                                
                 
@@ -600,14 +600,14 @@ class policies():
                     No_compra_total[k] = True
                     ya_comprado[k] = True
         
-        Costo_compra = sum(solucionTTP[t][3][i][k]*p[i,k,t] for i in M for k in K)
+        Costo_compra = sum(solucionTTP[t][3][i][k]*p[i,k] for i in M for k in Products)
     
         return solucionTTP, No_compra_total, Costo_compra
     
 
-    def Sort_prods_by_price_at_t(self, M, K, p):
+    def Sort_prods_by_price_at_t(self, M, Products, p):
         Sort_k_by_p = {}
-        for k in K:
+        for k in Products:
             Cantidad1 = [(p[i,k],i) for i in M]
             Cantidad1.sort(key=lambda y:y[0])
             Sort_k_by_p[k] = Cantidad1
