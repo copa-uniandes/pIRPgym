@@ -449,8 +449,11 @@ class policies():
         solucionTTP[0].append(Rutas_finales.copy())        
  
         
-        purchase = {(i,k) :solucionTTP[0][3][i,k] for k in Products for i in Mk[k]}
-        demand_compliance = {(k,0):sum(purchase[i,k] for i in Mk[k]) for k in Products}
+        purchase = {(i,k) :solucionTTP[0][3][i,k] if i in Mk[k] else 0 for k in Products for i in M}
+        demand_compliance = {(k,0):sum(purchase[i,k] for i in M if i in Mk[k]) for k in Products}
+        for k in Products:
+            for o in env.Ages[k]:
+                demand_compliance[k,o] = 0
      
         rutas = []
         for key in Rutas_finales[0].keys():
