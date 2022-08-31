@@ -45,9 +45,9 @@ state, _ = env.reset( return_state = True, rd_seed = rd_seed, q_params = q_param
 
 policy_generator = policies()
 
-action, la_dec = policy_generator.Myopic_Heuristic(state, _, env)
+action, la_dec = policy_generator.Stochastic(state, _, env)
 
-x=1 
+x=1
 
 
 

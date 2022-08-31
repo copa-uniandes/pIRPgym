@@ -411,11 +411,9 @@ class policies():
         M = env.Suppliers
         V = len(M)+1
         K = env.K
-        T = [0]
         q = _['sample_paths']['q'][0,0]
         d = _['sample_paths']['d'][0,0]
         p = env.p
-        h = env.h
         c = env.c
         max_cij = max(list(c.values()))
 
@@ -429,7 +427,8 @@ class policies():
                             np.zeros((V, K), dtype=int), 
                             np.full(V , -1, dtype = int), 
                             np.zeros(V, dtype=int), 
-                            np.zeros(K, dtype=int), 0, 0]}
+                            np.zeros(K, dtype=int), 
+                            0, 0]}
 
 
         compra_extra = np.zeros(K, dtype = int)
@@ -447,36 +446,18 @@ class policies():
         ''' Routing decisions '''
         Rutas_finales, solucionTTP, solucionTTP[0][8]  = self.Genera_ruta_at_t(solucionTTP, 0, max_cij, c, Q)
         
-        solucionTTP[0].append(Rutas_finales.copy())
+        solucionTTP[0].append(Rutas_finales.copy())        
+ 
         
-        # ''' Updates inventory and demand compliance - FIFO policy'''
-        # inventario, compra_extra, ventas = self.calcula_inventario(t, K, O_k, solucionTTP, inventario, compra_extra,ventas, d, 0)
-        
-        # costo_compra_extra_t = sum(compra_extra[t])*1000
-        # costo_inventario_t = sum(sum(inventario[t][1][k][o] for o in range(O_k[k]))*h[k,t] for k in K)
+        purchase = {(i,k) :solucionTTP[0][3][i,k] for k in Products for i in Mk[k]}
+        demand_compliance = {(k,0):sum(purchase[i,k] for i in Mk[k]) for k in Products}
+     
+        rutas = []
+        for key in Rutas_finales[0].keys():
+            rutas.append(Rutas_finales[0][key][0])
 
-        costo_compra_extra_t, costo_inventario_t = 0, 0
-        
-        solucionTTP[0].append(costo_inventario_t)
-        solucionTTP[0].append(costo_compra_extra_t)
-        
-        compra_compra = solucionTTP[0][7]
-        
-        costo_total_t = compra_compra + solucionTTP[0][8] + costo_compra_extra_t + costo_inventario_t
-        
-        solucionTTP[0].append(costo_total_t)
-        
-        costo_total_path=costo_total_t
-        costo_compra_path=compra_compra
-        costo_extra_path=costo_compra_extra_t
-        costo_inventario_path=costo_inventario_t
-        costo_ruteo_path=0
-        
-        
-        final_policy=(solucionTTP[0].copy(), inventario[0].copy(), compra_extra[0], compra_compra, solucionTTP[0][8], compra_compra+solucionTTP[0][8])
-        FO_policy += compra_compra+solucionTTP[0][8]
-                
-        return final_policy, []#, FO_policy
+        action = [rutas, purchase, demand_compliance]  
+        return action, []
 
 
     def Define_Quantity_Purchased_By_Policy(self, Products, initial_inventory, d, theta, O_k):
