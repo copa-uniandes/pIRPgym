@@ -148,7 +148,7 @@ class policies():
         return [rutas, purchase, demand_compliance]#, double_check, I_1
 
 
-    def stochastic_rolling_horizon(self, state, _, env):
+    def Stochastic_Rolling_Horizon(self, state, _, env):
     
         solucionTTP = {0:[  np.zeros(env.M+1, dtype=bool), 
                                 np.zeros(env.M+1, dtype=int), 
@@ -342,7 +342,6 @@ class policies():
 
         return Info_Route, solucionTTP
 
-
     #Build Augmented graph following general tour
     def Genera_Rutas_CVRP_at_t(self, Info_Route, solucionTTP, t, c, Q):
         Rutas_finales = {}
@@ -402,126 +401,108 @@ class policies():
         return FO_Routing, Rutas_finales
 
 
-    def Myopic_heuristic_Just_Demand(self, env, p,q, d,h, q_disp, c, max_cij, dist_demand_parm, path):
+    def Myopic_Heuristic(self, state, _, env):
 
         #Vertex = env.V
         Products = env.Products
         Q = env.Q
         O_k = env.O_k
-        Mk = env.M_kt
-        Km = env.K_it
-        M = env.M
-        V = M+1
+        Mk = {k:env.M_kt[k,env.t] for k in Products}
+        M = env.Suppliers
+        V = len(M)+1
         K = env.K
-        T = env.T
+        q = _['sample_paths']['q'][0,0]
+        d = _['sample_paths']['d'][0,0]
+        p = env.p
+        c = env.c
+        max_cij = max(list(c.values()))
+
         
         final_policy = {}    
         FO_policy = 0
         
-        policy_replenishment = 0
-        policy_purchase = 0
+        solucionTTP = {0:[  np.zeros(V, dtype=bool), 
+                            np.zeros(V, dtype=int), 
+                            np.zeros((V, K), dtype=bool), 
+                            np.zeros((V, K), dtype=int), 
+                            np.full(V , -1, dtype = int), 
+                            np.zeros(V, dtype=int), 
+                            np.zeros(K, dtype=int), 
+                            0, 0]}
+
+
+        compra_extra = np.zeros(K, dtype = int)
+        inventario = [[[0 for o in range(O_k[k]+1)] for k in Products], [[0 for o in range(O_k[k]+1)] for k in Products]]
+        ventas = {(k,o):0 for k in Products for o in range(O_k[k])}
         
-        solucionTTP = {t:[  np.zeros(len(V), dtype=bool), 
-                            np.zeros(len(V), dtype=int), 
-                            np.zeros((len(V), len(K)), dtype=bool), 
-                            np.zeros((len(V), len(K)), dtype=int), 
-                            np.full(len(V) , -1, dtype = int), 
-                            np.zeros(len(V), dtype=int), 
-                            np.zeros(len(K), dtype=int), 0, 0]   for t in T}
-
-
-        compra_extra = {t:np.zeros(len(K), dtype = int) for t in T}
-        inventario = {t:[[[0 for o in range(O_k[k]+1)] for k in K], [[0 for o in range(O_k[k]+1)] for k in K]]  for t in range(len(T)+1)}
-        ventas = {(k,t,o):0 for k in K for o in range(O_k[k]) for t in T}
+        initial_inventory = state
+                
+        ''' Replenish decision - how much to buy in total'''
+        var_compra = self.Define_Quantity_Purchased_By_Policy(Products, initial_inventory, d, 1, O_k)
         
-        for t in T: 
+        ''' Purchasing decision - who to buy from '''
+        solucionTTP, No_compra_total, solucionTTP[0][7] = self.Purchase_SortByprice(M, Mk, Products, p, q, Q, var_compra, solucionTTP)
+        
+        ''' Routing decisions '''
+        Rutas_finales, solucionTTP, solucionTTP[0][8]  = self.Genera_ruta_at_t(solucionTTP, 0, max_cij, c, Q)
+        
+        solucionTTP[0].append(Rutas_finales.copy())        
+ 
+        
+        purchase = {(i,k) :solucionTTP[0][3][i,k] for k in Products for i in Mk[k]}
+        demand_compliance = {(k,0):sum(purchase[i,k] for i in Mk[k]) for k in Products}
+     
+        rutas = []
+        for key in Rutas_finales[0].keys():
+            rutas.append(Rutas_finales[0][key][0])
 
-            ''' Everything starts at 0, so this doesn't matter '''
-            if t == 0:
-                initial_inventory = inventario[t][0].copy()
-            else:
-                initial_inventory = inventario[t+1][0].copy()
-                
-            ''' Replenish decision - how much to buy in total'''
-            var_compra = self.Define_Quantity_Purchased_By_Policy(K, t, T, initial_inventory, d, path, 1, O_k)
-            
-            ''' Purchasing decision - who to buy from '''
-            solucionTTP, q_disp, No_compra_total, solucionTTP[t][7] = self.Purchase_SortByprice(V, M, Mk, K, T,p, q, Q, q_disp, var_compra, t, solucionTTP)
-            
-            ''' Routing decisions '''
-            Rutas_finales, solucionTTP, solucionTTP[t][8]  = self.Genera_ruta_at_t(solucionTTP, t, max_cij, c, Q)
-            
-            solucionTTP[t].append(Rutas_finales.copy())
-            
-            ''' Updates inventory and demand compliance - FIFO policy'''
-            inventario, compra_extra, ventas = self.calcula_inventario(t, K, O_k, solucionTTP, inventario, compra_extra,ventas, d, 0)
-            
-            costo_compra_extra_t = sum(compra_extra[t])*1000
-            costo_inventario_t = sum(sum(inventario[t][1][k][o] for o in range(O_k[k]))*h[k,t] for k in K)
-            
-            solucionTTP[t].append(costo_inventario_t)
-            solucionTTP[t].append(costo_compra_extra_t)
-            
-            compra_compra = solucionTTP[t][7]
-            
-            costo_total_t = compra_compra + solucionTTP[t][8] + costo_compra_extra_t + costo_inventario_t
-            
-            solucionTTP[t].append(costo_total_t)
-            
-            costo_total_path+=costo_total_t
-            costo_compra_path+=compra_compra
-            costo_extra_path+=costo_compra_extra_t
-            costo_inventario_path+=costo_inventario_t
-            costo_ruteo_path+=solucionTTP[t][8]
-            
-            
-            final_policy[t]=(solucionTTP[t].copy(), inventario[t].copy(), compra_extra[t], compra_compra, solucionTTP[t][8], compra_compra+solucionTTP[t][8])
-            FO_policy += compra_compra+solucionTTP[t][8]
-                
-        return final_policy, FO_policy
+        action = [rutas, purchase, demand_compliance]  
+        return action, []
 
 
-    def Define_Quantity_Purchased_By_Policy(self, K, t, initial_inventory, d, path, theta, O_k):
+    def Define_Quantity_Purchased_By_Policy(self, Products, initial_inventory, d, theta, O_k):
         ''' replenishment dictionary '''
         var_compra = {}
-        for k in K:
+        for k in Products:
             
             ''' Total available inventory of product k '''
-            suma_inventory = sum(initial_inventory[k][o] for o in range(O_k[k]))
+            suma_inventory = sum([initial_inventory[k,o] for o in range(1,O_k[k] + 1)])
             
             ''' What's needed to be replenished '''
-            dif = suma_inventory - d[k,t,path]
+            dif = suma_inventory - d[k]
             if dif <0:
                 ''' theta is a previously selected extra percentage of the demand to buy, in this case will always be 0'''
-                var_compra[k,t] = np.ceil((d[k,t,path]- suma_inventory)*(1+theta))
+                var_compra[k] = np.ceil((d[k]- suma_inventory)*(1+theta))
                 
             else:
-                var_compra[k,t] = 0
+                var_compra[k] = 0
                 
         return var_compra
 
 
-    def Purchase_SortByprice(self, M, Mk, K, p, q, Q, q_disp, var_compra, t, solucionTTP):
-    
+    def Purchase_SortByprice(self, M, Mk, Products, p, q, Q, var_compra, solucionTTP):
+        
+        t = 0
+
         #Si esta o no en el ruteo, cantidad total a comprar en cada proceedor, si compro o no ese producto, la cantidad a comprar de ese producto.
         ''' Boolean, if product k has been purchased '''
-        ya_comprado = np.zeros(len(K) , dtype = bool)
+        ya_comprado = np.zeros(len(Products) , dtype = bool)
         
         ''' Dict of prices-supplier tuples, sorted by best price'''
-        Sort_k_by_p = self.Sort_prods_by_price_at_t(M, K, t, p)
+        Sort_k_by_p = self.Sort_prods_by_price_at_t(M, Products, p)
         
         ''' Dict w booleans: whether product k has backorders or not'''
         No_compra_total = {}
-        for k in K:
+        for k in Products:
             No_compra_total[k] = False
             demand = 0
-            while ya_comprado[k] == False and var_compra[k,t] > 0:
+            while ya_comprado[k] == False and var_compra[k] > 0:
 
                 ''' Goes through every supplier that offers product k at time t '''
-                for j in range(len(Mk[k,t])):
+                for j in range(len(Mk[k])):
 
                     ''' Dict, forall product k there's a list of tuples of prices-suppliers sorted by best price (bc it's a greedy algorithm) '''
-                    i = Sort_k_by_p[k,t][j]
+                    i = Sort_k_by_p[k][j]
 
                     ''' If quantity bought from supplier i at time t does not exceed Q '''                            
                     if solucionTTP[t][1][i[1]] < Q:
@@ -536,55 +517,52 @@ class policies():
                             solucionTTP[t][2][i[1]][k] = True
 
                             ''' If the vehicle's available capacity is greater than what's left to buy of product k at time t '''
-                            if (Q - solucionTTP[t][1][i[1]]) >= (var_compra[k,t] - demand):
+                            if (Q - solucionTTP[t][1][i[1]]) >= (var_compra[k] - demand):
                                 
                                 ''' If the quantity offered by supplier i is less than what's left to be bought of product k at time k '''
-                                if q[i[1], k,t] <= (var_compra[k,t] - demand):
+                                if q[i[1], k] <= (var_compra[k] - demand):
 
                                     ''' The quantity bought from supplier i at time k of product k is the whole quantity they offer '''
-                                    solucionTTP[t][3][i[1]][k] = q[i[1], k,t]
-                                    q_disp[i[1],k,t]-=q[i[1], k,t]
+                                    solucionTTP[t][3][i[1]][k] = q[i[1], k]
                                     ''' Updates quantity of product k that has been purchased ''' 
-                                    demand+=q[i[1], k,t]
+                                    demand+=q[i[1], k]
                                     ''' Total quantity purchased from supplier i at time t is updated '''
-                                    solucionTTP[t][1][i[1]]+=q[i[1], k,t]
+                                    solucionTTP[t][1][i[1]]+=q[i[1], k]
                                     ''' Total quantity of product k that is purchased at time t is updated '''
-                                    solucionTTP[t][6][k]+=q[i[1], k,t]
+                                    solucionTTP[t][6][k]+=q[i[1], k]
                                     
                                 else:
 
                                     ''' Buys what' left to be bought of product k at time t, from supplier i'''
-                                    solucionTTP[t][3][i[1]][k] = (var_compra[k,t] - demand)
-                                    q_disp[i[1],k,t]-=(var_compra[k,t] - demand)
+                                    solucionTTP[t][3][i[1]][k] = (var_compra[k] - demand)
+
                                     copia_demand = demand
                                     ''' Updates quantity of product k that has been purchased ''' 
-                                    demand+=(var_compra[k,t] - demand)
+                                    demand+=(var_compra[k] - demand)
                                     ''' Total quantity purchased from supplier i at time t is updated '''
-                                    solucionTTP[t][1][i[1]]+=(var_compra[k,t] - copia_demand)
+                                    solucionTTP[t][1][i[1]]+=(var_compra[k] - copia_demand)
                                     ''' Total quantity of product k that is purchased at time t is updated '''
-                                    solucionTTP[t][6][k]+=(var_compra[k,t] - copia_demand)
+                                    solucionTTP[t][6][k]+=(var_compra[k] - copia_demand)
 
                             #''' What's left to be bought of product k at time k does not fit in the vehicle '''
                             else:
 
                                 ''' If the quantity offered of product k by supplier i at time t fits in the vehicle '''
-                                if q[i[1],k,t] <= (Q - solucionTTP[t][1][i[1]]):
+                                if q[i[1],k] <= (Q - solucionTTP[t][1][i[1]]):
                                     
                                     ''' Buys the total offered quantity '''
-                                    solucionTTP[t][3][i[1]][k] = q[i[1],k,t]
-                                    q_disp[i[1],k,t]-=q[i[1],k,t]
+                                    solucionTTP[t][3][i[1]][k] = q[i[1],k]
                                     ''' Updates quantity of product k that has been purchased ''' 
-                                    demand+=q[i[1],k,t]
+                                    demand+=q[i[1],k]
                                     ''' Total quantity purchased from supplier i at time t is updated '''
-                                    solucionTTP[t][1][i[1]]+=q[i[1],k,t]
+                                    solucionTTP[t][1][i[1]]+=q[i[1],k]
                                     ''' Total quantity of product k that is purchased at time t is updated '''
-                                    solucionTTP[t][6][k]+=q[i[1],k,t]
+                                    solucionTTP[t][6][k]+=q[i[1],k]
                                     
                                 else:
 
                                     ''' Buys enough to fill the vehicle '''
                                     solucionTTP[t][3][i[1]][k] = (Q - solucionTTP[t][1][i[1]])
-                                    q_disp[i[1],k,t]-=(Q - solucionTTP[t][1][i[1]])
                                     ''' Updates quantity of product k that has been purchased ''' 
                                     demand+=(Q - solucionTTP[t][1][i[1]])
                                     copia_valor = (Q - solucionTTP[t][1][i[1]])
@@ -594,7 +572,7 @@ class policies():
                                     solucionTTP[t][6][k]+=copia_valor
                             
                             ''' If already bought everything needed to be bought of product k at time t '''
-                            if demand == var_compra[k,t]:
+                            if demand == var_compra[k]:
                                 ya_comprado[k] = True
                                 break                                
                 
@@ -603,17 +581,17 @@ class policies():
                     No_compra_total[k] = True
                     ya_comprado[k] = True
         
-        Costo_compra = sum(solucionTTP[t][3][i][k]*p[i,k,t] for i in M for k in K)
+        Costo_compra = sum(solucionTTP[t][3][i][k]*p[i,k] for i in M for k in Products)
     
-        return solucionTTP, q_disp, No_compra_total, Costo_compra
+        return solucionTTP, No_compra_total, Costo_compra
     
 
-    def Sort_prods_by_price_at_t(self, M, K, t, p):
+    def Sort_prods_by_price_at_t(self, M, Products, p):
         Sort_k_by_p = {}
-        for k in K:
-            Cantidad1 = [(p[i,k,t],i) for i in M]
+        for k in Products:
+            Cantidad1 = [(p[i,k],i) for i in M]
             Cantidad1.sort(key=lambda y:y[0])
-            Sort_k_by_p[k,t] = Cantidad1
+            Sort_k_by_p[k] = Cantidad1
                 
         return Sort_k_by_p
     
