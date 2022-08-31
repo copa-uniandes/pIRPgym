@@ -39,26 +39,56 @@ env = steroid_IRP( look_ahead = look_ahead,
                        stochastic_parameters = stochastic_parameters, 
                        env_config = env_config)
 
-generator = instance_generator(env, rd_seed = 0)
+
+state, _ = env.reset( return_state = True, rd_seed = rd_seed, q_params = q_params, 
+                        p_params = p_params, d_params = d_params, h_params = h_params)
+
+policy_generator = policies
+
+action, la_dec = policy_generator.Myopic_Heuristic(state, _, env)
 
 
-# Deterministic parameters
-O_k = generator.gen_ages()
-Ages = {k: range(1, O_k[k] + 1) for k in env.Products}
-c = generator.gen_routing_costs()
 
-# Availabilities
-M_kt, K_it = generator.gen_availabilities()
 
-# Stochastic parameters
-generator.gen_quantities(**q_params)
-generator.gen_demand(**d_params)
 
-# Other deterministic parameters
-p_t = generator.gen_p_price(**p_params)
-h_t = generator.gen_h_cost(**h_params)
 
-print(generator.sample_paths)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# generator = instance_generator(env, rd_seed = 0)
+
+
+# # Deterministic parameters
+# O_k = generator.gen_ages()
+# Ages = {k: range(1, O_k[k] + 1) for k in env.Products}
+# c = generator.gen_routing_costs()
+
+# # Availabilities
+# M_kt, K_it = generator.gen_availabilities()
+
+# # Stochastic parameters
+# generator.gen_quantities(**q_params)
+# generator.gen_demand(**d_params)
+
+# # Other deterministic parameters
+# p_t = generator.gen_p_price(**p_params)
+# h_t = generator.gen_h_cost(**h_params)
+
+# print(generator.sample_paths)
 
 
 
