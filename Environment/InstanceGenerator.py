@@ -152,6 +152,7 @@ class instance_generator():
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
+                
                 values_day_0 = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
 
                 if t + self.LA_horizon > self.T:
@@ -165,9 +166,9 @@ class instance_generator():
                         else:
                             self.sample_paths[t]['d'][day,sample] = {k: self.sim(self.historical_data[t]['d'][k]) for k in self.Products}
                 
-                seed(self.M * self.K + t)
+                seed(self.rd_seed + self.M * self.K + t)
                 # Generating random variable realization
-                if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
+                if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
                     self.W_t[t]['d'] = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
                 else:
                     self.W_t[t]['d'] = values_day_0

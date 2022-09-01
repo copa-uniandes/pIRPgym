@@ -265,7 +265,7 @@ class steroid_IRP(gym.Env):
         s_tprime, reward, back_orders, perished = self.transition_function(real_action, self.W_t, warnings)
 
         # Reward
-        transport_cost, purchase_cost, holding_cost, backorders_cost = self.compute_costs(real_action, s_tprime)
+        transport_cost, purchase_cost, holding_cost, backorders_cost = self.compute_costs(real_action, s_tprime, perished)
         reward += transport_cost + purchase_cost + holding_cost + backorders_cost
 
         # Time step update and termination check
@@ -324,7 +324,7 @@ class steroid_IRP(gym.Env):
 
 
     # Compute costs of a given procurement plan for a given day
-    def compute_costs(self, action, s_tprime):
+    def compute_costs(self, action, s_tprime, perished):
         routes, purchase, demand_compliance = action[:3]
         if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
 
@@ -336,6 +336,8 @@ class steroid_IRP(gym.Env):
         
         # TODO!!!!!
         holding_cost = sum(sum(s_tprime[k,o] for o in range(1, self.O_k[k] + 1)) * self.h[k] for k in self.Products)
+        for k in perished.keys():
+            holding_cost += perished[k] * self.h[k]
 
         backorders_cost = 0
         if self.other_env_params['backorders'] == 'backorders':
