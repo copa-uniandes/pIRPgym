@@ -20,6 +20,7 @@ class instance_generator():
     def __init__(self, env, rd_seed):
         
         seed(rd_seed)
+        self.rd_seed = rd_seed
         
         ### Importing instance parameters ###
         self.M = env.M; self.Suppliers = env.Suppliers    # Suppliers
@@ -152,7 +153,7 @@ class instance_generator():
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
-                
+
                 values_day_0 = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
 
                 if t + self.LA_horizon > self.T:
