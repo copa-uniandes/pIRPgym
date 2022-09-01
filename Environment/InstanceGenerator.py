@@ -126,6 +126,7 @@ class instance_generator():
                         else:
                             self.sample_paths[t]['q'][day,sample] = {(i,k): self.sim([self.historical_data[t]['q'][i,k][obs] for obs in range(len(self.historical_data[t]['q'][i,k])) if self.historical_data[t]['q'][i,k][obs] > 0]) if i in self.M_kt[k,t+day] else 0 for i in self.Suppliers for k in self.Products}
                 
+                seed(self.rd_seed + t + 1)
                 # Generating random variable realization
                 if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
                     self.W_t[t]['q'] = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
@@ -137,8 +138,8 @@ class instance_generator():
                     for i in self.Suppliers:
                         for k in self.Products:
                             self.historical_data[t+1]['q'][i,k] = self.historical_data[t]['q'][i,k] + [self.W_t[t]['q'][i,k]]
-    
-        
+            
+     
     def gen_demand(self, **kwargs):
         '''
         d_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
@@ -151,6 +152,7 @@ class instance_generator():
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
+                
                 values_day_0 = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
 
                 if t + self.LA_horizon > self.T:
@@ -163,9 +165,10 @@ class instance_generator():
                             self.sample_paths[t]['d'][day,sample] = values_day_0
                         else:
                             self.sample_paths[t]['d'][day,sample] = {k: self.sim(self.historical_data[t]['d'][k]) for k in self.Products}
-                        
+                
+                seed(self.rd_seed + self.M * self.K + t)
                 # Generating random variable realization
-                if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
+                if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
                     self.W_t[t]['d'] = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
                 else:
                     self.W_t[t]['d'] = values_day_0
@@ -174,7 +177,6 @@ class instance_generator():
                 if t < self.T - 1:
                     for k in self.Products:
                         self.historical_data[t+1]['d'][k] = self.historical_data[t]['d'][k] + [self.W_t[t]['d'][k]]
-
 
 
     def gen_p_price(self, **kwargs):
@@ -292,6 +294,7 @@ class instance_generator():
         - hist: (list) historical dataset that is used as an empirical distribution for
                 the random number generation
         '''
+        seed(randint(0,1e9))
         Te = len(hist)
         sorted_data = sorted(hist)
         

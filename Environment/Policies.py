@@ -411,8 +411,7 @@ class policies():
         M = env.Suppliers
         V = len(M)+1
         K = env.K
-        q = _['sample_paths']['q'][0,0]
-        d = _['sample_paths']['d'][0,0]
+        q, d = self.Expected_Value_from_Sample_Paths(env, _)
         p = env.p
         c = env.c
         max_cij = max(list(c.values()))
@@ -461,6 +460,13 @@ class policies():
 
         action = [rutas, purchase, demand_compliance]  
         return action, []
+
+    
+    def Expected_Value_from_Sample_Paths(self, env, _):
+        q = {(i,k): sum(_['sample_paths']['q'][0,s][i,k] for s in env.Samples)/env.S for k in self.Products for i in self.M}
+        d = {k: sum(_['sample_paths']['d'][0,s][k] for s in env.Samples)/env.S for k in self.Products}
+
+        return q, d
 
 
     def Define_Quantity_Purchased_By_Policy(self, Products, initial_inventory, d, theta, O_k):
