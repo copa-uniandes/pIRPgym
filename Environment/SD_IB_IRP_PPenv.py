@@ -210,13 +210,13 @@ class steroid_IRP(gym.Env):
         # Availabilities
         self.M_kt, self.K_it = generator.gen_availabilities()
 
-        # Stochastic parameters
-        generator.gen_quantities(**kwargs['q_params'])
-        generator.gen_demand(**kwargs['d_params'])
-
         # Other deterministic parameters
         self.p_t = generator.gen_p_price(**kwargs['p_params'])
         self.h_t = generator.gen_h_cost(**kwargs['h_params'])
+
+        # Stochastic parameters
+        generator.gen_quantities(**kwargs['q_params'])
+        generator.gen_demand(**kwargs['d_params'])
 
         # Recovery of other information
         self.exog_info = generator.W_t
