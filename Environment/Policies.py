@@ -411,13 +411,14 @@ class policies():
         M = env.Suppliers
         V = len(M)+1
         K = env.K
+        S = env.Samples
         q, d = self.Expected_Value_from_Sample_Paths(env, _)
         p = env.p
         c = env.c
         max_cij = max(list(c.values()))
 
         
-        final_policy = {}    
+        final_policy = {}
         FO_policy = 0
         
         solucionTTP = {0:[  np.zeros(V, dtype=bool), 
@@ -437,7 +438,7 @@ class policies():
         initial_inventory = state
                 
         ''' Replenish decision - how much to buy in total'''
-        var_compra = self.Define_Quantity_Purchased_By_Policy(Products, initial_inventory, d, 1, O_k)
+        var_compra = self.Define_Quantity_Purchased_By_Policy(Products, initial_inventory, d, 0, O_k)
         
         ''' Purchasing decision - who to buy from '''
         solucionTTP, No_compra_total, solucionTTP[0][7] = self.Purchase_SortByprice(M, Mk, Products, p, q, Q, var_compra, solucionTTP)
@@ -458,8 +459,16 @@ class policies():
         for key in Rutas_finales[0].keys():
             rutas.append(Rutas_finales[0][key][0])
 
-        action = [rutas, purchase, demand_compliance]  
-        return action, []
+        action = [rutas, purchase, demand_compliance] 
+
+        ii_f = {0:{s:{(k,o):initial_inventory[k,o-1] if o > 1 else max(0,sum(purchase[i,k] for i in M)-demand_compliance[k,0]) for k in Products for o in range(O_k[k]+1)} for s in S}}
+        back = {0:{s:{k:max(0,_['sample_paths']['d'][0,s][k] - min(demand_compliance[k,0], sum(purchase[i,k] for i in M))) for k in Products} for s in S}}
+        purch = {0:{s:purchase for s in S}}
+
+        la_decisions = [ii_f, purch, back]
+
+
+        return action, la_decisions
 
     
     def Expected_Value_from_Sample_Paths(self, env, _):
