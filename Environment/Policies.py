@@ -228,8 +228,8 @@ class policies():
                 for i in env.M_kt[k,env.t]:
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
                 
-                for o in range(env.O_k[k] + 1):
-                    m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,ss] for ss in S)/len(S), f'Anticipativity demand comp {k}{o}{s}')
+                #for o in range(env.O_k[k] + 1):
+                #    m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,ss] for ss in S)/len(S), f'Anticipativity demand comp {k}{o}{s}')
             
             for i in M:
                 m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
@@ -239,6 +239,7 @@ class policies():
         
         ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
         
+
         m.setObjective(compra+ruta)
                 
         m.update()
@@ -472,8 +473,8 @@ class policies():
 
     
     def Expected_Value_from_Sample_Paths(self, env, _):
-        q = {(i,k): sum(_['sample_paths']['q'][0,s][i,k] for s in env.Samples)/env.S for k in self.Products for i in self.M}
-        d = {k: sum(_['sample_paths']['d'][0,s][k] for s in env.Samples)/env.S for k in self.Products}
+        q = {(i,k): sum(_['sample_paths']['q'][0,s][i,k] for s in env.Samples)/env.S for k in env.Products for i in env.Suppliers}
+        d = {k: sum(_['sample_paths']['d'][0,s][k] for s in env.Samples)/env.S for k in env.Products}
 
         return q, d
 

@@ -130,7 +130,7 @@ class steroid_IRP(gym.Env):
     '''
     
     # Initialization method
-    def __init__(self, look_ahead = ['*'], historical_data = ['*'], backorders = 'backorders',
+    def __init__(self, look_ahead = ['*'], historical_data = ['*'], backorders = 'backorders', stoch=True,
                  stochastic_parameters = False, **kwargs):
         
         ### Main parameters ###
@@ -139,6 +139,8 @@ class steroid_IRP(gym.Env):
         self.F = 4                                      # Fleet
         self.T = 7                                  
         
+        self.stoch = stoch
+
         ### Other parameters ### 
         self.wh_cap = 1e9                               # Warehouse capacity
 
@@ -257,7 +259,7 @@ class steroid_IRP(gym.Env):
 
         if self.stochastic_parameters != False:
             self.q = self.W_t['q']; self.d = self.W_t['d']
-            real_action = self.get_real_action(action)
+            real_action = self.get_real_action(action, fixed_compl=False)
         else:
             real_action = action
 
@@ -290,7 +292,7 @@ class steroid_IRP(gym.Env):
         return self.state, reward, done, real_action, _
 
 
-    def get_real_action(self, action):
+    def get_real_action(self, action, fixed_compl=True):
         '''
         When some parameters are stochastic, the chosen action might not be feasible.
         Therefore, an aditional intra-step computation must be made and andjustments 
@@ -302,21 +304,34 @@ class steroid_IRP(gym.Env):
         # The purchase exceeds the available quantities of the suppliers
         real_purchase = {(i,k): min(purchase[i,k], self.q[i,k]) for i in self.Suppliers for k in self.Products}
 
-        real_demand_compliance = copy(demand_compliance)
-        for k in self.Products:
-            # The demand compliance of purchased items differs from the purchase 
-            real_demand_compliance[k,0] = min(real_demand_compliance[k,0], sum(real_purchase[i,k] for i in self.Suppliers))
-            # The demand is lower than the demand compliance plan 
-            if sum(real_demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
-                demand = self.d[k]
-                age = self.O_k[k]
-                while demand > 0:
-                    if demand >= real_demand_compliance[k,age]:
-                        demand -= real_demand_compliance[k,age]
-                        age -= 1
-                    elif demand < real_demand_compliance[k,age]:
-                        real_demand_compliance[k,age] = demand
-                        break
+        if fixed_compl:
+            real_demand_compliance = copy(demand_compliance)
+            for k in self.Products:
+                # The demand compliance of purchased items differs from the purchase 
+                real_demand_compliance[k,0] = min(real_demand_compliance[k,0], sum(real_purchase[i,k] for i in self.Suppliers))
+                # The demand is lower than the demand compliance plan 
+                if sum(real_demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k]:
+                    demand = self.d[k]
+                    age = self.O_k[k]
+                    while demand > 0:
+                        if demand >= real_demand_compliance[k,age]:
+                            demand -= real_demand_compliance[k,age]
+                            age -= 1
+                        elif demand < real_demand_compliance[k,age]:
+                            real_demand_compliance[k,age] = demand
+                            break
+        else:
+            real_demand_compliance={}
+            for k in self.Products:
+                left_to_comply = self.d[k]
+                for o in range(self.O_k[k],0,-1):
+                    if self.stoch:
+                        real_demand_compliance[k,o] = min(self.state[k,o], left_to_comply)
+                        left_to_comply -= real_demand_compliance[k,o]
+                    else:
+                        real_demand_compliance[k,o] = 0
+                
+                real_demand_compliance[k,0] = min(sum(real_purchase[i,k] for i in self.Suppliers), left_to_comply)
 
         real_action = [action[0], real_purchase, real_demand_compliance]
 
