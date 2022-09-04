@@ -272,7 +272,7 @@ class steroid_IRP(gym.Env):
 
         # Time step update and termination check
         self.t += 1
-        done = self.check_termination(s_tprime)
+        done = self.check_termination()
         _ = {'backorders': back_orders, 'perished': perished}
 
         # State update
@@ -410,7 +410,7 @@ class steroid_IRP(gym.Env):
 
 
     # Checking for episode's termination
-    def check_termination(self, s_tprime):
+    def check_termination(self):
         done = self.t >= self.T
         return done
 
