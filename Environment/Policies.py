@@ -147,9 +147,101 @@ class policies():
 
         return [rutas, purchase, demand_compliance]#, double_check, I_1
 
+    def theta_estimation(self, state, _, env):
+        
+        # State
+        I_0 = state.copy()
+        sample_paths = _['sample_paths']
+
+        # Look ahead window     
+        Num_periods = _['sample_path_window_size']
+        T = range(Num_periods)
+
+        # Iterables
+        M = env.Suppliers; K = env.Products; S = env.Samples
+
+        # Initialization routing cost
+        C_MIP = {(i,t):env.c[0,i]+env.c[i,0] for t in T for i in env.Suppliers} 
+
+        m = gu.Model('Inventory')
+
+        # Variables    
+        # How much to buy from supplier i of product k at time t 
+        z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in env.M_kt[k,env.t + t]}
+        tuples = [(i,k,t,s) for t in T for k in K for s in S for i in env.M_kt[k,env.t + t]]
+
+        # 1 if supplier i is selected at time t, 0 otherwise
+        w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
+
+        # Final inventory of product k of old o at time t 
+        ii = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="i_"+str((k,t,o,s))) for k in K for t in T for o in range(env.O_k[k] + 1) for s in S}
+
+        # Units sold of product k at time t of old age o
+        y = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="y_"+str((k,t,o,s))) for k in K for t in T for o in range(env.O_k[k] + 1) for s in S}
+
+        # Units in backorders of product k at time t
+        bo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,s))) for t in T for k in K for s in S}
+
+        theta = m.addVar(vtype=gu.GRB.CONTINUOUS, name="theta")
+
+        for s in S:
+            ''' Inventory constraints '''
+            for k in K:
+                for t in T:
+                    m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in env.M_kt[(k,env.t + t)]) - y[k,t,0,s], str(f'Inventario edad 0 {k}{t}{s}'))
+                    
+            for k in K:
+                for o in env.Ages[k]:
+                    m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s], str(f'Inventario periodo 0 k = {k}, o = {o}, s = {s}'))
+                    
+            for k in K:
+                for t in T:
+                    for o in env.Ages[k]:
+                        if t > 0:
+                            m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s], str(f'Inventario {k}{t}{o}{s}'))
+
+            for k in K: 
+                for t in T:
+                    m.addConstr(gu.quicksum(y[k,t,o,s] for o in range(env.O_k[k] + 1)) + bo[k,t,s] == sample_paths['d'][t,s][k], f'backorders {k}{t}{s}')   
+
+
+            ''' Purchase constraints '''
+            for t in T:
+                for k in K:
+                    for i in env.M_kt[k,env.t + t]: 
+                        m.addConstr(z[i,k,t,s] <= sample_paths['q'][t,s][i,k]*w[i,t,s], f'Purchase {i}{k}{t}{s}')
+                        
+            for t in T:
+                for i in M:
+                    m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= env.Q, f'Vehicle capacity {i}{t}{s}')
+        
+            '''' NON-ANTICIPATIVITY CONSTRAINTS '''
+            for k in K:
+
+                for i in env.M_kt[k,env.t]:
+                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
+                
+                #for o in range(env.O_k[k] + 1):
+                #    m.addConstr(y[k,0,o,s] == gu.quicksum(y[k,0,o,ss] for ss in S)/len(S), f'Anticipativity demand comp {k}{o}{s}')
+            
+            for i in M:
+                m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
+
+
+        ''' Backorders control restriction '''        
+        m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(sample_paths['d'][t,s][k] for t in T for k in K for s in S))
+        
+        m.update()
+        m.setParam('OutputFlag',0)
+        m.setObjective(theta)
+        m.optimize()
+
+        return theta.x
 
     def Stochastic_Rolling_Horizon(self, state, _, env):
-    
+        
+        
+
         solucionTTP = {0:[  np.zeros(env.M+1, dtype=bool), 
                                 np.zeros(env.M+1, dtype=int), 
                                 np.zeros((env.M+1, env.K), dtype=bool), 
@@ -165,6 +257,14 @@ class policies():
         # Look ahead window     
         Num_periods = _['sample_path_window_size']
         T = range(Num_periods)
+
+        theta = self.theta_estimation(state, _, env)
+        if Num_periods == env.LA_horizon:
+            theta *= 1.25
+        elif Num_periods < env.LA_horizon and env.t < (env.T - 1):
+            theta *= (1+0.25*(env.LA_horizon-Num_periods+1))
+        else:
+            theta = 1
 
         # Iterables
         M = env.Suppliers; K = env.Products; S = env.Samples
@@ -234,11 +334,13 @@ class policies():
             for i in M:
                 m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
 
+        ''' Backorders control restriction '''        
+        m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(sample_paths['d'][t,s][k] for t in T for k in K for s in S))
+        
         compra = gu.quicksum(env.p_t[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in env.M_kt[k,env.t + t])/len(S) + \
-            env.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S)
+            6e5*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S)
         
         ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
-        
 
         m.setObjective(compra+ruta)
                 
