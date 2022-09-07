@@ -258,7 +258,7 @@ class policies():
         Num_periods = _['sample_path_window_size']
         T = range(Num_periods)
 
-        theta = self.theta_estimation(state, _, env)
+        theta = 0.15
         if Num_periods == env.LA_horizon:
             theta *= 1.25
         elif Num_periods < env.LA_horizon and env.t < (env.T - 1):
@@ -290,6 +290,8 @@ class policies():
 
         # Units in backorders of product k at time t
         bo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,s))) for t in T for k in K for s in S}
+
+        boo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="boo_"+str((k,t,s))) for t in T for k in K for s in S}
 
         for s in S:
             ''' Inventory constraints '''
@@ -335,10 +337,10 @@ class policies():
                 m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
 
         ''' Backorders control restriction '''        
-        m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(sample_paths['d'][t,s][k] for t in T for k in K for s in S))
+        m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(sample_paths['d'][t,s][k] for t in T for k in K for s in S) + gu.quicksum(boo[k,t,s] for t in T for k in K for s in S))
         
         compra = gu.quicksum(env.p_t[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in env.M_kt[k,env.t + t])/len(S) + \
-            6e5*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S)
+            6e5*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S) + 6e9*gu.quicksum(boo[k,t,s] for k in K for t in T for s in S)/len(S)
         
         ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
 
