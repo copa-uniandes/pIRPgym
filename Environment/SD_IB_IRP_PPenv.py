@@ -192,7 +192,7 @@ class steroid_IRP(gym.Env):
 
 
     # Reseting the environment
-    def reset(self, return_state:bool = False, rd_seed:int = 0, **kwargs):
+    def reset(self, return_state:bool = False, det_rd_seed:int = 0, stoch_rd_seed:int = 0, **kwargs):
         '''
         Reseting the environment. Genrate or upload the instance.
         PARAMETER:
@@ -202,7 +202,7 @@ class steroid_IRP(gym.Env):
         self.t = 0
 
         # Generate instance generator object
-        generator = instance_generator(self, rd_seed)
+        generator = instance_generator(self, det_rd_seed, stoch_rd_seed)
 
         # Deterministic parameters
         self.O_k = generator.gen_ages()
@@ -217,6 +217,9 @@ class steroid_IRP(gym.Env):
         self.h_t = generator.gen_h_cost(**kwargs['h_params'])
 
         # Stochastic parameters
+        kwargss = {'min': kwargs['q_params']['min'], 'max': kwargs['q_params']['min'], 'mean': kwargs['d_params']['mean'], 'stdev': kwargs['d_params']['stdev']}
+        generator.gen_stoch_historics(**kwargss)
+        seed(stoch_rd_seed)
         generator.gen_quantities(**kwargs['q_params'])
         generator.gen_demand(**kwargs['d_params'])
 

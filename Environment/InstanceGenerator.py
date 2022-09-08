@@ -17,10 +17,11 @@ import utils
 
 class instance_generator():
 
-    def __init__(self, env, rd_seed):
+    def __init__(self, env, det_rd_seed, stoch_rd_seed):
         
-        seed(rd_seed)
-        self.rd_seed = rd_seed
+        seed(det_rd_seed)
+        self.det_rd_seed = stoch_rd_seed
+        self.stoch_rd_seed = stoch_rd_seed
         
         ### Importing instance parameters ###
         self.M = env.M; self.Suppliers = env.Suppliers    # Suppliers
@@ -105,13 +106,11 @@ class instance_generator():
         '''
         q_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
+        seed(self.stoch_rd_seed)
         if kwargs['distribution'] == 'c_uniform':
 
-            # Historic values
-            if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
-
             sample_path_window_size = copy(self.LA_horizon)
+            seed(self.stoch_rd_seed)
             for t in self.Horizon:   
                 values_day_0 = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
 
@@ -127,7 +126,7 @@ class instance_generator():
                         else:
                             self.sample_paths[t]['q'][day,sample] = {(i,k): self.sim([self.historical_data[t]['q'][i,k][obs] for obs in range(len(self.historical_data[t]['q'][i,k])) if self.historical_data[t]['q'][i,k][obs] > 0]) if i in self.M_kt[k,t+day] else 0 for i in self.Suppliers for k in self.Products}
                 
-                seed(self.rd_seed + t + 1)
+                #seed(self.stoch_rd_seed + t + 1)
                 # Generating random variable realization
                 if self.s_params != False and ('q' in self.s_params or '*' in self.s_params):
                     self.W_t[t]['q'] = {(i,k): round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
@@ -141,15 +140,22 @@ class instance_generator():
                             self.historical_data[t+1]['q'][i,k] = self.historical_data[t]['q'][i,k] + [self.W_t[t]['q'][i,k]]
             
      
+    def gen_stoch_historics(self, **kwargs):
+        # Historic values
+        if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
+            self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
+
+        # Historic values
+        if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
+            self.historical_data[0]['d'] = {k:[round(lognormal(kwargs['mean'], kwargs['stdev']),2) for t in self.historical] for k in self.Products}
+
+
     def gen_demand(self, **kwargs):
         '''
         d_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
+        seed(self.stoch_rd_seed)
         if kwargs['distribution'] == 'log-normal':
-
-            # Historic values
-            if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['d'] = {k:[round(lognormal(kwargs['mean'], kwargs['stdev']),2) for t in self.historical] for k in self.Products}
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
@@ -167,7 +173,7 @@ class instance_generator():
                         else:
                             self.sample_paths[t]['d'][day,sample] = {k: self.sim(self.historical_data[t]['d'][k]) for k in self.Products}
                 
-                seed(self.rd_seed + self.M * self.K + t)
+                #seed(self.stoch_rd_seed + self.M * self.K + t)
                 # Generating random variable realization
                 if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
                     self.W_t[t]['d'] = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
