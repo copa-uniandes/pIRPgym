@@ -264,11 +264,11 @@ class steroid_IRP(gym.Env):
             real_action = action
 
         # Inventory dynamics
-        s_tprime, reward, back_orders, perished = self.transition_function(real_action, self.W_t, warnings)
+        s_tprime, back_orders, perished = self.transition_function(real_action, self.W_t, warnings)
 
         # Reward
         transport_cost, purchase_cost, holding_cost, backorders_cost = self.compute_costs(real_action, s_tprime, perished)
-        reward += transport_cost + purchase_cost + holding_cost + backorders_cost
+        reward = [transport_cost, purchase_cost, holding_cost, backorders_cost]
 
         # Time step update and termination check
         self.t += 1
@@ -372,7 +372,6 @@ class steroid_IRP(gym.Env):
         if self.other_env_params['backorders'] == 'backlogs':
             back_o_compliance = real_action[3]
         inventory = deepcopy(self.state)
-        reward  = 0
         back_orders = {}
         perished = {}
 
@@ -406,7 +405,7 @@ class steroid_IRP(gym.Env):
                 if sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < W['d'][k]:
                     print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
 
-        return inventory, reward, back_orders, perished
+        return inventory, back_orders, perished
 
 
     # Checking for episode's termination
