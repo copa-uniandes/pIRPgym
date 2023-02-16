@@ -26,6 +26,7 @@ import imageio
 
 ### Gym & OR-Gym
 import gym; from gym import spaces
+# TODO Check if import or_gym works
 import utils
 
 ### Instance generation
@@ -509,7 +510,7 @@ class steroid_IRP(gym.Env):
         return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
 
 
-    ##################### EXTRA Non-funcitonal features #####################
+    ##################### EXTRA Non-functional features #####################
     '''
     1. Uploading instance from .txt file
     
