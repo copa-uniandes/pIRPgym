@@ -131,65 +131,9 @@ class steroid_IRP(gym.Env):
     '''
     
     # Initialization method
-    def __init__(self, look_ahead = ['*'], historical_data = ['*'], backorders = 'backorders', stoch=True,
-                 stochastic_parameters = False, **kwargs):
+    def __init__(self):
         
-        ### Main parameters ###
-        self.M = 10                                     # Suppliers
-        self.K = 10                                     # Products
-        self.F = 4                                      # Fleet
-        self.T = 7                                  
-        
-        self.stoch = stoch
-
-        ### Other parameters ### 
-        self.wh_cap = 1e9                               # Warehouse capacity
-
-        self.Q = 1e12 # TODO !!!!!!!!
-        self.stochastic_parameters = stochastic_parameters
-        
-        ### Look-ahead parameters ###
-        if look_ahead:    
-            self.S = 4              # Number of sample paths
-            self.LA_horizon = 5     # Look-ahead time window's size (includes current period)
-        
-        ### historical log parameters ###
-        if historical_data:        
-            self.hist_window = 40       # historical window
-
-        ### Backorders parameters ###
-        if backorders == 'backorders':
-            self.back_o_cost = 600
-        elif backorders == 'backlogs':
-            self.back_l_cost = 500
-
-        ### Extra information ###
-        self.other_env_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
-
-        ### Custom configurations ###
-        utils.assign_env_config(self, kwargs)
-        self.gen_sets()
-
-        ### State space ###
-        # Physical state
-        self.state = {}     # Inventory
-        
-    # Auxiliary method: Generate iterables of sets
-    def gen_sets(self):
-    
-        self.Suppliers = range(1,self.M + 1);  self.V = range(self.M + 1)
-        self.Products = range(self.K)
-        self.Vehicles = range(self.F)
-        self.Horizon = range(self.T)
-
-        if self.other_env_params['look_ahead']:
-            self.Samples = range(self.S)
-
-        if self.other_env_params['historical']:
-            self.TW = range(-self.hist_window, self.T)
-            self.historical = range(-self.hist_window, 0)
-        else:
-            self.TW = self.Horizon
+        pass
 
 
     # Reseting the environment
@@ -503,6 +447,46 @@ class steroid_IRP(gym.Env):
         columns=pd.Index([str(o) for o in range(1, max_O + 1)], name='Ages'))
 
         return df
+
+
+    def print_state(self):
+        print(f'################################### STEP {self.t} ###################################')
+        print('INVENTORY')
+        max_age = max(list(self.O_k.values()))
+        string = 'M \ O \t '
+        for o in range(1, max_age + 1):
+            string += f'{o} \t'
+        print(string)
+        for k in self.Products:
+            string = f'S{k} \t '
+            for o in self.Ages[k]:
+                string += f'{self.state[k,o]} \t'
+            print(string)
+        
+        print('\n')
+        print('DEMAND')
+        string1 = 'K'
+        string2 = 'd'
+        for k in self.Products:
+            string1 += f'\t{k}'
+            string2 += f'\t{self.W_t["d"][k]}'
+        print(string1)
+        print(string2)
+
+        print('\n')
+        print('AVAILABLE QUANTITIES')
+        string = 'M\K \t'
+        for k in self.Products:
+            string += f'{k} \t'
+        print(string)
+        for i in self.Suppliers:
+            new_string = f'{i}\t'
+            for k in self.Products:
+                if self.W_t['q'][i,k] == 0:
+                    new_string += f'{self.W_t["q"][i,k]}\t'
+                else:
+                    new_string += f'{self.W_t["q"][i,k]}\t'
+            print(new_string)
 
 
     # Printing a representation of the environment (repr(env))

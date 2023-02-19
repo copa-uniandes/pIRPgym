@@ -3,7 +3,7 @@
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
 import time; from termcolor import colored
-from numpy.random import seed, normal, lognormal, randint, uniform, random
+from random import random, seed, randint, shuffle
 
 ### Optimizer
 import gurobipy as gu
@@ -12,24 +12,48 @@ import gurobipy as gu
 import imageio
 
 ### Gym & OR-Gym
+import gym; from gym import spaces
+# TODO Check if import or_gym works
 import utils
 
 
 class instance_generator():
 
-    def __init__(self, env, det_rd_seed, stoch_rd_seed):
+    def __init__(self, det_rd_seed, stoch_rd_seed, look_ahead = ['*'], historical_data = ['*'], stoch=True,
+                 stochastic_parameters = False, backorders = 'backorders', **kwargs):
         
+        ### Main parameters ###
+        self.M = 10                                     # Suppliers
+        self.K = 10                                     # Products
+        self.F = 4                                      # Fleet
+        self.T = 7        
+
+        #TODO verify seed's funcitonality and if they are necessary
         seed(det_rd_seed)
         self.det_rd_seed = stoch_rd_seed
         self.stoch_rd_seed = stoch_rd_seed
+
+        ### Look-ahead parameters ###
+        if look_ahead:    
+            self.S = 4              # Number of sample paths
+            self.LA_horizon = 5     # Look-ahead time window's size (includes current period)
         
-        ### Importing instance parameters ###
-        self.M = env.M; self.Suppliers = env.Suppliers    # Suppliers
-        self.V = env.V
-        self.K = env.K; self.Products = env.Products      # Products
-        self.F = env.F; self.Vehicles = env.Vehicles      # Fleet
-        self.T = env.T
-        self.Horizon = env.Horizon
+        ### historical log parameters ###
+        if historical_data:        
+            self.hist_window = 40       # historical window
+
+        ### Backorders parameters ###
+        if backorders == 'backorders':
+            self.back_o_cost = 600
+        elif backorders == 'backlogs':
+            self.back_l_cost = 500
+
+        ### Extra information ###
+        self.other_env_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
+
+        ### Custom configurations ###
+        utils.assign_env_config(self, kwargs)
+        self.gen_sets()
     
         self.s_params = env.stochastic_parameters
         self.others = env.other_env_params
@@ -53,6 +77,34 @@ class instance_generator():
         else:
             self.TW = self.Horizon
 
+        
+    # Auxiliary method: Generate iterables of sets
+    def gen_sets(self):
+    
+        self.Suppliers = range(1,self.M + 1);  self.V = range(self.M + 1)
+        self.Products = range(self.K)
+        self.Vehicles = range(self.F)
+        self.Horizon = range(self.T)
+
+        if self.other_env_params['look_ahead']:
+            self.Samples = range(self.S)
+
+        if self.other_env_params['historical']:
+            self.TW = range(-self.hist_window, self.T)
+            self.historical = range(-self.hist_window, 0)
+        else:
+            self.TW = self.Horizon
+
+
+
+
+
+
+
+
+
+
+
 
     def gen_ages(self):
         '''
@@ -64,19 +116,6 @@ class instance_generator():
 
         return self.O_k 
     
-
-    def gen_routing_costs(self):
-        '''
-        c: (dict) transportation cost between nodes i \in V and j \in V
-        '''
-        # Suppliers locations in grid
-        size_grid = 1000
-        coor = {i:(randint(0, size_grid), randint(0, size_grid)) for i in self.V}
-
-        # Transportation cost between nodes i and j, estimated using euclidean distance
-        c = {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in self.V for j in self.V if i!=j} 
-
-        return c
 
 
     def gen_availabilities(self):
@@ -148,42 +187,6 @@ class instance_generator():
         # Historic values
         if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
             self.historical_data[0]['d'] = {k:[round(lognormal(kwargs['mean'], kwargs['stdev']),2) for t in self.historical] for k in self.Products}
-
-
-    def gen_demand(self, **kwargs):
-        '''
-        d_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
-        '''
-        seed(self.stoch_rd_seed)
-        if kwargs['distribution'] == 'log-normal':
-
-            sample_path_window_size = copy(self.LA_horizon)
-            for t in self.Horizon:   
-
-                values_day_0 = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
-
-                if t + self.LA_horizon > self.T:
-                    sample_path_window_size = self.T - t
-
-                # Generating sample-paths
-                for day in range(sample_path_window_size):
-                    for sample in self.Samples:
-                        if day == 0 and (self.s_params == False or ('d' not in self.s_params and '*' not in self.s_params)):
-                            self.sample_paths[t]['d'][day,sample] = values_day_0
-                        else:
-                            self.sample_paths[t]['d'][day,sample] = {k: self.sim(self.historical_data[t]['d'][k]) for k in self.Products}
-                
-                #seed(self.stoch_rd_seed + self.M * self.K + t)
-                # Generating random variable realization
-                if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
-                    self.W_t[t]['d'] = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
-                else:
-                    self.W_t[t]['d'] = values_day_0
-                
-                # Updating historical values
-                if t < self.T - 1:
-                    for k in self.Products:
-                        self.historical_data[t+1]['d'][k] = self.historical_data[t]['d'][k] + [self.W_t[t]['d'][k]]
 
 
     def gen_p_price(self, **kwargs):
@@ -323,6 +326,77 @@ class instance_generator():
 
 
 
+
+class costs():
+
+    def __init__(self):
+        pass
+
+
+class demand():
+
+    def __init__(self):
+        pass
+
+    def log_normal_demand(self, **kwargs):
+        '''
+        d_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
+        '''
+        seed(self.stoch_rd_seed)
+        if kwargs['distribution'] == 'log-normal':
+
+            sample_path_window_size = copy(self.LA_horizon)
+            for t in self.Horizon:   
+
+                values_day_0 = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
+
+                if t + self.LA_horizon > self.T:
+                    sample_path_window_size = self.T - t
+
+                # Generating sample-paths
+                for day in range(sample_path_window_size):
+                    for sample in self.Samples:
+                        if day == 0 and (self.s_params == False or ('d' not in self.s_params and '*' not in self.s_params)):
+                            self.sample_paths[t]['d'][day,sample] = values_day_0
+                        else:
+                            self.sample_paths[t]['d'][day,sample] = {k: self.sim(self.historical_data[t]['d'][k]) for k in self.Products}
+                
+                #seed(self.stoch_rd_seed + self.M * self.K + t)
+                # Generating random variable realization
+                if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
+                    self.W_t[t]['d'] = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
+                else:
+                    self.W_t[t]['d'] = values_day_0
+                
+                # Updating historical values
+                if t < self.T - 1:
+                    for k in self.Products:
+                        self.historical_data[t+1]['d'][k] = self.historical_data[t]['d'][k] + [self.W_t[t]['d'][k]] 
+
+
+class offer():
+
+    def __init__(self):
+        pass
     
 
+class routes():
+
+    def __init__(self):
+        pass 
+
+
+    def generate_grid(V): 
+        # Suppliers locations in grid
+        size_grid = 1000
+        coor = {i:(randint(0, size_grid), randint(0, size_grid)) for i in V}
+        return coor, V
     
+
+    def euclidean_distance(coor, V):
+        # Transportation cost between nodes i and j, estimated using euclidean distance
+        return {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in V for j in V if i!=j}
+    
+
+    def euclidean_d_costs(self, V):
+        return self.euclidean_distance(self.generate_grid(V))

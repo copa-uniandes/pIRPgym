@@ -43,16 +43,16 @@ env = steroid_IRP( look_ahead = look_ahead,
 state, _ = env.reset( return_state = True, rd_seed = rd_seed, q_params = q_params, 
                         p_params = p_params, d_params = d_params, h_params = h_params)
 
+
+print(env.print_inventory())
+print(env.print_state())
+
+
+
+
+
+
 policy_generator = policies()
-
-print(state)
-
-
-
-
-
-
-
 
 
 
