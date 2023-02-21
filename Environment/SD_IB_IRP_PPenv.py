@@ -2,7 +2,6 @@
 """
 @author: juanbeta
 
-TODO
 ! stochastic parameters
 
 WARNINGS:
@@ -132,7 +131,6 @@ class steroid_IRP(gym.Env):
     
     # Initialization method
     def __init__(self):
-        
         pass
 
 
