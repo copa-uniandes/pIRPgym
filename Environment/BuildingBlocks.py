@@ -1,3 +1,11 @@
+
+"""
+@author: juanbeta
+
+### Independent transition blocks of a Supply Chain
+
+"""
+
 class routing():
 
     def __init__(self):

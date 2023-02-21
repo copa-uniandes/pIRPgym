@@ -49,15 +49,14 @@ class instance_generator():
             self.back_l_cost = 500
 
         ### Extra information ###
-        self.other_env_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
+        self.other_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
 
         ### Custom configurations ###
         utils.assign_env_config(self, kwargs)
+        
         self.gen_sets()
     
-        self.s_params = env.stochastic_parameters
-        self.others = env.other_env_params
-
+        self.s_params = stochastic_parameters
         self.sample_path_window_size = {}
         
         self.W_t = {t:{'q':{}, 'p': {}, 'd': {}, 'h': {}} for t in self.Horizon}
