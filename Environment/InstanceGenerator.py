@@ -2,7 +2,7 @@
 ### Basic Librarires
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
-import time; from termcolor import colored
+import time
 from random import random, seed, randint, shuffle, uniform
 
 ### Optimizer
@@ -19,8 +19,8 @@ import utils
 
 class instance_generator():
 
-    def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'], stoch=True,
-                  backorders = 'backorders', **kwargs):
+    def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'],
+                  backorders = 'backorders', stoch=True, **kwargs):
         
         ### Main parameters ###
         self.M = 10                                     # Suppliers
@@ -51,15 +51,13 @@ class instance_generator():
         ### Custom configurations ###
         utils.assign_env_config(self, kwargs)
 
-        self.W_t = {t:{'q':{}, 'p': {}, 'd': {}, 'h': {}} for t in self.Horizon}
-
         
 
     # Generates an instance with a given random seed
-    def generate_instance(self, det_rd_seed, stoch_rd_seed, **kwargs):
+    def generate_instance(self, d_rd_seed, s_rd_seed, **kwargs):
         # Random seeds
-        self.det_rd_seed = det_rd_seed
-        self.stoch_rd_seed = stoch_rd_seed
+        self.d_rd_seed = d_rd_seed
+        self.s_rd_seed = s_rd_seed
         
         self.gen_sets()
 
@@ -70,7 +68,7 @@ class instance_generator():
 
         # Offer
         self.M_kt, self.K_it = offer.gen_availabilities(self)
-        self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self, kwargs['q'])
+        self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self, **kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q
 
         # Demand
@@ -89,10 +87,10 @@ class instance_generator():
         self.Vehicles = range(self.F)
         self.Horizon = range(self.T)
 
-        if self.other_env_params['look_ahead']:
+        if self.other_params['look_ahead']:
             self.Samples = range(self.S)
 
-        if self.other_env_params['historical']:
+        if self.other_params['historical']:
             self.TW = range(-self.hist_window, self.T)
             self.historical = range(-self.hist_window, 0)
         else:
@@ -108,9 +106,6 @@ class instance_generator():
         self.O_k = {k:randint(1,max_age) for k in self.Products}
 
         return self.O_k 
-    
-
-
             
      
     def gen_stoch_historics(self, **kwargs):
@@ -308,13 +303,13 @@ class demand():
                     for k in self.Products:
                         self.historical_data[t+1]['d'][k] = self.historical_data[t]['d'][k] + [self.W_t[t]['d'][k]] 
 
-#TODO verify offer funcitonality
+
 class offer():
 
     def __init__(self):
         pass
 
-    def gen_availabilities(self, inst_gen: instance_generator):
+    def gen_availabilities(inst_gen: instance_generator):
         '''
         M_kt: (dict) subset of suppliers that offer k \in K on t \in T
         K_it: (dict) subset of products offered by i \in M on t \in T
@@ -325,30 +320,32 @@ class offer():
             for t in inst_gen.TW:
                 # Random number of suppliers that offer k in t
                 sup = randint(1, inst_gen.M+1)
-                self.M_kt[k,t] = list(self.Suppliers)
+                M_kt[k,t] = list(inst_gen.Suppliers)
                 # Random suppliers are removed from subset, regarding {sup}
                 for ss in range(inst_gen.M - sup):
-                    a = int(randint(0, len(inst_gen.M_kt[k,t])))
-                    del self.M_kt[k,t][a]
+                    a = int(randint(0, len(M_kt[k,t])-1))
+                    del M_kt[k,t][a]
         
         # Products offered by each supplier on each time period, based on M_kt
-        K_it = {(i,t):[k for k in inst_gen.Products if i in self.M_kt[k,t]] for i in inst_gen.Suppliers for t in inst_gen.TW}
+        K_it = {(i,t):[k for k in inst_gen.Products if i in M_kt[k,t]] for i in inst_gen.Suppliers for t in inst_gen.TW}
 
         return M_kt, K_it
     
 
-    def gen_quantities(self, inst_gen: instance_generator, **kwargs):
-        hist_q = self.gen_hist_q(inst_gen, kwargs)
-        W_q, hist_q = self.gen_W_q(inst_gen, hist_q, kwargs)
-        s_paths_q = self.gen_sp_q(inst_gen, hist_q, W_q, kwargs)
+    #TODO rd_function parameter and the kwargs
+    def gen_quantities(inst_gen: instance_generator, **kwargs):
+        if kwargs['distribution'] == 'c_uniform':   rd_function = randint
+        hist_q = offer.gen_hist_q(inst_gen, rd_function, kwargs)
+        W_q, hist_q = offer.gen_W_q(inst_gen, hist_q, kwargs)
+        s_paths_q = offer.gen_sp_q(inst_gen, hist_q, W_q, kwargs)
 
         return hist_q, W_q, s_paths_q 
                
     
-    def gen_hist_q(inst_gen, **kwargs):
-        hist_q = {t:{} for t in self.Horizon}
+    def gen_hist_q(inst_gen, rd_function, **kwargs):
+        hist_q = {t:{} for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
-            hist_q[0] = {(i,k):[round(kwargs['random_function'](kwargs['r_f_params']),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
+            hist_q[0] = {(i,k):[round(rd_function(kwargs['r_f_params']),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
         else:
             hist_q[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
 

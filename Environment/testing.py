@@ -1,16 +1,17 @@
-from SD_IB_IRP_PPenv import steroid_IRP
+#from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policies
 import matplotlib.pyplot as plt
 import scipy.stats as st
-from InstanceGenerator import instance_generator
+from InstanceGenerator import instance_generator, offer
 
 #################################   Environment's parameters   #################################
 # Random seed
-rd_seed = 0
+d_rd_seed = 0
+s_rd_seed = 0
 
 # SD-IB-IRP-PP model's parameters
-backorderss = 'backorders'
-stochastic_parameters = ['q','d']
+backorders = 'backorders'
+stochastic_params = ['q','d']
 
 # Feature's parameters
 look_ahead = ['q','d']
@@ -22,8 +23,8 @@ warnings = False
 
 # Other parameters
 num_episodes = 1
-env_config = { 'M': 4, 'K': 4, 'T': 6,  'F': 1, 
-               'S': 1,  'LA_horizon': 3, 'back_o_cost':1e12}
+env_config = { 'M': 4, 'K': 4, 'T': 7,  'F': 1, 
+               'S': 2,  'LA_horizon': 3, 'back_o_cost':1e12}
 
 q_params = {'distribution': 'c_uniform', 'min': 6, 'max': 20}
 d_params = {'distribution': 'log-normal', 'mean': 2, 'stdev': 0.5}
@@ -31,36 +32,9 @@ d_params = {'distribution': 'log-normal', 'mean': 2, 'stdev': 0.5}
 p_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
 h_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
 
-#################################   Environment's parameters   #################################
-
-env = steroid_IRP( look_ahead = look_ahead, 
-                       historical_data = historical_data, 
-                       backorders = backorderss,
-                       stochastic_parameters = stochastic_parameters, 
-                       env_config = env_config)
-
-
-state, _ = env.reset( return_state = True, rd_seed = rd_seed, q_params = q_params, 
-                        p_params = p_params, d_params = d_params, h_params = h_params)
-
-
-print(env.print_inventory())
-print(env.print_state())
-
-
-
-
-
-
-policy_generator = policies()
-
-
-
-
-
-
-
-
+#################################   Instance's parameters   #################################
+instance = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
+instance.generate_instance(d_rd_seed, s_rd_seed, q_params = q_params)
 
 
 
