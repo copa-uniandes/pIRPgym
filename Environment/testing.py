@@ -34,7 +34,7 @@ h_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
 
 #################################   Instance's parameters   #################################
 inst = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst.generate_instance(d_rd_seed, s_rd_seed, q_params = q_params)
+inst.generate_instance(d_rd_seed, s_rd_seed, q_params = q_params, p_params = p_params)
 
 
 t = 0

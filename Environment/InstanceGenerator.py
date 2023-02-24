@@ -305,7 +305,8 @@ class offer():
 
     def __init__(self):
         pass
-
+    
+    ### Availabilty of products on suppliers
     def gen_availabilities(inst_gen: instance_generator):
         '''
         M_kt: (dict) subset of suppliers that offer k \in K on t \in T
@@ -328,7 +329,7 @@ class offer():
 
         return M_kt, K_it
     
-    
+    ### Available quantities of products on suppliers
     def gen_quantities(inst_gen: instance_generator, **kwargs):
         if kwargs['distribution'] == 'c_uniform':   rd_function = randint
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
@@ -341,7 +342,7 @@ class offer():
         else:
             return hist_q, W_q, None
                
-    
+    # Historic availabilities
     def gen_hist_q(inst_gen, rd_function, **kwargs):
         hist_q = {t:{} for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -351,7 +352,7 @@ class offer():
 
         return hist_q
 
-
+    # Realized (real) availabilities
     def gen_W_q(inst_gen: instance_generator, rd_function, hist_q, **kwargs):
         '''
         W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
@@ -370,7 +371,7 @@ class offer():
 
         return W_q, hist_q
 
-    
+    # Availabilitie's sample paths
     def gen_sp_q(inst_gen, hist_q, W_q):
         s_paths_q = {}
         for t in inst_gen.Horizon: 
@@ -386,6 +387,18 @@ class offer():
 
         return s_paths_q
 
+    ### Prices of products on suppliers
+    def gen_prices(inst_gen):
+        if kwargs['distribution'] == 'c_uniform':   rd_function = randint
+        hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
+        W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
+
+        if 'q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+            s_paths_q = offer.gen_sp_q(inst_gen, hist_q, W_q)
+            return hist_q, W_q, s_paths_q 
+
+        else:
+            return hist_q, W_q, None
     
 
 class routes():
