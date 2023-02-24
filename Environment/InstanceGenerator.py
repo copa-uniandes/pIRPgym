@@ -73,6 +73,7 @@ class instance_generator():
         # Demand
 
         # Inventory
+        # Other comment for branching example 
 
         # Routing
 
