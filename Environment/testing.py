@@ -27,9 +27,10 @@ env_config = { 'M': 3, 'K': 3, 'T': 7,  'F': 1,
                'S': 2,  'LA_horizon': 3, 'back_o_cost':1e12}
 
 q_params = {'distribution': 'c_uniform', 'r_f_params': [6,20]}
+p_params = {'distribution': 'd_uniform', 'r_f_params': [20,60]}
+
 d_params = {'distribution': 'log-normal', 'mean': 2, 'stdev': 0.5}
 
-p_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
 h_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
 
 #################################   Instance's parameters   #################################
