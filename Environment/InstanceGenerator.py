@@ -3,7 +3,8 @@
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
 import time
-from random import random, seed, randint, shuffle, uniform
+#from random import random, seed, randint, shuffle, uniform
+from numpy.random import seed, randint, lognormal
 
 ### Optimizer
 import gurobipy as gu
@@ -74,6 +75,8 @@ class instance_generator():
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
+        self.hist_d, self.W_d, self.s_paths_d = offer.gen_prices(self, **kwargs['d_params'])
+        if self.s_paths_d == None: del self.s_paths_d
 
         # Inventory
         # Other comment for branching example 
@@ -104,7 +107,7 @@ class instance_generator():
         '''
         # Maximum days that product k can be held in inventory before rotting
         max_age = self.T
-        self.O_k = {k:randint(1,max_age) for k in self.Products}
+        self.O_k = {k:randint(1,max_age+1) for k in self.Products}
 
         return self.O_k 
             
@@ -129,7 +132,7 @@ class instance_generator():
 
             # Historic values
             if self.others['historical'] != False and ('p' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['p'] = {(i,k):[randint(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
+                self.historical_data[0]['p'] = {(i,k):[randint(kwargs['min'], kwargs['max']+1) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:
@@ -161,7 +164,7 @@ class instance_generator():
                             self.historical_data[t+1]['p'][i,k] = self.historical_data[t]['p'][i,k] + [self.W_t[t]['p'][i,k]] 
                 '''
                 # Genrating realizations
-                self.p_t[t] = {(i,k): randint(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products}   
+                self.p_t[t] = {(i,k): randint(kwargs['min'], kwargs['max']+1) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products}   
                 self.W_t[t]['p'] = self.p_t[t]
 
                 # Updating historical values
@@ -183,7 +186,7 @@ class instance_generator():
 
             # Historic values
             if self.others['historical'] != False and ('h' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['h'] = {k:[randint(kwargs['min'], kwargs['max']) for t in self.historical] for k in self.Products}
+                self.historical_data[0]['h'] = {k:[randint(kwargs['min'], kwargs['max']+1) for t in self.historical] for k in self.Products}
 
             sample_path_window_size = copy(self.LA_horizon)
             for t in self.Horizon:   
@@ -268,6 +271,7 @@ class demand():
 
     def __init__(self):
         pass
+    
 
     def log_normal_demand(self, **kwargs):
         '''
@@ -303,6 +307,66 @@ class demand():
                 if t < self.T - 1:
                     for k in self.Products:
                         self.historical_data[t+1]['d'][k] = self.historical_data[t]['d'][k] + [self.W_t[t]['d'][k]] 
+        
+
+    ### Demand of products
+    def gen_demand(inst_gen: instance_generator, **kwargs) -> tuple:
+        if kwargs['distribution'] == 'log-normal':   rd_function = lognormal
+        hist_d = demand.gen_hist_d(inst_gen, rd_function, **kwargs)
+        W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
+
+        if 'd' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+            s_paths_d = demand.gen_sp_d(inst_gen, hist_d, W_d)
+            return hist_d, W_d, s_paths_d
+
+        else:
+            return hist_d, W_d, None
+    
+    # Historic demand
+    def gen_hist_d(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]: 
+        hist_d = {t:{} for t in inst_gen.Horizon}
+        if inst_gen.other_params['historical'] != False and ('d' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+            hist_d[0] = {k:[round(rd_function(*kwargs['r_f_params']),2) for t in inst_gen.historical] for k in inst_gen.Products}
+        else:
+            hist_d[0] = {k:[] for k in inst_gen.Products}
+
+        return hist_d
+
+
+    # Realized (real) availabilities
+    def gen_W_d(inst_gen: instance_generator, rd_function, hist_d, **kwargs):
+        '''
+        W_d: (dict) demand of k \in K  on t \in T
+        '''
+        W_d = {}
+        for t in inst_gen.Horizon:
+            W_d[t] = {}   
+            for i in inst_gen.Suppliers:
+                for k in inst_gen.Products:
+                    W_d[t][k] = round(rd_function(*kwargs['r_f_params']),2)
+
+                    if t < inst_gen.T - 1:
+                        hist_d[t+1][k] = hist_d[t][k] + [W_d[t][k]]
+
+        return W_d, hist_d
+    
+
+    # Demand's sample paths
+    def gen_sp_d(inst_gen: instance_generator, hist_d, W_d):
+        s_paths_d = {}
+        for t in inst_gen.Horizon: 
+            s_paths_d[t] = {}
+            for sample in inst_gen.Samples:
+                if inst_gen.s_params == False or ('d' not in inst_gen.s_params and '*' not in inst_gen.s_params):
+                    s_paths_d[t][0,sample] = W_d[t]
+                else:
+                    s_paths_d[t][0,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
+
+                for day in range(1,inst_gen.sp_window_sizes[t]):
+                    s_paths_d[t][day,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
+
+        return s_paths_d
+    
 
 
 class offer():
@@ -325,7 +389,7 @@ class offer():
                 M_kt[k,t] = list(inst_gen.Suppliers)
                 # Random suppliers are removed from subset, regarding {sup}
                 for ss in range(inst_gen.M - sup):
-                    a = int(randint(0, len(M_kt[k,t])-1))
+                    a = int(randint(0, len(M_kt[k,t])))
                     del M_kt[k,t][a]
         
         # Products offered by each supplier on each time period, based on M_kt
@@ -333,8 +397,9 @@ class offer():
 
         return M_kt, K_it
     
+
     ### Available quantities of products on suppliers
-    def gen_quantities(inst_gen: instance_generator, **kwargs):
+    def gen_quantities(inst_gen: instance_generator, **kwargs) -> tuple:
         if kwargs['distribution'] == 'd_uniform':   rd_function = randint
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
         W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
@@ -345,9 +410,10 @@ class offer():
 
         else:
             return hist_q, W_q, None
-               
+
+
     # Historic availabilities
-    def gen_hist_q(inst_gen, rd_function, **kwargs):
+    def gen_hist_q(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]:
         hist_q = {t:{} for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
             hist_q[0] = {(i,k):[round(rd_function(*kwargs['r_f_params']),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
@@ -356,6 +422,7 @@ class offer():
 
         return hist_q
 
+    
     # Realized (real) availabilities
     def gen_W_q(inst_gen: instance_generator, rd_function, hist_q, **kwargs):
         '''
@@ -460,7 +527,7 @@ class locations():
     def generate_grid(V): 
         # Suppliers locations in grid
         size_grid = 1000
-        coor = {i:(randint(0, size_grid), randint(0, size_grid)) for i in V}
+        coor = {i:(randint(0, size_grid+1), randint(0, size_grid+1)) for i in V}
         return coor, V
     
 

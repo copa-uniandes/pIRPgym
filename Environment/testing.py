@@ -1,7 +1,6 @@
 #from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policies
 import matplotlib.pyplot as plt
-import scipy.stats as st
 from InstanceGenerator import instance_generator, offer
 
 #################################   Environment's parameters   #################################
