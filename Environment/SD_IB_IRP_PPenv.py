@@ -135,7 +135,7 @@ class steroid_IRP(gym.Env):
 
 
     # Reseting the environment
-    def reset(self, return_state:bool = False, det_rd_seed:int = 0, stoch_rd_seed:int = 0, **kwargs):
+    def reset(self, inst_gen: instance_generator, return_state:bool = False, det_rd_seed:int = 0, stoch_rd_seed:int = 0, **kwargs):
         '''
         Reseting the environment. Genrate or upload the instance.
         PARAMETER:
@@ -144,35 +144,34 @@ class steroid_IRP(gym.Env):
         '''   
         self.t = 0
 
-        # Generate instance generator object
-        generator = instance_generator(self, det_rd_seed, stoch_rd_seed)
-
+        ########################### TODO Provisional transition structure ##########################
         # Deterministic parameters
-        self.O_k = generator.gen_ages()
+        self.gen_sets(inst_gen)
+        self.other_env_params = inst_gen.other_params
+        self.s_params = inst_gen.s_params
+
+        self.O_k = inst_gen.gen_ages()
         self.Ages = {k: range(1, self.O_k[k] + 1) for k in self.Products}
-        self.c = generator.gen_routing_costs()
+        self.c = inst_gen.c
 
         # Availabilities
-        self.M_kt, self.K_it = generator.gen_availabilities()
+        self.M_kt, self.K_it = inst_gen.M_kt, inst_gen.K_it
 
         # Other deterministic parameters
-        self.p_t = generator.gen_p_price(**kwargs['p_params'])
-        self.h_t = generator.gen_h_cost(**kwargs['h_params'])
+        self.p_t = inst_gen.W_p
+        self.h_t = inst_gen.W_h
 
-        # Stochastic parameters
-        kwargss = {'min': kwargs['q_params']['min'], 'max': kwargs['q_params']['min'], 'mean': kwargs['d_params']['mean'], 'stdev': kwargs['d_params']['stdev']}
-        generator.gen_stoch_historics(**kwargss)
-        seed(stoch_rd_seed)
-        generator.gen_quantities(**kwargs['q_params'])
-        generator.gen_demand(**kwargs['d_params'])
+
 
         # Recovery of other information
-        self.exog_info = generator.W_t
-        self.window_sizes = generator.sample_path_window_size
+        self.exog_info = {t:{'q': inst_gen.W_q[t], 'd': inst_gen.W_d[t]} for t in self.Horizon}
+
+        self.window_sizes = inst_gen.sp_window_sizes
+
         if self.other_env_params['look_ahead']:
-            self.hor_sample_paths = generator.sample_paths
+            self.hor_sample_paths = {{'q': inst_gen.s_paths_q[t], 'd': inst_gen.s_paths_d[t]} for t in self.Horizon}
         if self.other_env_params['historical']:
-            self.hor_historical_data = generator.historical_data
+            self.hor_historical_data = {{'q': inst_gen.hist_q[t], 'd': inst_gen.hist_d[t]} for t in self.Horizon} 
 
         ## State ##
         self.state = {(k,o):0   for k in self.Products for o in range(1, self.O_k[k] + 1)}
@@ -186,17 +185,34 @@ class steroid_IRP(gym.Env):
 
         self.W_t = self.exog_info[self.t]
 
-        self.d = self.W_t['d']
-        self.q = self.W_t['q']
+        self.d = self.W_t['d'] 
+        self.q = self.W_t['q'] 
 
-        self.sample_paths = self.hor_sample_paths[self.t]
-        self.historical_data = self.hor_historical_data[self.t]
+        self.sample_paths = self.hor_sample_paths[self.t] 
+        self.historical_data = self.hor_historical_data[self.t] 
 
         if return_state:
             _ = {'sample_paths': self.sample_paths, 
                  'sample_path_window_size': self.window_sizes[self.t]}
             return self.state, _
                               
+
+    # TODO Provisional translation function for sets
+    def gen_sets(self, inst_gen: instance_generator):
+        self.Suppliers = inst_gen.Suppliers;  self.V = inst_gen.V
+        self.Products = inst_gen.Products
+        self.Vehicles = inst_gen.Vehicles
+        self.Horizon = inst_gen.Horizon
+
+        if inst_gen.other_params['look_ahead']:
+            self.Samples = inst_gen.Samples
+
+        if inst_gen.other_params['historical']:
+            self.TW = inst_gen.TW
+            self.historical = inst_gen.historical
+        else:
+            self.TW = self.Horizon
+
 
     # Step 
     def step(self, action:list, validate_action:bool = False, warnings:bool = True):

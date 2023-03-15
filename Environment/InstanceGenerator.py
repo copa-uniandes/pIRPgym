@@ -143,7 +143,6 @@ class instance_generator():
 
 
 
-
 class costs():
 
     def __init__(self):
