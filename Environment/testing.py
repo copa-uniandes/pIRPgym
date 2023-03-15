@@ -1,251 +1,116 @@
-#from SD_IB_IRP_PPenv import steroid_IRP
 from InstanceGenerator import instance_generator
+from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policies
-import matplotlib.pyplot as plt
-
-#################################   Environment's parameters   #################################
-# Random seed
-d_rd_seed = 0
-s_rd_seed = 0
-
-# SD-IB-IRP-PP model's parameters
-backorders = 'backorders'
-stochastic_params = False
-
-# Feature's parameters
-look_ahead = ['*']
-historical_data = ['*']
-
-# Action's parameters
-validate_action = False
-warnings = False
-
-# Other parameters
-num_episodes = 5
-env_config = { 'M': 3, 'K': 3, 'T': 7,  'F': 1, 
-               'S': 2,  'LA_horizon': 3, 'back_o_cost':1e12}
-
-# Offer
-q_params = {'distribution': 'c_uniform', 'r_f_params': [6,20]}
-p_params = {'distribution': 'd_uniform', 'r_f_params': [20,61]}
-
-# Demand
-d_params = {'distribution': 'log-normal', 'r_f_params': [2,0.5]}
-
-# Holding costs
-h_params = {'distribution': 'd_uniform', 'r_f_params': [20,61]}
-
-#################################   Instance's parameters   #################################
-inst = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst.generate_instance(d_rd_seed, s_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
-
-# ############## Offer ##############
-# t = 0
-# print('QUANTITIES')
-# print('Last historic values:')
-# print(f'K\M \t 1 \t 2 \t 3')
-# for k in inst.Products:
-#     print(f'{k} \t {inst.hist_q[t][1,k][-1]} \t {inst.hist_q[t][2,k][-1]} \t {inst.hist_q[t][3,k][-1]}' )
-
-# print('\n\nRealized values:')
-# print(f'K\M \t 1 \t 2 \t 3')
-# for k in inst.Products:
-#     print(f'{k} \t {inst.W_q[t][1,k]} \t {inst.W_q[t][2,k]} \t {inst.W_q[t][3,k]}' )
-
-# print('\n\nSample paths:')
-# print('Sample \t (i, k) \t sample path')
-# for sample in inst.Samples:
-#     cont = 0
-#     for i in inst.Suppliers:
-#         for k in inst.Products:
-#             if cont == 0:
-#                 print(f'{sample} \t {i,k} \t {[inst.s_paths_q[t][day, sample][i,k] for day in range(inst.sp_window_sizes[t])]}')
-#             else:
-#                 print(f'\t {i,k} \t {[inst.s_paths_q[t][day, sample][i,k] for day in range(inst.sp_window_sizes[t])]}')
-#             cont += 1
-
-# print('PRICES')
-# print('Last historic values:')
-# print(f'K\M \t 1 \t 2 \t 3')
-# for k in inst.Products:
-#     print(f'{k} \t {inst.hist_p[t][1,k][-1]} \t {inst.hist_p[t][2,k][-1]} \t {inst.hist_p[t][3,k][-1]}' )
-
-# print('\n\nRealized values:')
-# print(f'K\M \t 1 \t 2 \t 3')
-# for k in inst.Products:
-#     print(f'{k} \t {inst.W_p[t][1,k]} \t {inst.W_p[t][2,k]} \t {inst.W_p[t][3,k]}' )
-
-# print('\n\nSample paths:')
-# print('Sample \t (i, k) \t sample path')
-# for sample in inst.Samples:
-#     cont = 0
-#     for i in inst.Suppliers:
-#         for k in inst.Products:
-#             if cont == 0:
-#                 print(f'{sample} \t {i,k} \t {[inst.s_paths_p[t][day, sample][i,k] for day in range(inst.sp_window_sizes[t])]}')
-#             else:
-#                 print(f'\t {i,k} \t {[inst.s_paths_p[t][day, sample][i,k] for day in range(inst.sp_window_sizes[t])]}')
-#             cont += 1
-
-
-############## Demand ##############
-# t = 0
-# print('Last historic values:')
-# for k in inst.Products:
-#     print(f'{k} \t {inst.hist_d[t][k][-1]}' )
-
-# print('\n\nRealized values:')
-# print(f'K')
-# for k in inst.Products:
-#     print(f'{k} \t {inst.W_d[t][k]}' )
-
-# print('\n\nSample paths:')
-# print('Sample \t (k) \t sample path')
-# for sample in inst.Samples:
-#     cont = 0
-#     for k in inst.Products:
-#         if cont == 0:
-#             print(f'{sample} \t {k} \t {[inst.s_paths_d[t][day, sample][k] for day in range(inst.sp_window_sizes[t])]}')
-#         else:
-#             print(f'\t {k} \t {[inst.s_paths_d[t][day, sample][k] for day in range(inst.sp_window_sizes[t])]}')
-#         cont += 1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# generator = instance_generator(env, rd_seed = 0)
-
-
-# # Deterministic parameters
-# O_k = generator.gen_ages()
-# Ages = {k: range(1, O_k[k] + 1) for k in env.Products}
-# c = generator.gen_routing_costs()
-
-# # Availabilities
-# M_kt, K_it = generator.gen_availabilities()
-
-# # Stochastic parameters
-# generator.gen_quantities(**q_params)
-# generator.gen_demand(**d_params)
-
-# # Other deterministic parameters
-# p_t = generator.gen_p_price(**p_params)
-# h_t = generator.gen_h_cost(**h_params)
-
-# print(generator.sample_paths)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import matplotlib.pyplot as plt; from matplotlib.gridspec import GridSpec; from matplotlib.transforms import Affine2D
+import scipy.stats as st; import imageio; import time; from IPython.display import Image
+from random import randint
+import ast
 
 
 '''
-POLICY EVALUATION FUNCTION
+Policy Evaluation Fucntion
 '''
-# def Policy_evaluation(num_episodes = 1000):
+def Policy_evaluation(inst_gen, det_rd_seed, stoch_rd_seed, stoch = True):  
     
-#     rewards = {}
-#     states = {}
-#     real_actions = {}
-#     backorders = {}
-#     la_decisions = {}
-#     realized_dem = {}
-#     q_sample = {}
-#     tws = {}
-#     env = steroid_IRP( look_ahead = look_ahead, 
-#                        historical_data = historical_data, 
-#                        backorders = backorderss,
-#                        stochastic_parameters = stochastic_parameters, 
-#                        env_config = env_config)
 
-#     policy = policies()
+    # Episode's and performance storage
+    rewards = {};   states = {};   real_actions = {};   backorders = {};   la_decisions = {}
+    realized_dem = {};   q_sample = {};   tws = {}; perished = {}; actions={}; times = {}
 
-#     for episode in range(num_episodes):
+    # Generating environment and policies generator
+    env = steroid_IRP()
 
-#         state, _ = env.reset(return_state = True, rd_seed = rd_seed, 
-#           q_params = q_params, 
-#           p_params = p_params,
-#           d_params = d_params,
-#           h_params = h_params)
-#         done = False
+    policy = policies()
+    
+    
+    run_time = time.time()
 
-#         while not done:
-            
-#             print(f'############################# {env.t} #############################')
-#             states[episode,env.t] = state
-#             action, la_dec = policy.stochastic_rolling_horizon(state, _, env)
-#             print(action[0])
-#             q_sample[episode,env.t] = [_["sample_paths"]["q"][0,s] for s in env.Samples]
-#             state, reward, done, real_action, _,  = env.step(action, validate_action = validate_action, warnings = warnings)
+    state, _ = env.reset(inst_gen, return_state = True)
+    
+    done = False
+    while not done:
+        #print_state(env)
+        # Environment transition
+        states[env.t] = state
+        q_sample[env.t] = [_["sample_paths"]["q"][0,s] for s in env.Samples]
+        realized_dem[env.t] = env.W_t["d"]
 
-#             real_actions[episode,env.t] = real_action
-#             backorders[episode,env.t] = _["backorders"]
-#             rewards[episode,env.t] = reward
-#             la_decisions[episode,env.t] = la_dec
-#             realized_dem[episode,env.t] = env.W_t["d"]
-#             if done:
-#                 tws[episode,env.t] = 1
-#             else:
-#                 tws[episode,env.t] = _["sample_path_window_size"]
-            
-#     iterables = (env.Suppliers, env.Products, env.Samples, env.M_kt, env.O_k, env.Horizon)
-#     costs = (env.c, env.h_t, env.p_t, env.back_o_cost)
+        # Transition
+        if stoch: action, la_dec = policy.Stochastic_Rolling_Horizon(state, _, env)
+        else: action, la_dec = policy.Myopic_Heuristic(state, _, env)
 
-#     return rewards, states, real_actions, backorders, la_decisions, realized_dem, q_sample, tws, iterables, costs
+        if done or not stoch:    tws[env.t] = 1
+        else:    tws[env.t] = _["sample_path_window_size"]
+        state, reward, done, real_action, _,  = env.step(action)
+        if done:    states[env.t] = state
+        #print(env.t)
+        #print_extras(env, real_action, _)
+        
+        # Data storage
+        actions[ env.t-1] = action
+        real_actions[env.t-1] = real_action
+        backorders[env.t-1] = _["backorders"]
+        perished[env.t-1] = {k:_["perished"][k] if k in _["perished"] else 0 for k in env.Products}
+        rewards[env.t] = reward
+        la_decisions[env.t-1] = la_dec
+
+    times = time.time() - run_time
+    iterables = (env.Suppliers, env.Products, env.Samples, env.M_kt, env.O_k, env.Horizon)
+    costs = (env.c, env.h_t, env.p_t, env.back_o_cost)
+
+    return (rewards, states, real_actions, backorders, la_decisions, tws, iterables, costs, perished, realized_dem, q_sample, actions, times, (det_rd_seed, stoch_rd_seed))
 
 
-# rewards, states, real_actions, backorders, la_decisions, realized_dem, q_sample, tws, iterables, costs = Policy_evaluation(num_episodes = num_episodes)
+'''
+Run a complete instance
+'''
+def run_instance(K, S, T, num_episodes):
+    # SD-IB-IRP-PP model's parameters
+    backorders = 'backorders'
+    stochastic_params = ['q','d']
 
+    # Feature's parameters
+    look_ahead = ['q','d']
+    historical_data = ['*']
+
+    # Other parameters
+    env_config = { 'M': 10, 'K': K, 'T': T,  'F': 4,
+                'S': S,  'LA_horizon': 4, 'back_o_cost': 2000}
+
+    q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}
+    p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+
+    # Demand
+    d_params = {'dist': 'log-normal', 'r_f_params': [2,0.5]}
+
+    # Holding costs
+    h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+
+
+    stochastic_policy = {}; myopic_policy = {}
+    ep = 0
+    det_rd_seed = randint(0,int(2e7))
+    # while ep < num_episodes:
+    #     try:
+    stoch_rd_seed = randint(0,int(2e7))
+    inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
+    inst_gen.generate_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+
+    
+    myopic_policy[ep] = Policy_evaluation(inst_gen, det_rd_seed = det_rd_seed, stoch_rd_seed = stoch_rd_seed, stoch=False)
+        #     #stochastic_policy[ep] = Policy_evaluation(inst_gen, det_rd_seed = det_rd_seed, stoch_rd_seed = stoch_rd_seed, stoch=True)
+        #     print(f"Done {ep}")
+        #     ep += 1
+        # except:
+        #     print("Error")
+        #     ep += 1
+        #     continue
+    
+    return stochastic_policy, myopic_policy
+
+
+'''
+Running functions
+'''
+M = 5; K = 10; S = 7; T = 7; num_episodes = 3
+stochastic_policy, myopic_policy = run_instance(K, S, T, num_episodes)

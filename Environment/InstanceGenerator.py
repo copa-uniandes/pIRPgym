@@ -150,7 +150,7 @@ class costs():
 
     ### Holding cost
     def gen_h_cost(inst_gen: instance_generator, **kwargs) -> tuple:
-        if kwargs['distribution'] == 'd_uniform':   rd_function = randint
+        if kwargs['dist'] == 'd_uniform':   rd_function = randint
         hist_h = costs.gen_hist_h(inst_gen, rd_function, **kwargs)
         W_h, hist_h = costs.gen_W_h(inst_gen, rd_function, hist_h, **kwargs)
 
@@ -192,7 +192,7 @@ class demand():
 
     ### Demand of products
     def gen_demand(inst_gen: instance_generator, **kwargs) -> tuple:
-        if kwargs['distribution'] == 'log-normal':   rd_function = lognormal
+        if kwargs['dist'] == 'log-normal':   rd_function = lognormal
         hist_d = demand.gen_hist_d(inst_gen, rd_function, **kwargs)
         W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
 
@@ -279,7 +279,7 @@ class offer():
 
     ### Available quantities of products on suppliers
     def gen_quantities(inst_gen: instance_generator, **kwargs) -> tuple:
-        if kwargs['distribution'] == 'c_uniform':   rd_function = randint
+        if kwargs['dist'] == 'c_uniform':   rd_function = randint
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
         W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
 
@@ -341,7 +341,7 @@ class offer():
 
     ### Prices of products on suppliers
     def gen_prices(inst_gen: instance_generator, **kwargs) -> tuple:
-        if kwargs['distribution'] == 'd_uniform':   rd_function = randint
+        if kwargs['dist'] == 'd_uniform':   rd_function = randint
         hist_p = offer.gen_hist_p(inst_gen, rd_function, **kwargs)
         W_p, hist_p = offer.gen_W_p(inst_gen, rd_function, hist_p, **kwargs)
 

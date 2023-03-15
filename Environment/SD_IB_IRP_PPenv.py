@@ -141,14 +141,15 @@ class steroid_IRP(gym.Env):
         PARAMETER:
         return_state: Indicates whether the state is returned
          
-        '''   
+        '''  
+        self.Q = 1e6 # TODO This value is recontra sacado del culo
         self.t = 0
 
         ########################### TODO Provisional transition structure ##########################
         # Deterministic parameters
         self.gen_sets(inst_gen)
         self.other_env_params = inst_gen.other_params
-        self.s_params = inst_gen.s_params
+        self.stochastic_parameters = inst_gen.s_params
 
         self.O_k = inst_gen.gen_ages()
         self.Ages = {k: range(1, self.O_k[k] + 1) for k in self.Products}
@@ -162,16 +163,20 @@ class steroid_IRP(gym.Env):
         self.h_t = inst_gen.W_h
 
 
-
         # Recovery of other information
         self.exog_info = {t:{'q': inst_gen.W_q[t], 'd': inst_gen.W_d[t]} for t in self.Horizon}
 
-        self.window_sizes = inst_gen.sp_window_sizes
+        if self.other_env_params['backorders'] == 'backorders':
+            self.back_o_cost = inst_gen.back_o_cost
 
         if self.other_env_params['look_ahead']:
-            self.hor_sample_paths = {{'q': inst_gen.s_paths_q[t], 'd': inst_gen.s_paths_d[t]} for t in self.Horizon}
+            self.S = inst_gen.S              # Number of sample paths
+            self.LA_horizon = inst_gen.LA_horizon     # Look-ahead time window's size (includes current period)
+            self.window_sizes = inst_gen.sp_window_sizes
+            self.hor_sample_paths = {t:{'q': inst_gen.s_paths_q[t], 'd': inst_gen.s_paths_d[t]} for t in self.Horizon}
+        
         if self.other_env_params['historical']:
-            self.hor_historical_data = {{'q': inst_gen.hist_q[t], 'd': inst_gen.hist_d[t]} for t in self.Horizon} 
+            self.hor_historical_data = {t:{'q': inst_gen.hist_q[t], 'd': inst_gen.hist_d[t]} for t in self.Horizon} 
 
         ## State ##
         self.state = {(k,o):0   for k in self.Products for o in range(1, self.O_k[k] + 1)}
@@ -199,6 +204,11 @@ class steroid_IRP(gym.Env):
 
     # TODO Provisional translation function for sets
     def gen_sets(self, inst_gen: instance_generator):
+        self.M = inst_gen.M                                     # Suppliers
+        self.K = inst_gen.K                                     # Products
+        self.F = inst_gen.F                                     # Fleet
+        self.T = inst_gen.T
+
         self.Suppliers = inst_gen.Suppliers;  self.V = inst_gen.V
         self.Products = inst_gen.Products
         self.Vehicles = inst_gen.Vehicles
@@ -287,7 +297,7 @@ class steroid_IRP(gym.Env):
             for k in self.Products:
                 left_to_comply = self.d[k]
                 for o in range(self.O_k[k],0,-1):
-                    if self.stoch:
+                    if self.stochastic_parameters:
                         real_demand_compliance[k,o] = min(self.state[k,o], left_to_comply)
                         left_to_comply -= real_demand_compliance[k,o]
                     else:
