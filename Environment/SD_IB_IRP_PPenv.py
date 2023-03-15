@@ -135,7 +135,7 @@ class steroid_IRP(gym.Env):
 
 
     # Reseting the environment
-    def reset(self, inst_gen: instance_generator, return_state:bool = False, det_rd_seed:int = 0, stoch_rd_seed:int = 0, **kwargs):
+    def reset(self, inst_gen: instance_generator, return_state:bool = False):
         '''
         Reseting the environment. Genrate or upload the instance.
         PARAMETER:
@@ -215,7 +215,7 @@ class steroid_IRP(gym.Env):
 
 
     # Step 
-    def step(self, action:list, validate_action:bool = False, warnings:bool = True):
+    def step(self, action:list, validate_action:bool = False, warnings:bool = False):
         if validate_action:
             self.action_validity(action)
 
