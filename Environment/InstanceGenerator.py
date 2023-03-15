@@ -1,13 +1,11 @@
 ################################## Modules ##################################
 ### Basic Librarires
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
-import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
+import sys; import pandas as pd; import math; import numpy as np
 import time
 #from random import random, seed, randint, shuffle, uniform
-from numpy.random import seed, randint, lognormal
+from numpy.random import seed, random, randint, lognormal
 
-### Optimizer
-import gurobipy as gu
 
 ### Renderizing
 import imageio
@@ -56,6 +54,7 @@ class instance_generator():
     # Generates an instance with a given random seed
     def generate_instance(self, d_rd_seed, s_rd_seed, **kwargs):
         # Random seeds
+        # TODO Implement appropriate seed setting 
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
         
@@ -75,11 +74,10 @@ class instance_generator():
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
-        self.hist_d, self.W_d, self.s_paths_d = offer.gen_prices(self, **kwargs['d_params'])
+        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
 
         # Inventory
-        # Other comment for branching example 
 
         # Routing
 
@@ -316,7 +314,7 @@ class demand():
         W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
 
         if 'd' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
-            s_paths_d = demand.gen_sp_d(inst_gen, hist_d, W_d)
+            s_paths_d = demand.gen_empiric_d_sp(inst_gen, hist_d, W_d)
             return hist_d, W_d, s_paths_d
 
         else:
@@ -334,7 +332,7 @@ class demand():
 
 
     # Realized (real) availabilities
-    def gen_W_d(inst_gen: instance_generator, rd_function, hist_d, **kwargs):
+    def gen_W_d(inst_gen: instance_generator, rd_function, hist_d, **kwargs) -> tuple:
         '''
         W_d: (dict) demand of k \in K  on t \in T
         '''
@@ -352,7 +350,7 @@ class demand():
     
 
     # Demand's sample paths
-    def gen_sp_d(inst_gen: instance_generator, hist_d, W_d):
+    def gen_empiric_d_sp(inst_gen: instance_generator, hist_d, W_d) -> dict[dict]:
         s_paths_d = {}
         for t in inst_gen.Horizon: 
             s_paths_d[t] = {}
@@ -375,7 +373,7 @@ class offer():
         pass
     
     ### Availabilty of products on suppliers
-    def gen_availabilities(inst_gen: instance_generator):
+    def gen_availabilities(inst_gen: instance_generator) -> tuple:
         '''
         M_kt: (dict) subset of suppliers that offer k \in K on t \in T
         K_it: (dict) subset of products offered by i \in M on t \in T
@@ -400,12 +398,12 @@ class offer():
 
     ### Available quantities of products on suppliers
     def gen_quantities(inst_gen: instance_generator, **kwargs) -> tuple:
-        if kwargs['distribution'] == 'd_uniform':   rd_function = randint
+        if kwargs['distribution'] == 'c_uniform':   rd_function = randint
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
         W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
 
         if 'q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
-            s_paths_q = offer.gen_sp_q(inst_gen, hist_q, W_q)
+            s_paths_q = offer.gen_empiric_q_sp(inst_gen, hist_q, W_q)
             return hist_q, W_q, s_paths_q 
 
         else:
@@ -424,7 +422,7 @@ class offer():
 
     
     # Realized (real) availabilities
-    def gen_W_q(inst_gen: instance_generator, rd_function, hist_q, **kwargs):
+    def gen_W_q(inst_gen: instance_generator, rd_function, hist_q, **kwargs) -> tuple:
         '''
         W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
@@ -442,8 +440,9 @@ class offer():
 
         return W_q, hist_q
 
+
     # Availabilitie's sample paths
-    def gen_sp_q(inst_gen: instance_generator, hist_q, W_q):
+    def gen_empiric_q_sp(inst_gen: instance_generator, hist_q, W_q) -> dict[dict]:
         s_paths_q = {}
         for t in inst_gen.Horizon: 
             s_paths_q[t] = {}
@@ -460,22 +459,22 @@ class offer():
 
 
     ### Prices of products on suppliers
-    def gen_prices(inst_gen: instance_generator, **kwargs):
+    def gen_prices(inst_gen: instance_generator, **kwargs) -> tuple:
         if kwargs['distribution'] == 'd_uniform':   rd_function = randint
         hist_p = offer.gen_hist_p(inst_gen, rd_function, **kwargs)
         W_p, hist_p = offer.gen_W_p(inst_gen, rd_function, hist_p, **kwargs)
 
         if 'p' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
-            s_paths_p = offer.gen_sp_p(inst_gen, hist_p, W_p)
+            s_paths_p = offer.gen_empiric_p_sp(inst_gen, hist_p, W_p)
             return hist_p, W_p, s_paths_p 
 
         else:
             return hist_p, W_p, None
     
     # Historic prices
-    def gen_hist_p(inst_gen, rd_function, **kwargs):
+    def gen_hist_p(inst_gen, rd_function, **kwargs) -> dict[dict]:
         hist_p = {t:{} for t in inst_gen.Horizon}
-        if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+        if inst_gen.other_params['historical'] != False and ('p' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
             hist_p[0] = {(i,k):[round(rd_function(*kwargs['r_f_params']),2) if i in inst_gen.M_kt[k,t] else 1000 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
         else:
             hist_p[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
@@ -483,7 +482,7 @@ class offer():
         return hist_p
 
     # Realized (real) prices
-    def gen_W_p(inst_gen: instance_generator, rd_function, hist_p, **kwargs):
+    def gen_W_p(inst_gen: instance_generator, rd_function, hist_p, **kwargs) -> tuple:
         '''
         W_p: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
@@ -502,7 +501,7 @@ class offer():
         return W_p, hist_p
     
     # Prices's sample paths
-    def gen_sp_p(inst_gen: instance_generator, hist_p, W_p):
+    def gen_empiric_p_sp(inst_gen: instance_generator, hist_p, W_p) -> dict[dict]:
         s_paths_p = {}
         for t in inst_gen.Horizon: 
             s_paths_p[t] = {}
@@ -513,7 +512,7 @@ class offer():
                     s_paths_p[t][0,sample] = {(i,k): inst_gen.sim([hist_p[t][i,k][obs] for obs in range(len(hist_p[t][i,k])) if hist_p[t][i,k][obs] < 1000]) if i in inst_gen.M_kt[k,0] else 1000 for i in inst_gen.Suppliers for k in inst_gen.Products}
 
                 for day in range(1,inst_gen.sp_window_sizes[t]):
-                    s_paths_p[t][day,sample] = {(i,k): inst_gen.sim([hist_p[t][i,k][obs] for obs in range(len(hist_p[t][i,k])) if hist_p[t][i,k][obs] > 1000]) if i in inst_gen.M_kt[k,t+day] else 1000 for i in inst_gen.Suppliers for k in inst_gen.Products}
+                    s_paths_p[t][day,sample] = {(i,k): inst_gen.sim([hist_p[t][i,k][obs] for obs in range(len(hist_p[t][i,k])) if hist_p[t][i,k][obs] < 1000]) if i in inst_gen.M_kt[k,t+day] else 1000 for i in inst_gen.Suppliers for k in inst_gen.Products}
 
         return s_paths_p
     

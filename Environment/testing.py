@@ -1,7 +1,7 @@
 #from SD_IB_IRP_PPenv import steroid_IRP
+from InstanceGenerator import instance_generator
 from Policies import policies
 import matplotlib.pyplot as plt
-from InstanceGenerator import instance_generator, offer
 
 #################################   Environment's parameters   #################################
 # Random seed
@@ -10,10 +10,10 @@ s_rd_seed = 0
 
 # SD-IB-IRP-PP model's parameters
 backorders = 'backorders'
-stochastic_params = ['d']
+stochastic_params = False
 
 # Feature's parameters
-look_ahead = ['q']
+look_ahead = ['*']
 historical_data = ['*']
 
 # Action's parameters
@@ -26,18 +26,19 @@ env_config = { 'M': 3, 'K': 3, 'T': 7,  'F': 1,
                'S': 2,  'LA_horizon': 3, 'back_o_cost':1e12}
 
 q_params = {'distribution': 'c_uniform', 'r_f_params': [6,20]}
-p_params = {'distribution': 'd_uniform', 'r_f_params': [20,60]}
+p_params = {'distribution': 'd_uniform', 'r_f_params': [20,61]}
 
-d_params = {'distribution': 'log-normal', 'mean': 2, 'stdev': 0.5}
+d_params = {'distribution': 'log-normal', 'r_f_params': [2,0.5]}
 
 h_params = {'distribution': 'd_uniform', 'min': 20, 'max': 60}
 
 #################################   Instance's parameters   #################################
 inst = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst.generate_instance(d_rd_seed, s_rd_seed, q_params = q_params, p_params = p_params)
+inst.generate_instance(d_rd_seed, s_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params)
 
-
+############## Offer ##############
 t = 0
+print('QUANTITIES')
 print('Last historic values:')
 print(f'K\M \t 1 \t 2 \t 3')
 for k in inst.Products:
@@ -59,6 +60,73 @@ for sample in inst.Samples:
             else:
                 print(f'\t {i,k} \t {[inst.s_paths_q[t][day, sample][i,k] for day in range(inst.sp_window_sizes[t])]}')
             cont += 1
+
+print('PRICES')
+print('Last historic values:')
+print(f'K\M \t 1 \t 2 \t 3')
+for k in inst.Products:
+    print(f'{k} \t {inst.hist_p[t][1,k][-1]} \t {inst.hist_p[t][2,k][-1]} \t {inst.hist_p[t][3,k][-1]}' )
+
+print('\n\nRealized values:')
+print(f'K\M \t 1 \t 2 \t 3')
+for k in inst.Products:
+    print(f'{k} \t {inst.W_p[t][1,k]} \t {inst.W_p[t][2,k]} \t {inst.W_p[t][3,k]}' )
+
+print('\n\nSample paths:')
+print('Sample \t (i, k) \t sample path')
+for sample in inst.Samples:
+    cont = 0
+    for i in inst.Suppliers:
+        for k in inst.Products:
+            if cont == 0:
+                print(f'{sample} \t {i,k} \t {[inst.s_paths_p[t][day, sample][i,k] for day in range(inst.sp_window_sizes[t])]}')
+            else:
+                print(f'\t {i,k} \t {[inst.s_paths_p[t][day, sample][i,k] for day in range(inst.sp_window_sizes[t])]}')
+            cont += 1
+
+
+############## Demand ##############
+# t = 0
+# print('Last historic values:')
+# for k in inst.Products:
+#     print(f'{k} \t {inst.hist_d[t][k][-1]}' )
+
+# print('\n\nRealized values:')
+# print(f'K')
+# for k in inst.Products:
+#     print(f'{k} \t {inst.W_d[t][k]}' )
+
+# print('\n\nSample paths:')
+# print('Sample \t (k) \t sample path')
+# for sample in inst.Samples:
+#     cont = 0
+#     for k in inst.Products:
+#         if cont == 0:
+#             print(f'{sample} \t {k} \t {[inst.s_paths_d[t][day, sample][k] for day in range(inst.sp_window_sizes[t])]}')
+#         else:
+#             print(f'\t {k} \t {[inst.s_paths_d[t][day, sample][k] for day in range(inst.sp_window_sizes[t])]}')
+#         cont += 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # generator = instance_generator(env, rd_seed = 0)
