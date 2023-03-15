@@ -78,8 +78,10 @@ class instance_generator():
         if self.s_paths_d == None: del self.s_paths_d
 
         # Inventory
+        self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
+        self.c = locations.euclidean_dist_costs(self.V)
 
 
     # Auxiliary method: Generate iterables of sets
@@ -108,124 +110,7 @@ class instance_generator():
         self.O_k = {k:randint(1,max_age+1) for k in self.Products}
 
         return self.O_k 
-            
-     
-    def gen_stoch_historics(self, **kwargs):
-        # Historic values
-        if self.others['historical'] != False and ('q' in self.others['historical'] or '*' in self.others['historical']):
-            self.historical_data[0]['q'] = {(i,k):[round(uniform(kwargs['min'], kwargs['max']),2) if i in self.M_kt[k,t] else 0 for t in self.historical] for i in self.Suppliers for k in self.Products}
-
-        # Historic values
-        if self.others['historical'] != False and ('d' in self.others['historical'] or '*' in self.others['historical']):
-            self.historical_data[0]['d'] = {k:[round(lognormal(kwargs['mean'], kwargs['stdev']),2) for t in self.historical] for k in self.Products}
-
-
-    def gen_p_price(self, **kwargs):
-        '''
-        p_t: (dict) price of k \in K offered by supplier i \in M on t \in T
-        '''
-        self.p_t = {t:{} for t in self.Horizon}
-
-        if kwargs['distribution'] == 'd_uniform':
-
-            # Historic values
-            if self.others['historical'] != False and ('p' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['p'] = {(i,k):[randint(kwargs['min'], kwargs['max']+1) if i in self.M_kt[k,t] else 1000 for t in self.historical] for i in self.Suppliers for k in self.Products}
-
-            sample_path_window_size = copy(self.LA_horizon)
-            for t in self.Horizon:
-                '''
-                SAMPLE PATH GENERATION FOR STOCHASTIC VERSION OF PURCHASING PRICES
-                values_day_0 = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,0] else 0 for i in self.Suppliers for k in self.Products}
-
-                if t + self.LA_horizon > self.T:
-                    sample_path_window_size = self.T - t
-
-                # Generating sample-paths
-                for day in range(sample_path_window_size):
-                    for sample in self.Samples:
-                        if day == 0 and (self.s_params == False or ('p' not in self.s_params and '*' not in self.s_params)):
-                            self.sample_paths[t]['p'][day,sample] = values_day_0
-                        else:
-                            self.sample_paths[t]['p'][day,sample] = {(i,k): self.sim(self.historical_data[t]['q'][i,k]) if i in self.M_kt[k,day] else 0 for i in self.Suppliers for k in self.Products}
-                        
-                # Generating random variable realization
-                if self.s_params != False and ('p' in self.s_params or '*' in self.s_params):
-                    self.W_t[t]['p'] = {(i,k): uniform(kwargs['min'], kwargs['max']) if i in self.M_kt[k,t] else 0 for i in self.Suppliers for k in self.Products}
-                else:
-                    self.W_t[t]['p'] = values_day_0
-                
-                # Updating historical values
-                if t < self.T - 1:
-                    for i in self.Suppliers:
-                        for k in self.Products:
-                            self.historical_data[t+1]['p'][i,k] = self.historical_data[t]['p'][i,k] + [self.W_t[t]['p'][i,k]] 
-                '''
-                # Genrating realizations
-                self.p_t[t] = {(i,k): randint(kwargs['min'], kwargs['max']+1) if i in self.M_kt[k,t] else 1000 for i in self.Suppliers for k in self.Products}   
-                self.W_t[t]['p'] = self.p_t[t]
-
-                # Updating historical values
-                if t < self.T - 1:
-                    for i in self.Suppliers:
-                        for k in self.Products:
-                            self.historical_data[t+1]['p'][i,k] = self.historical_data[t]['p'][i,k] + [self.W_t[t]['p'][i,k]]
-            
-            return self.p_t
-
-    
-    def gen_h_cost(self, **kwargs):
-        '''
-        h_t: (dict) holding cost of k \in K on t \in T
-        '''
-        self.h_t = {t:{} for t in self.Horizon}
-
-        if kwargs['distribution'] == 'd_uniform':
-
-            # Historic values
-            if self.others['historical'] != False and ('h' in self.others['historical'] or '*' in self.others['historical']):
-                self.historical_data[0]['h'] = {k:[randint(kwargs['min'], kwargs['max']+1) for t in self.historical] for k in self.Products}
-
-            sample_path_window_size = copy(self.LA_horizon)
-            for t in self.Horizon:   
-                '''
-                SAMPLE PATH GENERATION FOR STOCHASTIC VERSION OF HOLDING COSTS
-
-                values_day_0 = {k:self.sim(self.historical_data[t]['h'][k]) for k in self.Products}
-
-                if t + self.LA_horizon > self.T:
-                    sample_path_window_size = self.T - t
-
-                # Generating sample-paths
-                for day in range(sample_path_window_size):
-                    for sample in self.Samples:
-                        if day == 0 and (self.s_params == False or ('h' not in self.s_params and '*' not in self.s_params)):
-                            self.sample_paths[t]['h'][day,sample] = values_day_0
-                        else:
-                            self.sample_paths[t]['h'][day,sample] = {k:self.sim(self.historical_data[t]['h'][k]) for k in self.Products}
-                
-                # Generating random variable realization
-                if self.s_params != False and ('h' in self.s_params or '*' in self.s_params):
-                    self.W_t[t]['h'] = {k:randint(kwargs['min'], kwargs['max']) for k in self.Products}
-                else:
-                    self.W_t[t]['h'] = values_day_0
-                
-                # Updating historical values
-                if t < self.T - 1:
-                    for k in self.Products:
-                        self.historical_data[t+1]['h'][k] = self.historical_data[t]['h'][k] + [self.W_t[t]['h'][k]]
-                '''
-                # Genrating realizations
-                self.h_t[t] = {k:randint(kwargs['min'], kwargs['max']) for k in self.Products} 
-                self.W_t[t]['h'] = self.h_t[t]
-            
-                # Updating historical values
-                if t < self.T - 1:
-                    for k in self.Products:
-                        self.historical_data[t+1]['h'][k] = self.historical_data[t]['h'][k] + [self.W_t[t]['h'][k]]
-            
-            return self.h_t
-
+        
 
     # Auxuliary sample value generator function
     def sim(self, hist):
@@ -264,48 +149,47 @@ class costs():
     def __init__(self):
         pass
 
+    ### Holding cost
+    def gen_h_cost(inst_gen: instance_generator, **kwargs) -> tuple:
+        if kwargs['distribution'] == 'd_uniform':   rd_function = randint
+        hist_h = costs.gen_hist_h(inst_gen, rd_function, **kwargs)
+        W_h, hist_h = costs.gen_W_h(inst_gen, rd_function, hist_h, **kwargs)
+
+        return hist_h, W_h
+    
+
+    # Historic holding cost
+    def gen_hist_h(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]: 
+        hist_h = {t:{} for t in inst_gen.Horizon}
+        if inst_gen.other_params['historical'] != False and ('h' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+            hist_h[0] = {k:[round(rd_function(*kwargs['r_f_params']),2) for t in inst_gen.historical] for k in inst_gen.Products}
+        else:
+            hist_h[0] = {k:[] for k in inst_gen.Products}
+
+        return hist_h
+
+
+    # Realized (real) holding cost
+    def gen_W_h(inst_gen: instance_generator, rd_function, hist_h, **kwargs) -> tuple:
+        '''
+        W_h: (dict) holding cost of k \in K  on t \in T
+        '''
+        W_h = {}
+        for t in inst_gen.Horizon:
+            W_h[t] = {}   
+            for k in inst_gen.Products:
+                W_h[t][k] = round(rd_function(*kwargs['r_f_params']),2)
+
+                if t < inst_gen.T - 1:
+                    hist_h[t+1][k] = hist_h[t][k] + [W_h[t][k]]
+
+        return W_h, hist_h
+    
 
 class demand():
 
     def __init__(self):
         pass
-    
-
-    def log_normal_demand(self, **kwargs):
-        '''
-        d_t: (dict) quantity of k \in K offered by supplier i \in M on t \in T
-        '''
-        seed(self.stoch_rd_seed)
-        if kwargs['distribution'] == 'log-normal':
-
-            sample_path_window_size = copy(self.LA_horizon)
-            for t in self.Horizon:   
-
-                values_day_0 = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
-
-                if t + self.LA_horizon > self.T:
-                    sample_path_window_size = self.T - t
-
-                # Generating sample-paths
-                for day in range(sample_path_window_size):
-                    for sample in self.Samples:
-                        if day == 0 and (self.s_params == False or ('d' not in self.s_params and '*' not in self.s_params)):
-                            self.sample_paths[t]['d'][day,sample] = values_day_0
-                        else:
-                            self.sample_paths[t]['d'][day,sample] = {k: self.sim(self.historical_data[t]['d'][k]) for k in self.Products}
-                
-                #seed(self.stoch_rd_seed + self.M * self.K + t)
-                # Generating random variable realization
-                if self.s_params != False and ('d' in self.s_params or '*' in self.s_params):
-                    self.W_t[t]['d'] = {k: round(lognormal(kwargs['mean'], kwargs['stdev']),2) for k in self.Products}
-                else:
-                    self.W_t[t]['d'] = values_day_0
-                
-                # Updating historical values
-                if t < self.T - 1:
-                    for k in self.Products:
-                        self.historical_data[t+1]['d'][k] = self.historical_data[t]['d'][k] + [self.W_t[t]['d'][k]] 
-        
 
     ### Demand of products
     def gen_demand(inst_gen: instance_generator, **kwargs) -> tuple:
@@ -339,12 +223,11 @@ class demand():
         W_d = {}
         for t in inst_gen.Horizon:
             W_d[t] = {}   
-            for i in inst_gen.Suppliers:
-                for k in inst_gen.Products:
-                    W_d[t][k] = round(rd_function(*kwargs['r_f_params']),2)
+            for k in inst_gen.Products:
+                W_d[t][k] = round(rd_function(*kwargs['r_f_params']),2)
 
-                    if t < inst_gen.T - 1:
-                        hist_d[t+1][k] = hist_d[t][k] + [W_d[t][k]]
+                if t < inst_gen.T - 1:
+                    hist_d[t+1][k] = hist_d[t][k] + [W_d[t][k]]
 
         return W_d, hist_d
     
@@ -365,7 +248,6 @@ class demand():
 
         return s_paths_d
     
-
 
 class offer():
 
@@ -471,6 +353,7 @@ class offer():
         else:
             return hist_p, W_p, None
     
+    
     # Historic prices
     def gen_hist_p(inst_gen, rd_function, **kwargs) -> dict[dict]:
         hist_p = {t:{} for t in inst_gen.Horizon}
@@ -480,6 +363,7 @@ class offer():
             hist_p[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
 
         return hist_p
+
 
     # Realized (real) prices
     def gen_W_p(inst_gen: instance_generator, rd_function, hist_p, **kwargs) -> tuple:
@@ -500,6 +384,7 @@ class offer():
 
         return W_p, hist_p
     
+
     # Prices's sample paths
     def gen_empiric_p_sp(inst_gen: instance_generator, hist_p, W_p) -> dict[dict]:
         s_paths_p = {}
@@ -523,17 +408,17 @@ class locations():
         pass 
 
 
-    def generate_grid(V): 
+    def generate_grid(V: range): 
         # Suppliers locations in grid
         size_grid = 1000
         coor = {i:(randint(0, size_grid+1), randint(0, size_grid+1)) for i in V}
         return coor, V
     
 
-    def euclidean_distance(coor, V):
+    def euclidean_distance(coor: dict, V: range):
         # Transportation cost between nodes i and j, estimated using euclidean distance
         return {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in V for j in V if i!=j}
     
 
-    def euclidean_d_costs(self, V):
-        return self.euclidean_distance(self.generate_grid(V))
+    def euclidean_dist_costs(V: range):
+        return locations.euclidean_distance(*locations.generate_grid(V))
