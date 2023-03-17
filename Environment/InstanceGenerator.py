@@ -81,7 +81,7 @@ class instance_generator():
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
-        self.c = locations.euclidean_dist_costs(self.V)
+        self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
 
 
     # Auxiliary method: Generate iterables of sets
@@ -106,6 +106,7 @@ class instance_generator():
         O_k: (dict) maximum days that k \in K can be held in inventory
         '''
         # Maximum days that product k can be held in inventory before rotting
+        seed(self.d_rd_seed)
         max_age = self.T
         self.O_k = {k:randint(1,max_age+1) for k in self.Products}
 
@@ -150,6 +151,7 @@ class costs():
 
     ### Holding cost
     def gen_h_cost(inst_gen: instance_generator, **kwargs) -> tuple:
+        seed(inst_gen.d_rd_seed + 1)
         if kwargs['dist'] == 'd_uniform':   rd_function = randint
         hist_h = costs.gen_hist_h(inst_gen, rd_function, **kwargs)
         W_h, hist_h = costs.gen_W_h(inst_gen, rd_function, hist_h, **kwargs)
@@ -192,11 +194,13 @@ class demand():
 
     ### Demand of products
     def gen_demand(inst_gen: instance_generator, **kwargs) -> tuple:
+        seed(inst_gen.d_rd_seed + 2)
         if kwargs['dist'] == 'log-normal':   rd_function = lognormal
         hist_d = demand.gen_hist_d(inst_gen, rd_function, **kwargs)
         W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
 
         if 'd' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+            seed(inst_gen.s_rd_seed)
             s_paths_d = demand.gen_empiric_d_sp(inst_gen, hist_d, W_d)
             return hist_d, W_d, s_paths_d
 
@@ -259,6 +263,7 @@ class offer():
         M_kt: (dict) subset of suppliers that offer k \in K on t \in T
         K_it: (dict) subset of products offered by i \in M on t \in T
         '''
+        seed(inst_gen.d_rd_seed + 3)
         M_kt = {}
         # In each time period, for each product
         for k in inst_gen.Products:
@@ -279,11 +284,13 @@ class offer():
 
     ### Available quantities of products on suppliers
     def gen_quantities(inst_gen: instance_generator, **kwargs) -> tuple:
+        seed(inst_gen.d_rd_seed + 4)
         if kwargs['dist'] == 'c_uniform':   rd_function = randint
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
         W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
 
         if 'q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+            seed(inst_gen.s_rd_seed + 1)
             s_paths_q = offer.gen_empiric_q_sp(inst_gen, hist_q, W_q)
             return hist_q, W_q, s_paths_q 
 
@@ -341,11 +348,13 @@ class offer():
 
     ### Prices of products on suppliers
     def gen_prices(inst_gen: instance_generator, **kwargs) -> tuple:
+        seed(inst_gen.d_rd_seed + 5)
         if kwargs['dist'] == 'd_uniform':   rd_function = randint
         hist_p = offer.gen_hist_p(inst_gen, rd_function, **kwargs)
         W_p, hist_p = offer.gen_W_p(inst_gen, rd_function, hist_p, **kwargs)
 
         if 'p' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+            seed(inst_gen.s_rd_seed + 3)
             s_paths_p = offer.gen_empiric_p_sp(inst_gen, hist_p, W_p)
             return hist_p, W_p, s_paths_p 
 
@@ -408,6 +417,7 @@ class locations():
 
 
     def generate_grid(V: range): 
+        seed()
         # Suppliers locations in grid
         size_grid = 1000
         coor = {i:(randint(0, size_grid+1), randint(0, size_grid+1)) for i in V}
@@ -419,5 +429,6 @@ class locations():
         return {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in V for j in V if i!=j}
     
 
-    def euclidean_dist_costs(V: range):
+    def euclidean_dist_costs(V: range, d_rd_seed):
+        seed(d_rd_seed + 6)
         return locations.euclidean_distance(*locations.generate_grid(V))
