@@ -18,8 +18,57 @@ import utils
 
 class instance_generator():
 
+    # Initalization method for an instange_generator object
     def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'],
                   backorders = 'backorders', stoch=True, **kwargs):
+        '''
+        Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance
+        
+        INITIALIZATION
+        Look-ahead approximation: Generation of sample paths (look_ahead = ['d']):
+        1. List of parameters to be forecasted on the look-ahead approximation ['d', 'p', ...]
+        2. List with '*' to generate foreecasts for all parameters
+        3. False for no sample path generation
+        Related parameters:
+            - S: Number of sample paths
+            - LA_horizon: Number of look-ahead periods
+                
+        historical data: Generation or usage of historical data (historical_data = ['d'])   
+        Three historical data options:
+        1.  ['d', 'p', ...]: List with the parameters the historical info will be generated for
+        2.  ['*']: historical info generated for all parameters
+        3.  False: No historical data will be generated
+        Related parameter:
+            - hist_window: Initial log size (time periods)
+        
+        backorders: Catch unsatisfied demand (backorders = 'backorders'):
+        1. 'backorders': Demand may be not fully satisfied. Non-complied orders will be automatically fullfilled at an extra-cost
+        2. 'backlogs': Demand may be not fully satisfied. Non-complied orders will be registered and kept track of on age 'B'
+        3. False: All demand must be fullfilled
+        Related parameter:
+            - back_o_cost = 600
+            - back_l_cost = 20 
+        
+        stochastic_parameters: Which of the parameters are not known when the action is performed
+        1.  ['d', 'p', ...]: List with the parameters that are stochastic
+        2.  ['*']: All parameters are stochastic (h,p,d,q)
+        3.  False: All parameters are deterministic
+        
+        PARAMETERS
+        look_ahead = ['*']: Generate sample paths for look-ahead approximation
+        historical_data = ['*']: Use of historicalal data
+        backorders = False: Backorders
+        rd_seed = 0: Seed for random number generation
+        **kwargs: 
+            M = 10: Number of suppliers
+            K = 10: Number of Products
+            F = 2:  Number of vehicles on the fleet
+            T = 6:  Number of decision periods
+            
+            
+            S = 4:  Number of sample paths 
+            LA_horizon = 5: Number of look-ahead periods
+        '''
         
         ### Main parameters ###
         self.M = 10                                     # Suppliers
@@ -99,18 +148,6 @@ class instance_generator():
             self.historical = range(-self.hist_window, 0)
         else:
             self.TW = self.Horizon
-
-
-    def gen_ages(self):
-        '''
-        O_k: (dict) maximum days that k \in K can be held in inventory
-        '''
-        # Maximum days that product k can be held in inventory before rotting
-        seed(self.d_rd_seed)
-        max_age = self.T
-        self.O_k = {k:randint(1,max_age+1) for k in self.Products}
-
-        return self.O_k 
         
 
     # Auxuliary sample value generator function

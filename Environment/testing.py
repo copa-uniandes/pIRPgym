@@ -7,6 +7,43 @@ from random import randint
 import ast
 
 
+### Instance generator
+# SD-IB-IRP-PP model's parameters
+backorders = 'backorders'                                       # Feature's parameters
+stochastic_params = ['q','d']
+
+look_ahead = ['q','d']                                          
+historical_data = ['*']
+
+env_config = { 'M': 10, 'K': 3, 'T': 7,  'F': 4,
+            'S': 3,  'LA_horizon': 4, 'back_o_cost': 2000}      # Other parameters
+
+q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
+p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+
+d_params = {'dist': 'log-normal', 'r_f_params': [2,0.5]}        # Demand
+
+h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
+
+stoch_rd_seed = randint(0,int(2e7))                             # Random seeds
+det_rd_seed = randint(0,int(2e7))
+
+inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
+inst_gen.generate_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+
+
+### Environment
+routing = True
+inventory = True
+perishability = 'ages'
+env = steroid_IRP(routing, inventory, perishability)
+
+state, _ = env.reset(inst_gen, return_state = True)
+
+
+
+
+
 '''
 Policy Evaluation Fucntion
 '''
@@ -18,14 +55,14 @@ def Policy_evaluation(inst_gen, det_rd_seed, stoch_rd_seed, stoch = True):
     realized_dem = {};   q_sample = {};   tws = {}; perished = {}; actions={}; times = {}
 
     # Generating environment and policies generator
-    env = steroid_IRP()
+    
 
     policy = policies()
     
     
     run_time = time.time()
 
-    state, _ = env.reset(inst_gen, return_state = True)
+    
     
     done = False
     while not done:
@@ -65,36 +102,15 @@ def Policy_evaluation(inst_gen, det_rd_seed, stoch_rd_seed, stoch = True):
 Run a complete instance
 '''
 def run_instance(K, S, T, num_episodes):
-    # SD-IB-IRP-PP model's parameters
-    backorders = 'backorders'
-    stochastic_params = ['q','d']
-
-    # Feature's parameters
-    look_ahead = ['q','d']
-    historical_data = ['*']
-
-    # Other parameters
-    env_config = { 'M': 10, 'K': K, 'T': T,  'F': 4,
-                'S': S,  'LA_horizon': 4, 'back_o_cost': 2000}
-
-    q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}
-    p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
-
-    # Demand
-    d_params = {'dist': 'log-normal', 'r_f_params': [2,0.5]}
-
-    # Holding costs
-    h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+    
 
 
     stochastic_policy = {}; myopic_policy = {}
     ep = 0
-    det_rd_seed = randint(0,int(2e7))
+    
     # while ep < num_episodes:
     #     try:
-    stoch_rd_seed = randint(0,int(2e7))
-    inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-    inst_gen.generate_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+    
 
     
     myopic_policy[ep] = Policy_evaluation(inst_gen, det_rd_seed = det_rd_seed, stoch_rd_seed = stoch_rd_seed, stoch=False)

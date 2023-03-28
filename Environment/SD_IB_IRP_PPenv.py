@@ -12,24 +12,17 @@ WARNINGS:
 
 ################################## Modules ##################################
 ### Basic Librarires
-import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
-import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
-import time; from termcolor import colored
-from random import random, seed, randint, shuffle
+from copy import copy, deepcopy
+import pandas as pd
+from termcolor import colored
+import gym
 
-### Optimizer
-import gurobipy as gu
-
-### Renderizing
-import imageio
-
-### Gym & OR-Gym
-import gym; from gym import spaces
-# TODO Check if import or_gym works
-import utils
-
-### Instance generation
+### Instance generator
 from InstanceGenerator import instance_generator
+
+
+### Building blocks
+import BuildingBlocks as bl
 
 ################################ Description ################################
 '''
@@ -72,66 +65,14 @@ Exogenous information (W): The stochastic factors considered on the environment:
 
 ################################## Steroid IRP class ##################################
 
-class steroid_IRP(gym.Env): 
-    '''
-    Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products environment
-    
-    INITIALIZATION
-    Look-ahead approximation: Generation of sample paths (look_ahead = ['d']):
-    1. List of parameters to be forecasted on the look-ahead approximation ['d', 'p', ...]
-    2. List with '*' to generate foreecasts for all parameters
-    3. False for no sample path generation
-    Related parameters:
-        - S: Number of sample paths
-        - LA_horizon: Number of look-ahead periods
-            
-    historical data: Generation or usage of historical data (historical_data = ['d'])   
-    Three historical data options:
-    1.  ['d', 'p', ...]: List with the parameters the historical info will be generated for
-    2.  ['*']: historical info generated for all parameters
-    3.  False: No historical data will be stored or used
-    Related parameter:
-        - hist_window: Initial log size (time periods)
-    
-    backorders: Catch unsatisfied demand (backorders = 'backorders'):
-    1. 'backorders': Demand may be not fully satisfied. Non-complied orders will be automatically fullfilled at an extra-cost
-    2. 'backlogs': Demand may be not fully satisfied. Non-complied orders will be registered and kept track of on age 'B'
-    3. False: All demand must be fullfilled
-    Related parameter:
-        - back_o_cost = 600
-        - back_l_cost = 20 
-    
-    stochastic_parameters: Which of the parameters are not known when the action is performed
-    1.  ['d', 'p', ...]: List with the parameters that are stochastic
-    2.  ['*']: All parameters are stochastic (h,p,d,q)
-    3.  False: All parameters are deterministic
-    
-    PARAMETERS
-    look_ahead = ['*']: Generate sample paths for look-ahead approximation
-    historical_data = ['*']: Use of historicalal data
-    backorders = False: Backorders
-    rd_seed = 0: Seed for random number generation
-    **kwargs: 
-        M = 10: Number of suppliers
-        K = 10: Number of Products
-        F = 2:  Number of vehicles on the fleet
-        T = 6:  Number of decision periods
-        
-        wh_cap = 1e9: Warehouse capacity
-        penalization_cost: Penalization costs for RL
-        
-        S = 4:  Number of sample paths 
-        LA_horizon = 5: Number of look-ahead periods
-        lambda1 = 0.5: Controls demand, assures feasibility
-        
-    Two main functions:
-    -   reset(return_state = False)
-    -   step(action)
-    '''
+class steroid_IRP(gym.Env, bl.Inventory_management): 
     
     # Initialization method
-    def __init__(self):
-        pass
+    def __init__(self, routing = True, inventory = True, perishability = True):
+        
+        assert inventory >= bool(perishability), 'Perishability only available with Inventory Problem'
+        self.config = {'routing': routing, 'inventory': inventory, 'perishability': perishability}
+        
 
 
     # Reseting the environment
@@ -140,61 +81,70 @@ class steroid_IRP(gym.Env):
         Reseting the environment. Genrate or upload the instance.
         PARAMETER:
         return_state: Indicates whether the state is returned
-         
         '''  
-        self.Q = 1e6 # TODO This value is recontra sacado del culo
         self.t = 0
 
-        ########################### TODO Provisional transition structure ##########################
-        # Deterministic parameters
-        self.gen_sets(inst_gen)
-        self.other_env_params = inst_gen.other_params
-        self.stochastic_parameters = inst_gen.s_params
+        if self.config['inventory']:
+            if self.config['perishability'] == 'ages':
+                self.state, self.O_k = self.perishable_per_age_inv.reset(inst_gen)
 
-        self.O_k = inst_gen.gen_ages()
-        self.Ages = {k: range(1, self.O_k[k] + 1) for k in self.Products}
-        self.c = inst_gen.c
-
-        # Availabilities
-        self.M_kt, self.K_it = inst_gen.M_kt, inst_gen.K_it
-
-        # Other deterministic parameters
-        self.p_t = inst_gen.W_p
-        self.h_t = inst_gen.W_h
-
-
-        # Recovery of other information
-        self.exog_info = {t:{'q': inst_gen.W_q[t], 'd': inst_gen.W_d[t]} for t in self.Horizon}
-
-        if self.other_env_params['backorders'] == 'backorders':
-            self.back_o_cost = inst_gen.back_o_cost
-
-        if self.other_env_params['look_ahead']:
-            self.S = inst_gen.S              # Number of sample paths
-            self.LA_horizon = inst_gen.LA_horizon     # Look-ahead time window's size (includes current period)
-            self.window_sizes = inst_gen.sp_window_sizes
-            self.hor_sample_paths = {t:{'q': inst_gen.s_paths_q[t], 'd': inst_gen.s_paths_d[t]} for t in self.Horizon}
         
-        if self.other_env_params['historical']:
-            self.hor_historical_data = {t:{'q': inst_gen.hist_q[t], 'd': inst_gen.hist_d[t]} for t in self.Horizon} 
 
-        ## State ##
-        self.state = {(k,o):0   for k in self.Products for o in range(1, self.O_k[k] + 1)}
-        if self.other_env_params['backorders'] == 'backlogs':
-            for k in self.Products:
-                self.state[k,'B'] = 0
+
         
-        # Current values
-        self.p = self.p_t[self.t]
-        self.h = self.h_t[self.t]
 
-        self.W_t = self.exog_info[self.t]
 
-        self.d = self.W_t['d'] 
-        self.q = self.W_t['q'] 
 
-        self.sample_paths = self.hor_sample_paths[self.t] 
-        self.historical_data = self.hor_historical_data[self.t] 
+        # ########################### Provisional transition structure ##########################
+        # # Deterministic parameters
+        # self.gen_sets(inst_gen)
+        # self.other_env_params = inst_gen.other_params
+        # self.stochastic_parameters = inst_gen.s_params
+
+        # self.O_k = inst_gen.gen_ages()
+        
+        # self.c = inst_gen.c
+
+        # # Availabilities
+        # self.M_kt, self.K_it = inst_gen.M_kt, inst_gen.K_it
+
+        # # Other deterministic parameters
+        # self.p_t = inst_gen.W_p
+        # self.h_t = inst_gen.W_h
+
+
+        # # Recovery of other information
+        # self.exog_info = {t:{'q': inst_gen.W_q[t], 'd': inst_gen.W_d[t]} for t in self.Horizon}
+
+        # if self.other_env_params['backorders'] == 'backorders':
+        #     self.back_o_cost = inst_gen.back_o_cost
+
+        # if self.other_env_params['look_ahead']:
+        #     self.S = inst_gen.S              # Number of sample paths
+        #     self.LA_horizon = inst_gen.LA_horizon     # Look-ahead time window's size (includes current period)
+        #     self.window_sizes = inst_gen.sp_window_sizes
+        #     self.hor_sample_paths = {t:{'q': inst_gen.s_paths_q[t], 'd': inst_gen.s_paths_d[t]} for t in self.Horizon}
+        
+        # if self.other_env_params['historical']:
+        #     self.hor_historical_data = {t:{'q': inst_gen.hist_q[t], 'd': inst_gen.hist_d[t]} for t in self.Horizon} 
+
+        # ## State ##
+        # self.state = {(k,o):0   for k in self.Products for o in range(1, self.O_k[k] + 1)}
+        # if self.other_env_params['backorders'] == 'backlogs':
+        #     for k in self.Products:
+        #         self.state[k,'B'] = 0
+        
+        # # Current values
+        # self.p = self.p_t[self.t]
+        # self.h = self.h_t[self.t]
+
+        # self.W_t = self.exog_info[self.t]
+
+        # self.d = self.W_t['d'] 
+        # self.q = self.W_t['q'] 
+
+        # self.sample_paths = self.hor_sample_paths[self.t] 
+        # self.historical_data = self.hor_historical_data[self.t] 
 
         if return_state:
             _ = {'sample_paths': self.sample_paths, 
@@ -202,26 +152,7 @@ class steroid_IRP(gym.Env):
             return self.state, _
                               
 
-    # TODO Provisional translation function for sets
-    def gen_sets(self, inst_gen: instance_generator):
-        self.M = inst_gen.M                                     # Suppliers
-        self.K = inst_gen.K                                     # Products
-        self.F = inst_gen.F                                     # Fleet
-        self.T = inst_gen.T
 
-        self.Suppliers = inst_gen.Suppliers;  self.V = inst_gen.V
-        self.Products = inst_gen.Products
-        self.Vehicles = inst_gen.Vehicles
-        self.Horizon = inst_gen.Horizon
-
-        if inst_gen.other_params['look_ahead']:
-            self.Samples = inst_gen.Samples
-
-        if inst_gen.other_params['historical']:
-            self.TW = inst_gen.TW
-            self.historical = inst_gen.historical
-        else:
-            self.TW = self.Horizon
 
 
     # Step 

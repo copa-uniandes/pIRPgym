@@ -1,10 +1,9 @@
-
 """
 @author: juanbeta
-
-### Independent transition blocks of a Supply Chain
-
+Independent transition blocks of a Supply Chain
 """
+from numpy.random import seed, random, randint, lognormal
+
 
 class routing():
 
@@ -19,17 +18,21 @@ class routing():
         return transport_cost
 
 
-class perishable_per_age_inv():
+class Inventory_management():
+    
+    class perishable_per_age_inv():
 
-    def __init__():
-        pass
-
-
-    def reset(self, M, O_k):
-        ## State ##
-        self.state = {(k,o):0   for k in self.Products for o in range(1, self.O_k[k] + 1)}
-        if self.other_env_params['backorders'] == 'backlogs':
-            for k in self.Products:
-                self.state[k,'B'] = 0
+        def reset(self, inst_gen):
+            ## State ##
+            seed(inst_gen.d_rd_seed*2)
+            max_age = inst_gen.T
+            O_k = {k:randint(1,max_age+1) for k in inst_gen.Products} 
+            
+            state = {(k,o):0   for k in inst_gen.Products for o in range(1, self.O_k[k] + 1)}
+            if inst_gen.other_params['backorders'] == 'backlogs':
+                for k in inst_gen.Products:
+                    self.state[k,'B'] = 0
+            
+            return state, O_k
 
 
