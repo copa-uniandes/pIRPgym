@@ -99,11 +99,12 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
             real_action = []
             if self.config['routing']:
                 real_action.append(action[0])
+                del action[0]
 
             if self.config['inventory']:
-                real_purchase = {(i,k): min(action[1][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
+                real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
                 if self.config['perishability'] == 'ages':
-                    real_demand_compliance = self.perish_per_age_inv.get_real_dem_compl(inst_gen, self, real_purchase, action[2])
+                    real_demand_compliance = self.perish_per_age_inv.get_real_dem_compl(inst_gen, self, real_purchase)
 
                 real_action += [real_purchase, real_demand_compliance]
             
@@ -113,9 +114,7 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
             real_action = action
 
         if inst_gen.other_params['backorders'] == 'backlogs':
-            real_action.append(action[3])
-        
-        #TODO INDEX ACTION ACCORDINGLY TO CONFIGURATION!!!!!!!!!!!!!!
+            real_action.append(action[-1])
 
         # Update inventory
         if self.config['inventory']:
