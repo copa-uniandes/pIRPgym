@@ -81,7 +81,8 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
 
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
-                self.state, self.O_k = self.perish_per_age_inv.reset(inst_gen)
+                self.state, self.O_k, self.Ages = self.perish_per_age_inv.reset(inst_gen)
+                
 
             if return_state:
                 return self.state
@@ -91,7 +92,7 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
         if validate_action:
             self.action_validity(action)
 
-        if inst_gen.s_parameters != False:
+        if inst_gen.s_params != False:
             '''
             When some parameters are stochastic, the chosen action might not be feasible. Therefore, an aditional intra-step 
             computation must be made and andjustments on the action might be necessary
@@ -104,11 +105,11 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
             if self.config['inventory']:
                 real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
                 if self.config['perishability'] == 'ages':
-                    real_demand_compliance = self.perish_per_age_inv.get_real_dem_compl(inst_gen, self, real_purchase)
+                    real_demand_compliance = self.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
 
                 real_action += [real_purchase, real_demand_compliance]
             
-            # EDITABLE Update action due to other stochastic phenomena
+            # EDITABLE Update action for other stochastic phenomena
             
         else:
             real_action = action
@@ -133,7 +134,7 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
 
         # Time step update and termination check
         self.t += 1
-        done = self.check_termination()
+        done = self.check_termination(inst_gen)
         _ = {'backorders': back_orders, 'perished': perished}
 
         # State update
@@ -146,11 +147,13 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
                 
 
     # Checking for episode's termination
-    def check_termination(self):
-        done = self.t >= self.T
+    def check_termination(self, inst_gen):
+        done = self.t >= inst_gen.T
         return done
 
 
+    # Method to evaluate actions
+    # TODO! inst_gen parameters and iterables
     def action_validity(self, action):
         routes, purchase, demand_compliance = action[:3]
         if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
@@ -212,132 +215,86 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
 
 
     # Simple function to visualize the inventory
-    def print_inventory(self):
-        max_O = max([self.O_k[k] for k in self.Products])
-        listamax = [[self.state[k,o] for o in self.Ages[k]] for k in self.Products]
-        df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in self.Products], name='Products'),
+    def print_inventory(self, inst_gen):
+        max_O = max([self.O_k[k] for k in inst_gen.Products])
+        listamax = [[self.state[k,o] for o in self.Ages[k]] for k in inst_gen.Products]
+        df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in inst_gen.Products], name='Products'),
         columns=pd.Index([str(o) for o in range(1, max_O + 1)], name='Ages'))
 
-        return df
+        print(df)
 
 
-    def print_state(self):
+    def generate_empty_inv_action(self, inst_gen):
+        purchase = {(i,k):0 for i in inst_gen.Suppliers for k in inst_gen.Products}
+        demand_compliance = {(k,o):0 for k in inst_gen.Products for o in [0]+self.Ages[k]}
+
+        return purchase, demand_compliance
+
+    # Simple function to print state and main parameters
+    def print_state(self, inst_gen):
         print(f'################################### STEP {self.t} ###################################')
         print('INVENTORY')
         max_age = max(list(self.O_k.values()))
-        string = 'M \ O \t '
-        for o in range(1, max_age + 1):
-            string += f'{o} \t'
+        string = 'K \ O \t '
+        for o in range(1, max_age + 1):     string += f'{o} \t'
         print(string)
-        for k in self.Products:
-            string = f'S{k} \t '
-            for o in self.Ages[k]:
-                string += f'{self.state[k,o]} \t'
+        for k in inst_gen.Products:
+            string = f'k{k} \t '
+            for o in self.Ages[k]:  string += f'{self.state[k,o]} \t'
             print(string)
         
         print('\n')
         print('DEMAND')
-        string1 = 'K'
-        string2 = 'd'
-        for k in self.Products:
-            string1 += f'\t{k}'
-            string2 += f'\t{self.W_t["d"][k]}'
+        string1 = 'K';  string2 = 'd'
+        for k in inst_gen.Products: string1 += f'\t{k}';    string2 += f'\t{inst_gen.W_d[self.t][k]}'
         print(string1)
         print(string2)
 
         print('\n')
         print('AVAILABLE QUANTITIES')
         string = 'M\K \t'
-        for k in self.Products:
-            string += f'{k} \t'
+        for k in inst_gen.Products:     string += f'{k} \t'
         print(string)
-        for i in self.Suppliers:
+        for i in inst_gen.Suppliers:
             new_string = f'{i}\t'
-            for k in self.Products:
-                if self.W_t['q'][i,k] == 0:
-                    new_string += f'{self.W_t["q"][i,k]}\t'
-                else:
-                    new_string += f'{self.W_t["q"][i,k]}\t'
+            for k in inst_gen.Products:
+                if inst_gen.W_q[self.t][i,k] == 0:  new_string += f'{inst_gen.W_q[self.t][i,k]}\t'
+                else:       new_string += f'{inst_gen.W_q[self.t][i,k]}\t'
             print(new_string)
+
+        print('\n')
+
+    # Simple function to print an action
+    def print_action(self, action, inst_gen):
+        if self.config['routing']:
+            del action[0]
+
+        if self.config['inventory']:
+            print(f'####################### Action {self.t} #######################')
+            print('Purchase')
+            string = 'M\K \t'
+            for k in inst_gen.Products:     string += f'{k} \t'
+            print(string)
+            for i in inst_gen.Suppliers:
+                new_string = f'{i}\t'
+                for k in inst_gen.Products:
+                    new_string += f'{action[0][i,k]}\t'
+                print(new_string)
+            print('\n')
+
+            print('Demand Compliance')
+            max_age = max(list(self.O_k.values()))
+            string = 'K \ O \t '
+            for o in range(1, max_age + 1):     string += f'{o} \t'
+            print(string)
+            for k in inst_gen.Products:
+                string = f'k{k} \t '
+                for o in [0]+self.Ages[k]:  string += f'{action[1][k,o]} \t'
+                print(string)
+
+            print('\n')
 
 
     # Printing a representation of the environment (repr(env))
     def __repr__(self):
-        return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance. V = {self.M}; K = {self.K}; F = {self.F}'
-
-
-    ##################### EXTRA Non-functional features #####################
-    '''
-    1. Uploading instance from .txt file
-    
-    def upload_instance(self, nombre, path = ''):
-        
-        #sys.path.insert(1, path)
-        with open(nombre, "r") as f:
-            
-            linea1 = [x for x in next(f).split()];  linea1 = [x for x in next(f).split()] 
-            Vertex = int(linea1[1])
-            linea1 = [x for x in next(f).split()];  Products = int(linea1[1])
-            linea1 = [x for x in next(f).split()];  Periods = int(linea1[1])
-            linea1 = [x for x in next(f).split()];  linea1 = [x for x in next(f).split()] 
-            Q = int(linea1[1])   
-            linea1 = [x for x in next(f).split()]
-            coor = {}
-            for k in range(Vertex):
-                linea1= [int(x) for x in next(f).split()];  coor[linea1[0]] = (linea1[1], linea1[2])   
-            linea1 = [x for x in next(f).split()]  
-            h = {}
-            for k in range(Products):
-                linea1= [int(x) for x in next(f).split()]
-                for t in range(len(linea1)):  h[k,t] = linea1[t]    
-            linea1 = [x for x in next(f).split()]
-            d = {}
-            for k in range(Products):
-                linea1= [int(x) for x in next(f).split()]
-                for t in range(len(linea1)):  d[k,t] = linea1[t]
-            linea1 = [x for x in next(f).split()] 
-            O_k = {}
-            for k in range(Products):
-                linea1= [int(x) for x in next(f).split()];  O_k[k] = linea1[1] 
-            linea1 = [x for x in next(f).split()]
-            Mk = {};  Km = {};  q = {};  p = {} 
-            for t in range(Periods):
-                for k in range(Products):
-                    Mk[k,t] = []    
-                linea1 = [x for x in next(f).split()] 
-                for i in range(1, Vertex):
-                    Km[i,t] = [];   linea = [int(x) for x in next(f).split()]  
-                    KeyM = linea[0];   prod = linea[1];   con = 2 
-                    while con < prod*3+2:
-                        Mk[linea[con], t].append(KeyM);   p[(KeyM, linea[con],t)]=linea[con+1]
-                        q[(KeyM, linea[con],t)]=linea[con+2];  Km[i,t].append(linea[con]);   con = con + 3
-        
-        self.M = Vertex;   self.Suppliers = range(1, self.M);   self.V = range(self.M)
-        self.P = Products; self.Products = range(self.P)
-        self.T = Periods;  self.Horizon = range(self.T)
- 
-        self.F, I_0, c  = self.extra_processing(coor)
-        self.Vehicles = range(self.F)
-        
-        return O_k, c, Q, h, Mk, Km, q, p, d, I_0
-
-    def extra_processing(self, coor):
-        
-        F = int(np.ceil(sum(self.d.values())/self.Q)); self.Vehicles = range(self.F)
-        I_0 = {(k,o):0 for k in self.Products for o in range(1, self.O_k[k] + 1)} # Initial inventory level with an old > 1 
-        
-        # Travel cost between (i,j). It is the same for all time t
-        c = {(i,j,t,v):round(np.sqrt(((coor[i][0]-coor[j][0])**2)+((coor[i][1]-coor[j][1])**2)),0) for v in self.Vehicles for t in self.Horizon for i in self.V for j in self.V if i!=j }
-        
-        return F, I_0, c
-    
-
-    2. Upload file with historical information 
-
-    def upload_historical_data(self):  
-
-        self.h_t =
-        self.q_t =
-        self.p_t =
-        self.d_t =
-    '''
+        return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance.'

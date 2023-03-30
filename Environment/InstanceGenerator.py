@@ -180,11 +180,7 @@ class instance_generator():
 
 
 
-
 class costs():
-
-    def __init__(self):
-        pass
 
     ### Holding cost
     def gen_h_cost(inst_gen: instance_generator, **kwargs) -> tuple:
@@ -225,9 +221,6 @@ class costs():
     
 
 class demand():
-
-    def __init__(self):
-        pass
 
     ### Demand of products
     def gen_demand(inst_gen: instance_generator, **kwargs) -> tuple:
@@ -290,9 +283,6 @@ class demand():
     
 
 class offer():
-
-    def __init__(self):
-        pass
     
     ### Availabilty of products on suppliers
     def gen_availabilities(inst_gen: instance_generator) -> tuple:
@@ -448,10 +438,6 @@ class offer():
     
 
 class locations():
-
-    def __init__(self):
-        pass 
-
 
     def generate_grid(V: range): 
         seed()

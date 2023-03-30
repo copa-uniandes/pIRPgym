@@ -26,21 +26,22 @@ class Inventory_management():
     
     class perish_per_age_inv():
 
-        def reset(self, inst_gen):
+        def reset(inst_gen):
             ## State ##
             seed(inst_gen.d_rd_seed*2)
             max_age = inst_gen.T
             O_k = {k:randint(1,max_age+1) for k in inst_gen.Products} 
+            Ages = {k:[i for i in range(1, O_k[k] + 1)] for k in inst_gen.Products}
             
-            state = {(k,o):0   for k in inst_gen.Products for o in range(1, self.O_k[k] + 1)}
+            state = {(k,o):0   for k in inst_gen.Products for o in range(1, O_k[k] + 1)}
             if inst_gen.other_params['backorders'] == 'backlogs':
                 for k in inst_gen.Products:
                     state[k,'B'] = 0
             
-            return state, O_k
+            return state, O_k, Ages
     
     
-        def get_real_dem_compl(inst_gen, env, real_purchase):
+        def get_real_dem_compl_FIFO(inst_gen, env, real_purchase):
             real_demand_compliance={}
             for k in inst_gen.Products:
                 left_to_comply = inst_gen.W_d[env.t][k]
@@ -113,7 +114,7 @@ class Inventory_management():
 
             backorders_cost = 0
             if inst_gen.other_params['backorders'] == 'backorders':
-                backorders = sum(max(inst_gen.W_d[k] - sum(demand_compliance[k,o] for o in range(env.O_k[k]+1)),0) for k in inst_gen.Products)
+                backorders = sum(max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(env.O_k[k]+1)),0) for k in inst_gen.Products)
                 backorders_cost = backorders * inst_gen.back_o_cost
             
             elif inst_gen.other_params['backorders'] == 'backlogs':

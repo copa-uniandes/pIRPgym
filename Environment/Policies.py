@@ -1,5 +1,9 @@
 ################################## Modules ##################################
 ### Basic Librarires
+
+from InstanceGenerator import instance_generator
+from SD_IB_IRP_PPenv import steroid_IRP
+
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
 import time; from termcolor import colored
@@ -15,6 +19,48 @@ import imageio
 ### Gym & OR-Gym
 import gym; from gym import spaces
 import utils
+
+class policy_generator():
+
+    def __init__(self) -> None:
+        pass
+
+    class Purchasing():
+
+        def det_purchase_all(env: steroid_IRP, inst_gen: instance_generator) -> dict[float]:
+            purchase = {}
+            for i in inst_gen.Suppliers:
+                for k in inst_gen.Products:
+                    purchase[(i,k)] = inst_gen.W_q[env.t][i,k]
+
+            return purchase
+
+
+    class Inventory():
+        
+        def det_FIFO(state: dict[float], purchase: dict[float], env: steroid_IRP, inst_gen: instance_generator) -> dict[float]:
+            demand_compliance = {}
+            for k in inst_gen.Products:
+                left_to_comply = inst_gen.W_d[env.t][k]
+                for o in range(env.O_k[k],0,-1):
+                    demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
+                    left_to_comply -= demand_compliance[k,o]
+                
+                demand_compliance[k,0] = min(sum(purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
+            
+            return demand_compliance
+
+
+    class Routing():
+        pass
+
+
+
+
+
+
+
+
 
 class policies():
 
