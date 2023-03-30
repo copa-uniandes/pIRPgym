@@ -57,6 +57,18 @@ class policy_generator():
 
 
 
+class purchasing_blocks():
+    pass
+
+
+class inventory_blocks():
+    pass
+
+
+class routing_blocks():
+    pass
+
+
 
 
 
@@ -193,6 +205,7 @@ class policies():
 
         return [rutas, purchase, demand_compliance]#, double_check, I_1
 
+
     def theta_estimation(self, state, _, env):
         
         # State
@@ -283,6 +296,7 @@ class policies():
         m.optimize()
 
         return theta.x
+
 
     def Stochastic_Rolling_Horizon(self, state, _, env):
         
