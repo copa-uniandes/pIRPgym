@@ -37,9 +37,9 @@ inst_gen.generate_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_pa
 
 ### Environment
 # Creating environment object
-routing = False
-inventory = True
-perishability = 'ages'
+routing = True
+inventory = False
+perishability = False
 env = steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment

@@ -54,14 +54,7 @@ class Inventory_management():
             return real_demand_compliance
 
 
-        def update_inventory(inst_gen, env, real_action, warnings):
-            if env.config['routing']:
-                del real_action[0]
-            purchase, demand_compliance = real_action[0:2]
-
-            # backlogs
-            if inst_gen.other_params['backorders'] == 'backlogs':
-                back_o_compliance = real_action[-1]
+        def update_inventory(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
             inventory = deepcopy(env.state)
             back_orders = {}
             perished = {}
@@ -99,13 +92,7 @@ class Inventory_management():
             return inventory, back_orders, perished
         
 
-        def compute_costs(inst_gen, env, action, s_tprime, perished):
-            if env.config['routing']:
-                del action[0]
-
-            purchase, demand_compliance = action[0:2]
-            if inst_gen.other_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
-            
+        def compute_costs(inst_gen, env, purchase, demand_compliance, s_tprime, perished):            
             purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)
         
             holding_cost = sum(sum(s_tprime[k,o] for o in range(1, env.O_k[k] + 1)) * inst_gen.W_h[env.t][k] for k in inst_gen.Products)

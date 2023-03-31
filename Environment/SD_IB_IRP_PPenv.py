@@ -15,7 +15,7 @@ from InstanceGenerator import instance_generator
 
 
 ### Building blocks
-import BuildingBlocks as bl
+from BuildingBlocks import Routing_management, Inventory_management 
 
 ################################ Description ################################
 '''
@@ -58,7 +58,7 @@ Exogenous information (W): The stochastic factors considered on the environment:
 
 ################################## Steroid IRP class ##################################
 
-class steroid_IRP(gym.Env, bl.Inventory_management): 
+class steroid_IRP(gym.Env): 
     
     # Initialization method
     def __init__(self, routing = True, inventory = True, perishability = True):
@@ -81,7 +81,7 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
 
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
-                self.state, self.O_k, self.Ages = self.perish_per_age_inv.reset(inst_gen)
+                self.state, self.O_k, self.Ages = Inventory_management.perish_per_age_inv.reset(inst_gen)
                 
 
             if return_state:
@@ -99,43 +99,56 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
             '''
             real_action = []
             if self.config['routing']:
-                real_action.append(action[0])
-                del action[0]
+                real_routing = action[0]
+                real_purchase = {(i,k): min(action[1][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
 
             if self.config['inventory']:
-                real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
+                if not self.config['routing']:
+                    real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
                 if self.config['perishability'] == 'ages':
-                    real_demand_compliance = self.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
-
-                real_action += [real_purchase, real_demand_compliance]
-            
-            # EDITABLE Update action for other stochastic phenomena
+                    real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
             
         else:
-            real_action = action
+            if self.config['routing']:
+                real_routing, real_purchase  = action[0:2]
+            
+            if self.config['inventory']:
+                if not self.config['routing']:
+                        real_purchase, real_demand_compliance  = action[0:2]
+                else:
+                    real_demand_compliance = action[2]
 
         if inst_gen.other_params['backorders'] == 'backlogs':
-            real_action.append(action[-1])
+            real_back_o_compliance = action[-1]
 
         # Update inventory
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
-                s_tprime, back_orders, perished = self.perish_per_age_inv.update_inventory(inst_gen, self, real_action, warnings)
+                s_tprime, back_orders, perished = Inventory_management.perish_per_age_inv.update_inventory(inst_gen, self, real_purchase, real_demand_compliance, warnings)
 
         # Reward
         reward = []
         if self.config['routing']:
-            transport_cost = bl.Routing_management.evaluate_routes(inst_gen, real_action[0])
+            transport_cost = Routing_management.evaluate_routes(inst_gen, real_routing)
             reward.append(transport_cost)
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
-                purchase_cost, holding_cost, backorders_cost = self.perish_per_age_inv.compute_costs(inst_gen, self, real_action, s_tprime, perished)
+                purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
                 reward += [purchase_cost, holding_cost, backorders_cost]
 
         # Time step update and termination check
         self.t += 1
         done = self.check_termination(inst_gen)
         _ = {'backorders': back_orders, 'perished': perished}
+
+        # Action assembly
+        real_action = []
+        if self.config['routing']:
+            real_action += [real_routing, real_purchase]
+            if self.config['inventory']:
+                real_action.append(real_demand_compliance)
+        elif self.config['inventory']:
+            real_action += [real_purchase, real_demand_compliance]
 
         # State update
         if not done:
@@ -154,64 +167,67 @@ class steroid_IRP(gym.Env, bl.Inventory_management):
 
     # Method to evaluate actions
     # TODO! inst_gen parameters and iterables
-    def action_validity(self, action):
-        routes, purchase, demand_compliance = action[:3]
-        if self.other_env_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
-        valid = True
-        error_msg = ''
-        
-        # Routing check
-        assert not len(routes) > self.F, 'The number of routes exceedes the number of vehicles'
+    def action_validity(self, action, inst_gen):
+        if self.config['routing']:
+            routes = action[0]
+            # Routing check
+            assert not len(routes) > inst_gen.F, 'The number of routes exceedes the number of vehicles'
 
-        for route in routes:
-            assert not (route[0] != 0 or route[-1] != 0), \
-                'Routes not valid, must start and end at the depot'
+            for route in routes:
+                assert not (route[0] != 0 or route[-1] != 0), \
+                    'Routes not valid, must start and end at the depot'
 
-            route_capacity = sum(purchase[node,k] for k in self.Products for node in route[1:-2])
-            assert not route_capacity > self.Q, \
-                "Purchased items exceed vehicle's capacity"
+                route_capacity = sum(action[1][node,k] for k in inst_gen.Products for node in route[1:-2])
+                assert not route_capacity > inst_gen.Q, \
+                    "Purchased items exceed vehicle's capacity"
 
-            assert not len(set(route)) != len(route) - 1, \
-                'Suppliers can only be visited once by a route'
+                assert not len(set(route)) != len(route) - 1, \
+                    'Suppliers can only be visited once by a route'
 
-            for i in range(len(route)):
-                assert not route[i] not in self.V, \
-                    'Route must be composed of existing suppliers' 
+                for i in range(len(route)):
+                    assert not route[i] not in inst_gen.V, \
+                        'Route must be composed of existing suppliers'
             
-        # Purchase
-        for i in self.Suppliers:
-            for k in self.Products:
-                assert not purchase[i,k] > self.q[i,k], \
-                    f"Purchased quantities exceed suppliers' available quantities  ({i},{k})"
-        
-        # Demand_compliance
-        for k in self.Products:
-            assert not (self.others['backorders'] != 'backlogs' and demand_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers)), \
-                f'Demand compliance with purchased items of product {k} exceed the purchase'
+            del action[0]   
+         
+        if self.config['inventory']: 
+            purchase, demand_compliance = action[0:2]
+            if inst_gen.other_params['backorders'] == 'backlogs':   back_o_compliance = action[3]
 
-            assert not (self.others['backorders'] == 'backlogs' and demand_compliance[k,0] + back_o_compliance[k,0] > sum(purchase[i,k] for i in self.Suppliers)), \
-                f'Demand/backlogs compliance with purchased items of product {k} exceed the purchase'
-
-            assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > self.d[k], \
-                f'Trying to comply a non-existing demand of product {k}' 
+            # Purchase
+            for i in inst_gen.Suppliers:
+                for k in inst_gen.Products:
+                    assert not purchase[i,k] > inst_gen.W_q[self.t][i,k], \
+                        f"Purchased quantities exceed suppliers' available quantities  ({i},{k})"
             
-            for o in range(1, self.O_k[k] + 1):
-                assert not (self.others['backorders'] != 'backlogs' and demand_compliance[k,o] > self.state[k,o]), \
-                    f'Demand compliance with inventory items exceed the stored items  ({k},{o})' 
+            # Demand_compliance
+            for k in inst_gen.Products:
+                assert not (inst_gen.other_params['backorders'] != 'backlogs' and demand_compliance[k,0] > sum(purchase[i,k] for i in inst_gen.Suppliers)), \
+                    f'Demand compliance with purchased items of product {k} exceed the purchase'
+
+                assert not (self.others['backorders'] == 'backlogs' and demand_compliance[k,0] + back_o_compliance[k,0] > sum(purchase[i,k] for i in inst_gen.Suppliers)), \
+                    f'Demand/backlogs compliance with purchased items of product {k} exceed the purchase'
+
+                assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) > inst_gen.W_d[self.t][k], \
+                    f'Trying to comply a non-existing demand of product {k}' 
                 
-                assert not (self.others['backorders'] == 'backlogs' and demand_compliance[k,o] + back_o_compliance[k,o] > self.state[k,o]), \
-                    f'Demand/Backlogs compliance with inventory items exceed the stored items ({k},{o})'
+                for o in range(1, self.O_k[k] + 1):
+                    assert not (inst_gen.other_params['backorders'] != 'backlogs' and demand_compliance[k,o] > self.state[k,o]), \
+                        f'Demand compliance with inventory items exceed the stored items  ({k},{o})' 
+                    
+                    assert not (inst_gen.other_params['backorders'] == 'backlogs' and demand_compliance[k,o] + back_o_compliance[k,o] > self.state[k,o]), \
+                        f'Demand/Backlogs compliance with inventory items exceed the stored items ({k},{o})'
 
-        # backlogs
-        if self.others['backorders'] == 'backlogs':
-            for k in self.Products:
-                assert not sum(back_o_compliance[k,o] for o in range(self.O_k[k])) > self.state[k,'B'], \
-                    f'Trying to comply a non-existing backlog of product {k}'
-        
-        elif self.others['backorders'] == False:
-            for k in self.Products:
-                assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < self.d[k], \
-                    f'Demand of product {k} was not fulfilled'
+            # backlogs
+            if self.other_params['backorders'] == 'backlogs':
+                for k in inst_gen.Products:
+                    assert not sum(back_o_compliance[k,o] for o in range(self.O_k[k])) > self.state[k,'B'], \
+                        f'Trying to comply a non-existing backlog of product {k}'
+            
+            elif self.others['backorders'] == False:
+                for k in inst_gen.Products:
+                    assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < inst_gen.W_d[self.t][k], \
+                        f'Demand of product {k} was not fulfilled'
 
 
     # Simple function to visualize the inventory
