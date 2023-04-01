@@ -136,7 +136,7 @@ class instance_generator():
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
 
 
-    # Generates a complete, completely random instance with a given random seed
+    # Generates an offer instance with a given random seed
     def generate_routing_instance(self, d_rd_seed, s_rd_seed):
         # Random seeds
         self.d_rd_seed = d_rd_seed

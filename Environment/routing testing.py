@@ -19,13 +19,6 @@ historical_data = False
 
 env_config = { 'M': 3, 'T': 7,  'F': 4, 'Q': 40}      # Other parameters
 
-q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
-p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
-
-d_params = {'dist': 'log-normal', 'r_f_params': [2,0.5]}        # Demand
-
-h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
-
 stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
 

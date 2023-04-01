@@ -7,7 +7,7 @@ from SD_IB_IRP_PPenv import steroid_IRP
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
 import time; from termcolor import colored
-from random import random, seed, randint, shuffle
+from random import random, seed, randint, shuffle, choice
 import networkx as nx
 
 ### Optimizer
@@ -71,8 +71,7 @@ class policy_generator():
             return routes
 
 
-        def generate_random_purchase(env: steroid_IRP, inst_gen:instance_generator) -> dict:
-            return routing_blocks.generate_random_purchase(env, inst_gen)
+        
 
 
 
@@ -111,10 +110,44 @@ class routing_blocks():
         return target
 
 
-    # Generate a random, reasonable purchase for the problem
-    def generate_random_purcahse(env: steroid_IRP, inst_gen:instance_generator) -> dict:
-        purchase, _ = env.generate_empty_inv_action(inst_gen)
-        pass
+    def generate_candidate_from_RCL(self, node: str, env: steroid_IRP, inst_gen: instance_generator):
+        feasible_candidates: list = []
+        feasible_energy_candidates: list = []
+        max_crit: float = -1e9
+        min_crit: float = 1e9
+
+        RCL_mode: str = choice(['distance', 'TimeWindow'])
+
+        energy_feasible: bool = False     # Indicates if there is at least one candidate feasible by time and load but not charge
+        for target in self.pending_c:
+            distance = env.dist[node,target]
+
+            global_c, energy_feasible, feasible_energy_candidates = self.evaluate_candidate(env, target, distance, t, q, k, energy_feasible, feasible_energy_candidates)
+
+            if global_c:
+                feasible_candidates.append(target)
+            elif energy_feasible: 
+                feasible_energy_candidates.append(target)
+
+                if RCL_mode == 'distance':      crit = distance
+                elif RCL_mode == 'TimeWindow':  crit = env.C[target]['DueDate']
+                
+                max_crit = max(crit, max_crit)
+                min_crit = min(crit, min_crit)
+
+        upper_bound = min_crit + self.RCL_alpha * (max_crit - min_crit)
+        if RCL_mode == 'distance':
+            feasible_candidates = [i for i in feasible_candidates if env.dist[node, i] <= upper_bound]
+        else:
+            feasible_candidates = [i for i in feasible_candidates if env.C[i]['DueDate'] <= upper_bound]
+        
+        if node != 'D' and t + env.dist[node,'D'] / env.v >= env.T:
+            return False, False, feasible_energy_candidates
+        if len(feasible_candidates) != 0:
+            target = choice(feasible_candidates)
+            return target, energy_feasible, feasible_energy_candidates
+        else:
+            return False, energy_feasible, feasible_energy_candidates
 
 
 
