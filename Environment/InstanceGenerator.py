@@ -137,11 +137,17 @@ class instance_generator():
 
 
     # Generates an offer instance with a given random seed
-    def upload_Uchoa_CVRP_instance(self, file_name = 'X-n101-k25.vrp'):
-        file = open('./CVRP Instances/Uchoa et al., (2014)/' + file_name, mode = 'r');     file = file.readlines()
+    def Uchoa_CVRP_instance(self, file_name = 'X-n101-k25.vrp'):
+        self.T = 1
+        self.F = 1e9
+        self.max_t = 1e9
 
-        fila = 3
-        self.M = int(file[fila][13:16])
+        file = open('./CVRP Instances/Uchoa et al., (2014)/' + file_name, mode = 'r');     file = file.readlines()
+        self.file = file
+    
+        self.M, self.Q, self.coor, purchase = locations.upload_Uchoa_CVRP_instance(file)
+
+        return purchase
         
 
 
@@ -468,3 +474,42 @@ class locations():
         seed(d_rd_seed + 6)
         coor, _ = locations.generate_grid(V)
         return coor, locations.euclidean_distance(coor, _)
+    
+    # Uploading 
+    def upload_Uchoa_CVRP_instance(file):
+
+        # Number of suppliers
+        try:    M = int(file[3][13:17]) - 1
+        except: M = int(file[3][13:16]) - 1
+        
+        # Vehicle capacity
+        pos = 12
+        num = file[5][pos]
+        while True:
+            try:
+                int(file[5][pos+1])
+                pos += 1;   num += file[5][pos]
+            except: break
+        Q = int(num)
+
+        # Coordinates
+        fila, coor = 6, {}
+        while True:
+            fila += 1
+            if not file[fila][0] == 'D':
+                vals = file[fila].split('\t')
+                vals[2] = vals[2][:-1]
+                coor[int(vals[0]) - 1] = (int(vals[1]), int(vals[2]))
+            else:   break
+
+        # Demand
+        purchase = {}
+        while True:
+            fila += 1
+            if not file[fila][0] == 'D':
+                vals = file[fila].split('\t')
+                if vals[0] != '1':
+                    purchase[int(vals[0]) - 1] = int(vals[1])
+            else:   break
+
+        return M, Q, coor, purchase

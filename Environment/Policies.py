@@ -50,7 +50,10 @@ class policy_generator():
         
         # Routing by nearest neighbor
         def nearest_neighbor(purchase:dict[float], inst_gen:instance_generator) -> dict:
-            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+            if type(list(purchase.keys())[0]) == tuple:
+                pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+            else:
+                pending_sup, requirements = list(purchase.keys()), purchase
 
             routes = []
             while len(pending_sup) > 0:
