@@ -21,11 +21,10 @@ env_config = { 'M': 3, 'T': 7,  'F': 4, 'Q': 40}      # Other parameters
 
 stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
-
+#%%
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst_gen.generate_routing_instance(det_rd_seed, stoch_rd_seed)
-
+inst_gen.upload_Uchoa_CVRP_instance()
 
 ### Environment
 # Creating environment object
@@ -45,10 +44,9 @@ policy_gen = policy_generator()
 #%%
 ### Step
 # generate empty purchase
-purchase, _ = env.generate_empty_inv_action(inst_gen)
-policy_generator.Routing.generate_random_purchase(env, inst_gen)
+
 
 # Call step function, transition
-state, reward, done, real_action, _ = env.step([routes], inst_gen)
+# state, reward, done, real_action, _ = env.step([routes], inst_gen)
 
 #%%

@@ -137,15 +137,12 @@ class instance_generator():
 
 
     # Generates an offer instance with a given random seed
-    def generate_routing_instance(self, d_rd_seed, s_rd_seed):
-        # Random seeds
-        self.d_rd_seed = d_rd_seed
-        self.s_rd_seed = s_rd_seed
+    def upload_Uchoa_CVRP_instance(self, file_name = 'X-n101-k25.vrp'):
+        file = open('./CVRP Instances/Uchoa et al., (2014)/' + file_name, mode = 'r');     file = file.readlines()
 
-        self.gen_sets()
+        fila = 3
+        self.M = int(file[fila][13:16])
         
-        # Routing
-        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
 
 
     # Auxiliary method: Generate iterables of sets
