@@ -1,7 +1,7 @@
 #%%
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
-from Policies import policy_generator
+from Policies import policy_generator, routing_blocks
 
 import matplotlib.pyplot as plt; from matplotlib.gridspec import GridSpec; from matplotlib.transforms import Affine2D
 import scipy.stats as st; import imageio; import time; from IPython.display import Image
@@ -11,14 +11,13 @@ import ast
 
 ### Instance generator
 # SD-IB-IRP-PP model's parameters
-backorders = 'backorders'                                       # Feature's parameters
-stochastic_params = ['q','d']
+backorders = False                                      # Feature's parameters
+stochastic_params = False
 
-look_ahead = ['q','d']
-historical_data = ['*']
+look_ahead = False
+historical_data = False
 
-env_config = { 'M': 3, 'K': 3, 'T': 7,  'F': 4,
-            'S': 3,  'LA_horizon': 4, 'back_o_cost': 2000}      # Other parameters
+env_config = { 'M': 3, 'T': 7,  'F': 4, 'Q': 40}      # Other parameters
 
 q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
 p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
@@ -32,7 +31,7 @@ det_rd_seed = 1
 
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst_gen.generate_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+inst_gen.generate_routing_instance(det_rd_seed, stoch_rd_seed)
 
 
 ### Environment
@@ -43,7 +42,7 @@ perishability = False
 env = steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
-state = env.reset(inst_gen, return_state = True)
+env.reset(inst_gen)
 
 
 ### Policies
@@ -52,16 +51,11 @@ policy_gen = policy_generator()
 
 #%%
 ### Step
-env.print_state(inst_gen)
-
-# Generating action
-purchase = policy_gen.Purchasing.det_purchase_all(env, inst_gen)
-demand_compliance = policy_gen.Inventory.det_FIFO(state, purchase, env, inst_gen)
-
-action = [purchase, demand_compliance]
-env.print_action(action, inst_gen)
+# generate empty purchase
+purchase, _ = env.generate_empty_inv_action(inst_gen)
+policy_generator.Routing.generate_random_purchase(env, inst_gen)
 
 # Call step function, transition
-state, reward, done, real_action, _ = env.step(action, inst_gen)
+state, reward, done, real_action, _ = env.step([routes], inst_gen)
 
 #%%

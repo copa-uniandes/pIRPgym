@@ -13,12 +13,7 @@ import networkx as nx
 ### Optimizer
 import gurobipy as gu
 
-### Renderizing
-import imageio
 
-### Gym & OR-Gym
-import gym; from gym import spaces
-import utils
 
 class policy_generator():
 
@@ -27,7 +22,7 @@ class policy_generator():
 
     class Purchasing():
 
-        def det_purchase_all(env: steroid_IRP, inst_gen: instance_generator) -> dict[float]:
+        def det_purchase_all(env:steroid_IRP, inst_gen:instance_generator) -> dict[float]:
             purchase = {}
             for i in inst_gen.Suppliers:
                 for k in inst_gen.Products:
@@ -38,7 +33,7 @@ class policy_generator():
 
     class Inventory():
         
-        def det_FIFO(state: dict[float], purchase: dict[float], env: steroid_IRP, inst_gen: instance_generator) -> dict[float]:
+        def det_FIFO(state:dict[float], purchase:dict[float], env: steroid_IRP, inst_gen:instance_generator) -> dict[float]:
             demand_compliance = {}
             for k in inst_gen.Products:
                 left_to_comply = inst_gen.W_d[env.t][k]
@@ -52,21 +47,82 @@ class policy_generator():
 
 
     class Routing():
-        pass
+        
+        # Routing by nearest neighbor
+        def nearest_neighbor(purchase:dict[float], inst_gen:instance_generator) -> dict:
+            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+
+            routes = []
+            while len(pending_sup) > 0:
+                node, load = 0, 0
+                route = [node]
+                while load < inst_gen.Q:
+                    target = routing_blocks.find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen)
+                    if target == False:
+                        break
+                    else:
+                        load += requirements[target]
+                        node = target
+                        route.append(node)
+                        pending_sup.remove(node)
+
+                routes.append(route + [0])
+            
+            return routes
+
+
+        def generate_random_purchase(env: steroid_IRP, inst_gen:instance_generator) -> dict:
+            return routing_blocks.generate_random_purchase(env, inst_gen)
 
 
 
 
 class purchasing_blocks():
     pass
-
+    
 
 class inventory_blocks():
     pass
 
 
 class routing_blocks():
-    pass
+    
+    # Compute total product to recover from suppliers
+    def consolidate_purchase(purchase, inst_gen):
+        pending_suppliers = []
+        requirements = {}
+        for i in inst_gen.Suppliers:
+            req = sum(purchase[i,k] for k in inst_gen.Products)
+            if req > 0:
+                pending_suppliers.append(i)
+                requirements[i] = req
+
+        return pending_suppliers, requirements
+    
+
+    # Find nearest feasible (by capacity) node
+    def find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen):
+        target, dist = False, 1e6
+        for candidate in pending_sup:
+            if inst_gen.c[target,candidate] < dist and load + requirements[candidate] <= inst_gen.Q:
+                target = candidate
+                dist = inst_gen.c[target,candidate]
+        
+        return target
+
+
+    # Generate a random, reasonable purchase for the problem
+    def generate_random_purcahse(env: steroid_IRP, inst_gen:instance_generator) -> dict:
+        purchase, _ = env.generate_empty_inv_action(inst_gen)
+        pass
+
+
+
+
+
+
+
+
 
 
 

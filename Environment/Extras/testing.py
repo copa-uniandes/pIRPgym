@@ -32,7 +32,7 @@ det_rd_seed = 1
 
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst_gen.generate_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+inst_gen.generate_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
 
 
 ### Environment

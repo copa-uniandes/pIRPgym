@@ -67,7 +67,6 @@ class steroid_IRP(gym.Env):
         self.config = {'routing': routing, 'inventory': inventory, 'perishability': perishability}
         
 
-
     # Reseting the environment
     def reset(self, inst_gen: instance_generator, return_state:bool = False):
         '''
@@ -86,6 +85,7 @@ class steroid_IRP(gym.Env):
 
             if return_state:
                 return self.state
+
 
     # Step 
     def step(self, action:list, inst_gen: instance_generator, validate_action:bool = False, warnings:bool = False):
@@ -139,7 +139,8 @@ class steroid_IRP(gym.Env):
         # Time step update and termination check
         self.t += 1
         done = self.check_termination(inst_gen)
-        _ = {'backorders': back_orders, 'perished': perished}
+        if self.config['inventory']:
+            _ = {'backorders': back_orders, 'perished': perished}
 
         # Action assembly
         real_action = []
@@ -160,14 +161,13 @@ class steroid_IRP(gym.Env):
                 
 
     # Checking for episode's termination
-    def check_termination(self, inst_gen):
+    def check_termination(self, inst_gen: instance_generator):
         done = self.t >= inst_gen.T
         return done
 
 
     # Method to evaluate actions
-    # TODO! inst_gen parameters and iterables
-    def action_validity(self, action, inst_gen):
+    def action_validity(self, action, inst_gen: instance_generator):
         if self.config['routing']:
             routes = action[0]
             # Routing check
@@ -230,8 +230,16 @@ class steroid_IRP(gym.Env):
                         f'Demand of product {k} was not fulfilled'
 
 
+    # Generates empty dicts 
+    def generate_empty_inv_action(self, inst_gen: instance_generator) -> tuple[dict,dict]:
+        purchase = {(i,k):0 for i in inst_gen.Suppliers for k in inst_gen.Products}
+        demand_compliance = {(k,o):0 for k in inst_gen.Products for o in [0]+self.Ages[k]}
+
+        return purchase, demand_compliance
+
+
     # Simple function to visualize the inventory
-    def print_inventory(self, inst_gen):
+    def print_inventory(self, inst_gen: instance_generator) -> None:
         max_O = max([self.O_k[k] for k in inst_gen.Products])
         listamax = [[self.state[k,o] for o in self.Ages[k]] for k in inst_gen.Products]
         df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in inst_gen.Products], name='Products'),
@@ -240,14 +248,8 @@ class steroid_IRP(gym.Env):
         print(df)
 
 
-    def generate_empty_inv_action(self, inst_gen):
-        purchase = {(i,k):0 for i in inst_gen.Suppliers for k in inst_gen.Products}
-        demand_compliance = {(k,o):0 for k in inst_gen.Products for o in [0]+self.Ages[k]}
-
-        return purchase, demand_compliance
-
     # Simple function to print state and main parameters
-    def print_state(self, inst_gen):
+    def print_state(self, inst_gen: instance_generator) -> None:
         print(f'################################### STEP {self.t} ###################################')
         print('INVENTORY')
         max_age = max(list(self.O_k.values()))
@@ -280,8 +282,9 @@ class steroid_IRP(gym.Env):
 
         print('\n')
 
+
     # Simple function to print an action
-    def print_action(self, action, inst_gen):
+    def print_action(self, action, inst_gen: instance_generator) -> None:
         if self.config['routing']:
             del action[0]
 

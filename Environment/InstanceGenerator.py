@@ -20,7 +20,7 @@ class instance_generator():
 
     # Initalization method for an instange_generator object
     def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'],
-                  backorders = 'backorders', stoch=True, **kwargs):
+                  backorders = 'backorders', **kwargs):
         '''
         Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance
         
@@ -72,9 +72,13 @@ class instance_generator():
         
         ### Main parameters ###
         self.M = 10                                     # Suppliers
-        self.K = 10                                     # Products
+        self.K = 1                                      # Products
+
+        self.T = 7                                      # Horizon
+
         self.F = 4                                      # Fleet
-        self.T = 7        
+        self.Q = 40                                     # Vehicles capacity
+                
 
         ### Look-ahead parameters ###
         if look_ahead:    
@@ -100,10 +104,9 @@ class instance_generator():
         utils.assign_env_config(self, kwargs)
 
 
-    # Generates an instance with a given random seed
-    def generate_instance(self, d_rd_seed, s_rd_seed, **kwargs):
+    # Generates a complete, completely random instance with a given random seed
+    def generate_random_instance(self, d_rd_seed, s_rd_seed, **kwargs):
         # Random seeds
-        # TODO Implement appropriate seed setting 
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
         
@@ -130,7 +133,19 @@ class instance_generator():
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
-        self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+
+
+    # Generates a complete, completely random instance with a given random seed
+    def generate_routing_instance(self, d_rd_seed, s_rd_seed):
+        # Random seeds
+        self.d_rd_seed = d_rd_seed
+        self.s_rd_seed = s_rd_seed
+
+        self.gen_sets()
+        
+        # Routing
+        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
 
 
     # Auxiliary method: Generate iterables of sets
@@ -454,4 +469,5 @@ class locations():
 
     def euclidean_dist_costs(V: range, d_rd_seed):
         seed(d_rd_seed + 6)
-        return locations.euclidean_distance(*locations.generate_grid(V))
+        coor, _ = locations.generate_grid(V)
+        return coor, locations.euclidean_distance(coor, _)
