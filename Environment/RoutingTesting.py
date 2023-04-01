@@ -19,6 +19,7 @@ historical_data = False
 
 env_config = {}      # Other parameters
 
+
 stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
 
@@ -47,6 +48,8 @@ policy_gen = policy_generator()
 #%%
 ### Step
 routes, distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
+result = policy_generator.Routing.HyGeSe(purchase, inst_gen)
+print(result)
 
 # Call step function, transition
 action = [routes, purchase]
