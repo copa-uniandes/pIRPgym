@@ -55,23 +55,27 @@ class policy_generator():
             else:
                 pending_sup, requirements = list(purchase.keys()), purchase
 
-            routes = []
+            routes: list = []
+            distance: int = 0
             while len(pending_sup) > 0:
-                node, load = 0, 0
-                route = [node]
+                node: int = 0
+                load: int = 0
+                route: list = [node]
                 while load < inst_gen.Q:
                     target = routing_blocks.find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen)
                     if target == False:
                         break
                     else:
                         load += requirements[target]
+                        distance += inst_gen.c[node, target]
                         node = target
                         route.append(node)
                         pending_sup.remove(node)
 
+                distance += inst_gen.c[node,0]
                 routes.append(route + [0])
             
-            return routes
+            return routes, distance
 
 
         
@@ -106,9 +110,9 @@ class routing_blocks():
     def find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen):
         target, dist = False, 1e6
         for candidate in pending_sup:
-            if inst_gen.c[target,candidate] < dist and load + requirements[candidate] <= inst_gen.Q:
+            if inst_gen.c[node,candidate] < dist and load + requirements[candidate] <= inst_gen.Q:
                 target = candidate
-                dist = inst_gen.c[target,candidate]
+                dist = inst_gen.c[node,target]
         
         return target
 

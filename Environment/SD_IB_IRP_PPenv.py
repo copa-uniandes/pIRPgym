@@ -90,7 +90,7 @@ class steroid_IRP(gym.Env):
     # Step 
     def step(self, action:list, inst_gen: instance_generator, validate_action:bool = False, warnings:bool = False):
         if validate_action:
-            self.action_validity(action)
+            self.action_validity(action, inst_gen)
 
         if inst_gen.s_params != False:
             '''
@@ -141,6 +141,8 @@ class steroid_IRP(gym.Env):
         done = self.check_termination(inst_gen)
         if self.config['inventory']:
             _ = {'backorders': back_orders, 'perished': perished}
+        else:
+            _ = {}
 
         # Action assembly
         real_action = []
@@ -158,7 +160,8 @@ class steroid_IRP(gym.Env):
                 return self.state, reward, done, real_action, _
             else:
                 return None, reward, done, real_action, _
-                
+        else:
+            return None, reward, done, real_action, _
 
     # Checking for episode's termination
     def check_termination(self, inst_gen: instance_generator):
@@ -168,6 +171,7 @@ class steroid_IRP(gym.Env):
 
     # Method to evaluate actions
     def action_validity(self, action, inst_gen: instance_generator):
+        # TODO: Manage action by individual componentes, problem when deleting components 
         if self.config['routing']:
             routes = action[0]
             # Routing check
@@ -188,7 +192,7 @@ class steroid_IRP(gym.Env):
                     assert not route[i] not in inst_gen.V, \
                         'Route must be composed of existing suppliers'
             
-            del action[0]   
+            #del action[0]   
          
         if self.config['inventory']: 
             purchase, demand_compliance = action[0:2]

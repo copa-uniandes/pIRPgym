@@ -15,7 +15,7 @@ class Routing_management():
         pass
     
 
-    def evaluate_routes(self, inst_gen, routes):
+    def evaluate_routes(inst_gen, routes):
         transport_cost = 0
         for route in routes:
             transport_cost += sum(inst_gen.c[route[i], route[i + 1]] for i in range(len(route) - 1))

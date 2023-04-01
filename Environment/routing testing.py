@@ -24,10 +24,10 @@ det_rd_seed = 1
 
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst_gen.Uchoa_CVRP_instance()
+purchase = inst_gen.Uchoa_CVRP_instance()
 
-inst_gen2 = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-purchase = inst_gen2.Uchoa_CVRP_instance('X-n1001-k43.vrp')
+# inst_gen2 = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
+# purchase = inst_gen2.Uchoa_CVRP_instance('X-n1001-k43.vrp')
 
 ### Environment
 # Creating environment object
@@ -46,9 +46,10 @@ policy_gen = policy_generator()
 
 #%%
 ### Step
-routes = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
+routes, distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
 
 # Call step function, transition
-# state, reward, done, real_action, _ = env.step([routes], inst_gen)
+action = [routes, purchase]
+state, reward, done, real_action, _ = env.step(action, inst_gen, True)
 
 #%%

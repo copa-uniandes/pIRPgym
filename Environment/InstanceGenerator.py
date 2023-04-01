@@ -138,14 +138,20 @@ class instance_generator():
 
     # Generates an offer instance with a given random seed
     def Uchoa_CVRP_instance(self, file_name = 'X-n101-k25.vrp'):
-        self.T = 1
-        self.F = 1e9
-        self.max_t = 1e9
+        self.K = 1
+        self.T: int = 1
+        self.F: int = 100
+        self.max_t: int = 1e6
 
         file = open('./CVRP Instances/Uchoa et al., (2014)/' + file_name, mode = 'r');     file = file.readlines()
         self.file = file
     
         self.M, self.Q, self.coor, purchase = locations.upload_Uchoa_CVRP_instance(file)
+        purchase = {(i,0):purchase[i] for i in purchase.keys()}
+
+        self.gen_sets()
+
+        self.c = locations.euclidean_distance(self.coor, self.V)
 
         return purchase
         
@@ -153,19 +159,19 @@ class instance_generator():
 
     # Auxiliary method: Generate iterables of sets
     def gen_sets(self):
-        self.Suppliers = range(1,self.M + 1);  self.V = range(self.M + 1)
-        self.Products = range(self.K)
-        self.Vehicles = range(self.F)
-        self.Horizon = range(self.T)
+        self.Suppliers: range = range(1,self.M + 1);  self.V = range(self.M + 1)
+        self.Products: range = range(self.K)
+        self.Vehicles: range = range(self.F)
+        self.Horizon: range = range(self.T)
 
         if self.other_params['look_ahead']:
-            self.Samples = range(self.S)
+            self.Samples: range = range(self.S)
 
         if self.other_params['historical']:
-            self.TW = range(-self.hist_window, self.T)
-            self.historical = range(-self.hist_window, 0)
+            self.TW : range = range(-self.hist_window, self.T)
+            self.historical: range = range(-self.hist_window, 0)
         else:
-            self.TW = self.Horizon
+            self.TW: range = self.Horizon
         
 
     # Auxuliary sample value generator function
