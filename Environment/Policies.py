@@ -94,8 +94,13 @@ class policy_generator():
             data['x_coordinates'] = np.array([x_coor for (x_coor,_) in inst_gen.coor.values()])
             data['y_coordinates'] = np.array([y_coor for (_,y_coor) in inst_gen.coor.values()])
             
-            data['service_times'] = np.zeros(inst_gen.M)
+            data['service_times'] = np.zeros(inst_gen.M+1)
             data['demands'] = np.array([0] + list(purchase.values()))
+
+            print(len(data['x_coordinates']))
+            print(len(data['y_coordinates']))
+            print(len(data['service_times']))
+            print(len(data['demands']))
 
             data['vehicle_capacity'] = inst_gen.Q
             data['num_vehicles'] = inst_gen.F
@@ -183,13 +188,6 @@ class routing_blocks():
             return target, energy_feasible, feasible_energy_candidates
         else:
             return False, energy_feasible, feasible_energy_candidates
-
-
-
-
-
-
-
 
 
 

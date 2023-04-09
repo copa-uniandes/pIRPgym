@@ -47,9 +47,12 @@ policy_gen = policy_generator()
 
 #%%
 ### Step
-routes, distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
-result = policy_generator.Routing.HyGeSe(purchase, inst_gen)
-print(result)
+# Policies
+routes, distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)    #  Nearest neighbor
+
+result = policy_generator.Routing.HyGeSe(purchase, inst_gen)                        # Hybrid Genetic Search
+routes, distance = result.routes, result.cost
+
 
 # Call step function, transition
 action = [routes, purchase]

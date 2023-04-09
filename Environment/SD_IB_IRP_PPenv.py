@@ -9,6 +9,7 @@
 from copy import copy, deepcopy
 import pandas as pd
 import gym
+import networkx as nx
 
 ### Instance generator
 from InstanceGenerator import instance_generator
@@ -164,7 +165,7 @@ class steroid_IRP(gym.Env):
             return None, reward, done, real_action, _
 
     # Checking for episode's termination
-    def check_termination(self, inst_gen: instance_generator):
+    def check_termination(self, inst_gen: instance_generator) -> bool:
         done = self.t >= inst_gen.T
         return done
 
@@ -242,7 +243,7 @@ class steroid_IRP(gym.Env):
         return purchase, demand_compliance
 
 
-    # Simple function to visualize the inventory
+    # Visualize the inventory
     def print_inventory(self, inst_gen: instance_generator) -> None:
         max_O = max([self.O_k[k] for k in inst_gen.Products])
         listamax = [[self.state[k,o] for o in self.Ages[k]] for k in inst_gen.Products]
@@ -252,7 +253,7 @@ class steroid_IRP(gym.Env):
         print(df)
 
 
-    # Simple function to print state and main parameters
+    # Print state and main parameters
     def print_state(self, inst_gen: instance_generator) -> None:
         print(f'################################### STEP {self.t} ###################################')
         print('INVENTORY')
@@ -287,7 +288,7 @@ class steroid_IRP(gym.Env):
         print('\n')
 
 
-    # Simple function to print an action
+    # Print an action
     def print_action(self, action, inst_gen: instance_generator) -> None:
         if self.config['routing']:
             del action[0]
@@ -316,6 +317,51 @@ class steroid_IRP(gym.Env):
                 print(string)
 
             print('\n')
+
+
+    # Plot routes
+    def render(self, routes: list, save:bool = False):
+        G = nx.MultiDiGraph()
+
+        # Nodes
+        node_list = ['D']
+        node_list += self.Stations
+        node_list += self.Costumers
+        G.add_nodes_from(node_list)
+
+        node_color = ['purple']
+        node_color += ['tab:green' for s in self.Stations[1:]]
+        node_color += ['tab:blue' for c in self.Costumers]
+        nodes_to_draw = deepcopy(node_list)
+        nodes_to_draw.remove('S0')   
+
+        # Edges
+        edges = []
+        edge_colors = []
+        orders = {}
+        for i in range(len(routes)):
+            route = routes[i]
+            for node in range(len(route) - 1):
+                edge = (route[node], route[node + 1])
+                edges.append(edge)
+                orders[edge] = i
+
+        G.add_edges_from(edges) 
+        edges = G.edges()
+        for edge in edges:
+            color = self.colors[orders[edge]]
+            edge_colors.append(color)
+
+        pos = {c: (self.C[c]['x'], self.C[c]['y']) for c in self.Costumers}
+        pos.update({s: (self.S[s]['x'], self.S[s]['y']) for s in self.Stations})
+        pos['D'] = (self.D['x'], self.D['y'])
+
+        nx.draw_networkx(G, pos = pos, with_labels = True, nodelist = nodes_to_draw, 
+                         node_color = node_color, edge_color = edge_colors, alpha = 0.8, 
+                         font_size = 7, node_size = 200)
+        if save:
+            plt.savefig(self.path + 'sexting.png', dpi = 600)
+        plt.show()
 
 
     # Printing a representation of the environment (repr(env))
