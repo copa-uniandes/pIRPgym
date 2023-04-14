@@ -136,44 +136,26 @@ class instance_generator():
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
 
 
-    # Generates an offer instance with a given random seed
-    def Uchoa_CVRP_instance(self, file_name = 'X-n101-k25.vrp'):
-        self.K = 1
-        self.T: int = 1
-        self.F: int = 100
-        self.max_t: int = 1e6
+    # Generates an CVRPTW instance of the literature
+    def CVRP_instance(self, set = 'Li', instance = 'Li_21.vrp'):
+        self.K:int = 1         # One product
+        self.T:int = 1         # One period 
+        self.F:int = 100       # 100 vehicles
+        self.d_max:int = 1e6   # Max_time
 
-        file = open('./CVRP Instances/Uchoa et al., (2014)/' + file_name, mode = 'r');     file = file.readlines()
-        self.file = file
-    
-        self.M, self.Q, self.coor, purchase = locations.upload_Uchoa_CVRP_instance(file)
+        if set in ['Li']:   CVRPtype = 'dCVRP'
+        else:   CVRPtype = 'CVRP'
+
+        file = open(f'./{CVRPtype}/set/{instance}', mode = 'r');     file = file.readlines()
+
+        self.M, self.Q, self.coor, purchase = locations.upload_vrp_instance(file)
         purchase = {(i,0):purchase[i] for i in purchase.keys()}
 
         self.gen_sets()
 
         self.c = locations.euclidean_distance(self.coor, self.V)
 
-        return purchase
-    
-    # Generates an offer instance with a given random seed
-    def Uchoa_CVRP_instance(self, file_name = 'X-n101-k25.vrp'):
-        self.K = 1
-        self.T: int = 1
-        self.F: int = 100
-        self.max_t: int = 1e6
-
-        file = open('./CVRP Instances/Uchoa et al., (2014)/' + file_name, mode = 'r');     file = file.readlines()
-        self.file = file
-    
-        self.M, self.Q, self.coor, purchase = locations.upload_Uchoa_CVRP_instance(file)
-        purchase = {(i,0):purchase[i] for i in purchase.keys()}
-
-        self.gen_sets()
-
-        self.c = locations.euclidean_distance(self.coor, self.V)
-
-        return purchase
-        
+        return purchase        
 
 
     # Auxiliary method: Generate iterables of sets
@@ -504,6 +486,24 @@ class locations():
         return coor, locations.euclidean_distance(coor, _)
     
     # Uploading 
+    def upload_vrp_instance(file, CVRPtype):
+        
+        line =  int(file[3][13:17]) - 1
+
+        M = int(file[3].split(' ')[-1][:-1])
+        Q = int(file[5].split(' ')[-1][:-1])
+
+        fila = 6
+        if file[fila][0]=='D':
+            d_max = int(file[fila].split(' ')[-1][:-1])
+            fila += 1
+        
+        #TODO
+
+        return M, Q
+
+
+
     def upload_Uchoa_CVRP_instance(file):
 
         # Number of suppliers
@@ -543,4 +543,4 @@ class locations():
         return M, Q, coor, purchase
     
 
-    def upload_Li_d_CVRP_instance(file):
+

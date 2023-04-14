@@ -1,5 +1,5 @@
 #%%
-from InstanceGenerator import instance_generator
+from InstanceGenerator import instance_generator, locations
 from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policy_generator
 
@@ -25,7 +25,7 @@ det_rd_seed = 1
 
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-purchase = inst_gen.Uchoa_CVRP_instance()
+#purchase = inst_gen.Uchoa_CVRP_instance()
 
 # inst_gen2 = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
 # purchase = inst_gen2.Uchoa_CVRP_instance('X-n1001-k43.vrp')
@@ -44,6 +44,27 @@ env.reset(inst_gen)
 ### Policies
 # Creating policy generator object
 policy_gen = policy_generator()
+
+#%%
+set = 'Li'
+instance = 'Li_21.vrp'
+
+
+if set in ['Li']:   CVRPtype = 'dCVRP'
+else:   CVRPtype = 'CVRP'
+
+file = open(f'./CVRP Instances/{CVRPtype}/{set}/{instance}', mode = 'r');     file = file.readlines()
+
+
+Q = locations.upload_vrp_instance(file)
+
+
+
+
+
+
+
+# %%
 
 #%%
 ### Step
