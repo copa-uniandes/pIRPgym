@@ -44,23 +44,6 @@ policy_gen = policy_generator()
 
 
 
-
-
-
-
-
-
-
-
-
-
-#%%
-
-
-
-
-
-
 #%% Routing instance and generation 
 set = 'Li'
 instance = 'Li_21.vrp'
@@ -75,8 +58,7 @@ purchase = inst_gen.CVRP_instance(set, instance)
 # Policies
 routes, distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)    #  Nearest neighbor
 
-result = policy_generator.Routing.HyGeSe(purchase, inst_gen)                        # Hybrid Genetic Search
-routes, distance = result.routes, result.cost
+HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)                        # Hybrid Genetic Search
 
 
 # Call step function, transition

@@ -56,14 +56,15 @@ class policy_generator():
             else:
                 pending_sup, requirements = list(purchase.keys()), purchase
 
-            routes: list = []
-            distance: int = 0
+            routes: list = list()
+            t_distance: int = 0
             while len(pending_sup) > 0:
                 node: int = 0
                 load: int = 0
                 route: list = [node]
+                distance: float = 0
                 while load < inst_gen.Q:
-                    target = routing_blocks.find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen)
+                    target = routing_blocks.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
                     if target == False:
                         break
                     else:
@@ -74,9 +75,10 @@ class policy_generator():
                         pending_sup.remove(node)
 
                 distance += inst_gen.c[node,0]
+                t_distance += distance
                 routes.append(route + [0])
             
-            return routes, distance
+            return routes, t_distance
 
         
         def HyGeSe(purchase:dict[float], inst_gen:instance_generator):
@@ -90,24 +92,15 @@ class policy_generator():
                 pending_sup, requirements = list(purchase.keys()), purchase
 
             data = dict()
-            
-            data['x_coordinates'] = np.array([x_coor for (x_coor,_) in inst_gen.coor.values()])
-            data['y_coordinates'] = np.array([y_coor for (_,y_coor) in inst_gen.coor.values()])
-            
-            data['service_times'] = np.zeros(inst_gen.M+1)
-            data['demands'] = np.array([0] + list(purchase.values()))
 
-            print(len(data['x_coordinates']))
-            print(len(data['y_coordinates']))
-            print(len(data['service_times']))
-            print(len(data['demands']))
-
+            data['distance_matrix'] = [[inst_gen.c[i,j] if i!=j else 0 for j in inst_gen.V] for i in inst_gen.V]
+            data['demands'] = np.array([0] + list(requirements.values()))
             data['vehicle_capacity'] = inst_gen.Q
             data['num_vehicles'] = inst_gen.F
             data['depot'] = 0
 
             result = hgs_solver.solve_cvrp(data)
-            return result
+            return result.routes, result.cost
 
 
 
@@ -139,10 +132,11 @@ class routing_blocks():
         return pending_suppliers, requirements
     
     # Find nearest feasible (by capacity) node
-    def find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen):
+    def find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen):
         target, dist = False, 1e6
         for candidate in pending_sup:
-            if inst_gen.c[node,candidate] < dist and load + requirements[candidate] <= inst_gen.Q:
+            if inst_gen.c[node,candidate] < dist and load + requirements[candidate] <= inst_gen.Q \
+                and distance + inst_gen.c[node,candidate] + inst_gen.c[candidate,0] <= inst_gen.d_max:
                 target = candidate
                 dist = inst_gen.c[node,target]
         
@@ -150,8 +144,8 @@ class routing_blocks():
 
 
     def generate_candidate_from_RCL(self, node: str, env: steroid_IRP, inst_gen: instance_generator):
-        feasible_candidates: list = []
-        feasible_energy_candidates: list = []
+        feasible_candidates: list = list()
+        feasible_energy_candidates: list = list()
         max_crit: float = -1e9
         min_crit: float = 1e9
 
