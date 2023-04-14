@@ -48,8 +48,8 @@ policy_gen = policy_generator()
 # set = 'Li'
 # instance = 'Li_21.vrp'
 
-set = 'Uchoa'
-instance = 'X-n101-k25.vrp'
+set = 'Golden'
+instance = 'Golden_1.vrp'
 
 
 purchase = inst_gen.CVRP_instance(set, instance)

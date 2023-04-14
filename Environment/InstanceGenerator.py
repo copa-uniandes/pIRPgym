@@ -481,9 +481,8 @@ class locations():
     
     # Uploading 
     def upload_cvrp_instance(set, instance) -> tuple[int, int, int, dict[float], dict[float]]:
-        if set == 'Li': CVRPtype = 'dCVRP'; sep = ' '
+        if set in ['Li','Golden']: CVRPtype = 'dCVRP'; sep = ' '
         elif set == 'Uchoa': CVRPtype = 'CVRP'; sep = '\t'
-
         file = open(f'./CVRP Instances/{CVRPtype}/{set}/{instance}', mode = 'r');     file = file.readlines()
 
 
@@ -496,7 +495,7 @@ class locations():
         fila:int = 6
         d_max:int = 1e6   # Max_time
         if file[fila][0]=='D':
-            d_max = int(file[fila].split(' ')[-1][:-1])
+            d_max = float(file[fila].split(' ')[-1][:-1])
             fila += 1
         
         # Coordinates
