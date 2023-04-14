@@ -105,7 +105,7 @@ class instance_generator():
 
 
     # Generates a complete, completely random instance with a given random seed
-    def generate_random_instance(self, d_rd_seed, s_rd_seed, **kwargs):
+    def generate_random_instance(self, d_rd_seed:int, s_rd_seed:int, **kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -137,18 +137,12 @@ class instance_generator():
 
 
     # Generates an CVRPTW instance of the literature
-    def CVRP_instance(self, set = 'Li', instance = 'Li_21.vrp'):
+    def CVRP_instance(self, set:str = 'Li', instance:str = 'Li_21.vrp') -> dict[float]:
         self.K:int = 1         # One product
         self.T:int = 1         # One period 
         self.F:int = 100       # 100 vehicles
-        self.d_max:int = 1e6   # Max_time
 
-        if set in ['Li']:   CVRPtype = 'dCVRP'
-        else:   CVRPtype = 'CVRP'
-
-        file = open(f'./{CVRPtype}/set/{instance}', mode = 'r');     file = file.readlines()
-
-        self.M, self.Q, self.coor, purchase = locations.upload_vrp_instance(file)
+        self.M, self.Q, self.d_max, self.coor, purchase = locations.upload_cvrp_instance(set, instance)
         purchase = {(i,0):purchase[i] for i in purchase.keys()}
 
         self.gen_sets()
@@ -486,61 +480,52 @@ class locations():
         return coor, locations.euclidean_distance(coor, _)
     
     # Uploading 
-    def upload_vrp_instance(file, CVRPtype):
-        
+    def upload_cvrp_instance(set, instance) -> tuple[int, int, int, dict[float], dict[float]]:
+        if set == 'Li': CVRPtype = 'dCVRP'; sep = ' '
+        elif set == 'Uchoa': CVRPtype = 'CVRP'; sep = '\t'
+
+        file = open(f'./CVRP Instances/{CVRPtype}/{set}/{instance}', mode = 'r');     file = file.readlines()
+
+
         line =  int(file[3][13:17]) - 1
 
-        M = int(file[3].split(' ')[-1][:-1])
-        Q = int(file[5].split(' ')[-1][:-1])
+        M:int = int(file[3].split(' ')[-1][:-1])        # Number of suppliers
+        Q:int = int(file[5].split(' ')[-1][:-1])        # Vehicles capacity
 
-        fila = 6
+        # Max distance per route
+        fila:int = 6
+        d_max:int = 1e6   # Max_time
         if file[fila][0]=='D':
             d_max = int(file[fila].split(' ')[-1][:-1])
             fila += 1
         
-        #TODO
-
-        return M, Q
-
-
-
-    def upload_Uchoa_CVRP_instance(file):
-
-        # Number of suppliers
-        try:    M = int(file[3][13:17]) - 1
-        except: M = int(file[3][13:16]) - 1
-        
-        # Vehicle capacity
-        pos = 12
-        num = file[5][pos]
-        while True:
-            try:
-                int(file[5][pos+1])
-                pos += 1;   num += file[5][pos]
-            except: break
-        Q = int(num)
-
         # Coordinates
-        fila, coor = 6, {}
+        coor:dict = dict()
         while True:
             fila += 1
             if not file[fila][0] == 'D':
-                vals = file[fila].split('\t')
+                vals = file[fila].split(sep)
                 vals[2] = vals[2][:-1]
-                coor[int(vals[0]) - 1] = (int(vals[1]), int(vals[2]))
+                coor[int(vals[0]) - 1] = (float(vals[1]), float(vals[2]))
             else:   break
 
         # Demand
-        purchase = {}
+        purchase:dict = dict()
         while True:
             fila += 1
             if not file[fila][0] == 'D':
-                vals = file[fila].split('\t')
+                vals = file[fila].split(sep)
                 if vals[0] != '1':
-                    purchase[int(vals[0]) - 1] = int(vals[1])
+                    purchase[float(vals[0]) - 1] = float(vals[1])
             else:   break
+        
 
-        return M, Q, coor, purchase
+        return M-1, Q, d_max, coor, purchase
+        
+
+
+
+
     
 
 

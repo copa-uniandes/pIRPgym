@@ -11,24 +11,21 @@ import ast
 
 ### Instance generator
 # SD-IB-IRP-PP model's parameters
-backorders = False                                      # Feature's parameters
+backorders = False              # Feature's parameters
 stochastic_params = False
 
 look_ahead = False
 historical_data = False
 
-env_config = {}      # Other parameters
+env_config = {}                 # Other parameters
 
 
-stoch_rd_seed = 0                                               # Random seeds
+stoch_rd_seed = 0               # Random seeds
 det_rd_seed = 1
 
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-#purchase = inst_gen.Uchoa_CVRP_instance()
 
-# inst_gen2 = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-# purchase = inst_gen2.Uchoa_CVRP_instance('X-n1001-k43.vrp')
 
 ### Environment
 # Creating environment object
@@ -45,18 +42,17 @@ env.reset(inst_gen)
 # Creating policy generator object
 policy_gen = policy_generator()
 
+
+
 #%%
-set = 'Li'
-instance = 'Li_21.vrp'
+# set = 'Li'
+# instance = 'Li_21.vrp'
+
+set = 'Uchoa'
+instance = 'X-n101-k25.vrp'
 
 
-if set in ['Li']:   CVRPtype = 'dCVRP'
-else:   CVRPtype = 'CVRP'
-
-file = open(f'./CVRP Instances/{CVRPtype}/{set}/{instance}', mode = 'r');     file = file.readlines()
-
-
-Q = locations.upload_vrp_instance(file)
+purchase = inst_gen.CVRP_instance(set, instance)
 
 
 
