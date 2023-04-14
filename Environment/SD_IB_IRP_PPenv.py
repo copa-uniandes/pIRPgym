@@ -235,6 +235,13 @@ class steroid_IRP(gym.Env):
                         f'Demand of product {k} was not fulfilled'
 
 
+
+
+
+
+
+
+
     # Generates empty dicts 
     def generate_empty_inv_action(self, inst_gen: instance_generator) -> tuple[dict,dict]:
         purchase = {(i,k):0 for i in inst_gen.Suppliers for k in inst_gen.Products}

@@ -138,7 +138,6 @@ class routing_blocks():
 
         return pending_suppliers, requirements
     
-
     # Find nearest feasible (by capacity) node
     def find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen):
         target, dist = False, 1e6

@@ -136,6 +136,7 @@ class instance_generator():
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
 
 
+
     # Generates an CVRPTW instance of the literature
     def CVRP_instance(self, set:str = 'Li', instance:str = 'Li_21.vrp') -> dict[float]:
         self.K:int = 1         # One product
@@ -248,6 +249,9 @@ class demand():
     def gen_demand(inst_gen: instance_generator, **kwargs) -> tuple:
         seed(inst_gen.d_rd_seed + 2)
         if kwargs['dist'] == 'log-normal':   rd_function = lognormal
+        elif kwargs['dist'] == 'd_uniform': rd_function = randint
+
+
         hist_d = demand.gen_hist_d(inst_gen, rd_function, **kwargs)
         W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
 
@@ -302,6 +306,7 @@ class demand():
                     s_paths_d[t][day,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
 
         return s_paths_d
+    
     
 
 class offer():
