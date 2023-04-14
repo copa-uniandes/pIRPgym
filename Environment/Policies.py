@@ -3,7 +3,7 @@
 
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
-import hygese as hgs
+# import hygese as hgs
 
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
@@ -79,35 +79,35 @@ class policy_generator():
             return routes, distance
 
         
-        def HyGeSe(purchase:dict[float], inst_gen:instance_generator):
-            # Solver initialization
-            ap = hgs.AlgorithmParameters(timeLimit=3.2)  # seconds
-            hgs_solver = hgs.Solver(parameters=ap, verbose=True)
+        # def HyGeSe(purchase:dict[float], inst_gen:instance_generator):
+        #     # Solver initialization
+        #     ap = hgs.AlgorithmParameters(timeLimit=3.2)  # seconds
+        #     hgs_solver = hgs.Solver(parameters=ap, verbose=True)
 
-            if type(list(purchase.keys())[0]) == tuple:
-                pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
-            else:
-                pending_sup, requirements = list(purchase.keys()), purchase
+        #     if type(list(purchase.keys())[0]) == tuple:
+        #         pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+        #     else:
+        #         pending_sup, requirements = list(purchase.keys()), purchase
 
-            data = dict()
+        #     data = dict()
             
-            data['x_coordinates'] = np.array([x_coor for (x_coor,_) in inst_gen.coor.values()])
-            data['y_coordinates'] = np.array([y_coor for (_,y_coor) in inst_gen.coor.values()])
+        #     data['x_coordinates'] = np.array([x_coor for (x_coor,_) in inst_gen.coor.values()])
+        #     data['y_coordinates'] = np.array([y_coor for (_,y_coor) in inst_gen.coor.values()])
             
-            data['service_times'] = np.zeros(inst_gen.M+1)
-            data['demands'] = np.array([0] + list(purchase.values()))
+        #     data['service_times'] = np.zeros(inst_gen.M+1)
+        #     data['demands'] = np.array([0] + list(purchase.values()))
 
-            print(len(data['x_coordinates']))
-            print(len(data['y_coordinates']))
-            print(len(data['service_times']))
-            print(len(data['demands']))
+        #     print(len(data['x_coordinates']))
+        #     print(len(data['y_coordinates']))
+        #     print(len(data['service_times']))
+        #     print(len(data['demands']))
 
-            data['vehicle_capacity'] = inst_gen.Q
-            data['num_vehicles'] = inst_gen.F
-            data['depot'] = 0
+        #     data['vehicle_capacity'] = inst_gen.Q
+        #     data['num_vehicles'] = inst_gen.F
+        #     data['depot'] = 0
 
-            result = hgs_solver.solve_cvrp(data)
-            return result
+        #     result = hgs_solver.solve_cvrp(data)
+        #     return result
 
 
 
