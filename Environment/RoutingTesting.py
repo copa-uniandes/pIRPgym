@@ -56,6 +56,6 @@ routes, distance = result.routes, result.cost
 
 # Call step function, transition
 action = [routes, purchase]
-state, reward, done, real_action, _ = env.step(action, inst_gen, True)
+state, reward, done, real_action, _ = env.step(action, inst_gen, False)
 
 #%%

@@ -154,6 +154,25 @@ class instance_generator():
         self.c = locations.euclidean_distance(self.coor, self.V)
 
         return purchase
+    
+    # Generates an offer instance with a given random seed
+    def Uchoa_CVRP_instance(self, file_name = 'X-n101-k25.vrp'):
+        self.K = 1
+        self.T: int = 1
+        self.F: int = 100
+        self.max_t: int = 1e6
+
+        file = open('./CVRP Instances/Uchoa et al., (2014)/' + file_name, mode = 'r');     file = file.readlines()
+        self.file = file
+    
+        self.M, self.Q, self.coor, purchase = locations.upload_Uchoa_CVRP_instance(file)
+        purchase = {(i,0):purchase[i] for i in purchase.keys()}
+
+        self.gen_sets()
+
+        self.c = locations.euclidean_distance(self.coor, self.V)
+
+        return purchase
         
 
 
@@ -522,3 +541,6 @@ class locations():
             else:   break
 
         return M, Q, coor, purchase
+    
+
+    def upload_Li_d_CVRP_instance(file):
