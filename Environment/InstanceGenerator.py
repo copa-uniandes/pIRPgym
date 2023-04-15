@@ -116,6 +116,8 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
+        self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
+        self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
 
         # Offer
         self.M_kt, self.K_it = offer.gen_availabilities(self)
@@ -129,6 +131,12 @@ class instance_generator():
         self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
 
+        # Selling prices
+        self.salv_price = selling_prices.gen_salvage_price(self)
+        self.opt_price = selling_prices.gen_optimal_price(self)
+
+        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
@@ -242,6 +250,88 @@ class costs():
 
         return W_h, hist_h
     
+
+
+class selling_prices():
+
+    def get_selling_prices(inst_gen:instance_generator, discount) -> dict:
+        
+        #discount = kwargs["discount"]
+        sell_prices = {}
+
+        if  discount[0] == "no": sell_prices = selling_prices.gen_sell_price_null_discount(inst_gen)
+        elif discount[0] == "lin": sell_prices = selling_prices.gen_sell_price_linear_discount(inst_gen)
+        elif discount[0] == "mild": sell_prices = selling_prices.gen_sell_price_mild_discount(inst_gen, discount[1])
+        elif discount[0] == "strong":sell_prices = selling_prices.gen_sell_price_strong_discount(inst_gen, discount[1])
+
+        return sell_prices
+    
+    def gen_salvage_price(inst_gen, **kwargs) -> dict:
+        salv_price = {}
+        for k in inst_gen.Products:
+            li = []
+            for t in inst_gen.Horizon:
+                for i in inst_gen.Suppliers:
+                    if i in inst_gen.M_kt[k,t]:
+                        li += [inst_gen.W_p[t][i,k]]
+            salv_price[k] = sum(li)/len(li)
+        
+        return salv_price
+    
+    def gen_optimal_price(inst_gen, **kwargs) -> dict:
+        opt_price = {}
+        for k in inst_gen.Products:            
+            opt_price[k] = 20*inst_gen.salv_price[k]
+        
+        return opt_price
+
+    def gen_sell_price_strong_discount(inst_gen: instance_generator, conv_discount) -> dict:
+
+        def ff(k):
+            return k*(k+1)/2
+
+        sell_prices = {}
+        for k in inst_gen.Products:
+            for o in range(inst_gen.O_k[k] + 1):
+                if conv_discount == "conc":
+                    if o == inst_gen.O_k[k]: sell_prices[k,o] = inst_gen.salv_price[k]
+                    else: sell_prices[k,o] = inst_gen.opt_price[k] - ((inst_gen.opt_price[k]-inst_gen.salv_price[k])*0.25)*(ff(o+1)-1)/(ff(inst_gen.O_k[k])-1)
+                elif conv_discount == "conv":
+                    if o == 0: sell_prices[k,o] = inst_gen.opt_price[k]
+                    else: sell_prices[k,o] = inst_gen.salv_price[k] + ((inst_gen.opt_price[k]-inst_gen.salv_price[k])*0.25)*(ff(inst_gen.O_k[k]-o+1)-1)/(ff(inst_gen.O_k[k])-1)
+        
+        return sell_prices
+        
+    def gen_sell_price_mild_discount(inst_gen: instance_generator, conv_discount) -> dict:
+
+        def ff(k):
+            return k*(k+1)/2
+        
+        sell_prices = {}
+        for k in inst_gen.Products:
+            for o in range(inst_gen.O_k[k] + 1):
+                if conv_discount == "conc":
+                    sell_prices[k,o] = inst_gen.salv_price[k] + (inst_gen.opt_price[k]-inst_gen.salv_price[k])*(ff(inst_gen.O_k[k])-ff(o))/ff(inst_gen.O_k[k])
+                elif conv_discount == "conv":
+                    sell_prices[k,o] = inst_gen.salv_price[k] + (inst_gen.opt_price[k]-inst_gen.salv_price[k])*(ff(inst_gen.O_k[k]-o))/ff(inst_gen.O_k[k])
+        
+        return sell_prices
+
+    def gen_sell_price_null_discount(inst_gen: instance_generator, **kwargs) -> dict:
+
+        sell_prices = {(k,o):inst_gen.opt_price[k] for k in inst_gen.Products for o in range(inst_gen.O_k[k] + 1)}
+        return sell_prices
+    
+    def gen_sell_price_linear_discount(inst_gen: instance_generator, **kwargs) -> dict:
+        
+        sell_prices = {}
+        for k in inst_gen.Products:
+            for o in range(inst_gen.O_k[k] + 1):
+                sell_prices[k,o] = inst_gen.salv_price[k] + (inst_gen.opt_price[k]-inst_gen.salv_price[k])*(inst_gen.O_k[k]-o)/inst_gen.O_k[k]
+        
+        return sell_prices
+
+
 
 class demand():
 

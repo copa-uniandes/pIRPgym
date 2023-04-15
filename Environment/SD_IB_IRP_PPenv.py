@@ -23,7 +23,7 @@ from BuildingBlocks import Routing_management, Inventory_management
 State (S_t): The state according to Powell (three components): 
     - Physical State (R_t):
         state:  Current available inventory (!*): (dict)  Inventory of product k \in K of age o \in O_k
-                When backlogs are activated, will appear under age 'B'
+                When backlogsb are activated, will appear under age 'B'
     - Other deterministic info (Z_t):
         p: Prices: (dict) Price of product k \in K at supplier i \in M
         q: Available quantities: (dict) Available quantity of product k \in K at supplier i \in M
@@ -69,7 +69,7 @@ class steroid_IRP(gym.Env):
         
 
     # Reseting the environment
-    def reset(self, inst_gen: instance_generator, return_state:bool = False):
+    def reset(self, inst_gen: instance_generator, strong_rate:bool = True, return_state:bool = False):
         '''
         Reseting the environment. Genrate or upload the instance.
         PARAMETER:
@@ -79,9 +79,11 @@ class steroid_IRP(gym.Env):
         # sample paths, etc. of the instance_generator element. 
         self.t = 0
 
+        self.strong_rate = strong_rate
+
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
-                self.state, self.O_k, self.Ages = Inventory_management.perish_per_age_inv.reset(inst_gen)
+                self.state = Inventory_management.perish_per_age_inv.reset(inst_gen)
                 
 
             if return_state:
@@ -107,7 +109,8 @@ class steroid_IRP(gym.Env):
                 if not self.config['routing']:
                     real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
                 if self.config['perishability'] == 'ages':
-                    real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
+                    real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[2],real_purchase,self.strong_rate)
+                    #real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
             
         else:
             if self.config['routing']:

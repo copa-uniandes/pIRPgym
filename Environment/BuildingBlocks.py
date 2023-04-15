@@ -28,17 +28,13 @@ class Inventory_management():
 
         def reset(inst_gen):
             ## State ##
-            seed(inst_gen.d_rd_seed*2)
-            max_age = inst_gen.T
-            O_k = {k:randint(1,max_age+1) for k in inst_gen.Products} 
-            Ages = {k:[i for i in range(1, O_k[k] + 1)] for k in inst_gen.Products}
-            
-            state = {(k,o):0   for k in inst_gen.Products for o in range(1, O_k[k] + 1)}
+
+            state = {(k,o):0   for k in inst_gen.Products for o in range(1, inst_gen.O_k[k] + 1)}
             if inst_gen.other_params['backorders'] == 'backlogs':
                 for k in inst_gen.Products:
                     state[k,'B'] = 0
             
-            return state, O_k, Ages
+            return state
     
     
         def get_real_dem_compl_FIFO(inst_gen, env, real_purchase):
@@ -53,6 +49,20 @@ class Inventory_management():
             
             return real_demand_compliance
 
+        def get_real_dem_compl_rate(inst_gen, env, rates, real_purchase, strong_rate):
+            
+            if strong_rate: rates = {(a):int(rates[a]) for a in rates}
+
+            real_demand_compliance = {}
+            for k in inst_gen.Products:
+                left_to_comply = inst_gen.W_d[env.t][k]
+                real_demand_compliance[k,0] = min(rates[k,0]*sum(real_purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
+                left_to_comply -= real_demand_compliance[k,0]
+                for o in range(inst_gen.O_k[k],0,-1):
+                    real_demand_compliance[k,o] = min(rates[k,o]*env.state[k,o], left_to_comply)
+                    left_to_comply = max(0,left_to_comply-real_demand_compliance[k,o])
+            
+            return real_demand_compliance
 
         def update_inventory(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
             inventory = deepcopy(env.state)
