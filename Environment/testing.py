@@ -40,14 +40,8 @@ routing = False
 inventory = True
 perishability = 'ages'
 env = steroid_IRP(routing, inventory, perishability)
+policy = policy_generator()
 
-# Reseting the environment
-state = env.reset(inst_gen, return_state = True)
-
-
-### Policies
-# Creating policy generator object
-policy_gen = policy_generator()
 
 #%%
 
@@ -55,8 +49,47 @@ policy_gen = policy_generator()
 from Policies import policies
 policy2 = policies()
 
-_=[]
-action = policy2.Stochastic_Rolling_Horizon(state,_,env,inst_gen)
+def Policy_evaluation(inst_gen):  
+    
+
+    # Episode's and performance storage
+    rewards = {};   states = {};   real_actions = {};   backorders = {};   la_decisions = {}
+    perished = {}; actions={}; #times = {}
+
+    # Generating environment and policies generator
+    
+    run_time = time.time()
+
+    state = env.reset(inst_gen, return_state = True)
+    
+    done = False
+    while not done:
+        #print_state(env)
+        # Environment transition
+        states[env.t] = state
+
+        # Transition
+        #print(f"Day {env.t}")
+        action, la_dec = policy.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+
+        state, reward, done, real_action, _,  = env.step(action[1:],inst_gen)
+        if done:   states[env.t] = state
+        
+        # Data storage
+        actions[env.t-1] = action
+        real_actions[env.t-1] = real_action
+        backorders[env.t-1] = _["backorders"]
+        perished[env.t-1] = {k:_["perished"][k] if k in _["perished"] else 0 for k in inst_gen.Products}
+        rewards[env.t] = reward
+        la_decisions[env.t-1] = la_dec
+    
+    #times = time.time() - run_time
+
+    return (rewards, states, real_actions, backorders, la_decisions, perished, actions)
+
+
+(rewards, states, real_actions, backorders, la_decisions, perished, actions) = Policy_evaluation(inst_gen)
+
 
 
 #%%

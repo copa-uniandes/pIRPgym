@@ -108,9 +108,11 @@ class steroid_IRP(gym.Env):
             if self.config['inventory']:
                 if not self.config['routing']:
                     real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
-                if self.config['perishability'] == 'ages':
+                if self.config['perishability'] == 'ages' and not self.config['routing']:
+                    real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[1],real_purchase,self.strong_rate)
+                elif  self.config['perishability'] == 'ages':
                     real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[2],real_purchase,self.strong_rate)
-                    #real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
+                #real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
             
         else:
             if self.config['routing']:

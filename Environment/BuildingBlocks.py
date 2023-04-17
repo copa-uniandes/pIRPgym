@@ -41,7 +41,7 @@ class Inventory_management():
             real_demand_compliance={}
             for k in inst_gen.Products:
                 left_to_comply = inst_gen.W_d[env.t][k]
-                for o in range(env.O_k[k],0,-1):
+                for o in range(inst_gen.O_k[k],0,-1):
                     real_demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
                     left_to_comply -= real_demand_compliance[k,o]
                 
@@ -73,17 +73,17 @@ class Inventory_management():
             for k in inst_gen.Products:
                 inventory[k,1] = round(sum(purchase[i,k] for i in inst_gen.Suppliers) - demand_compliance[k,0],2)
 
-                max_age = env.O_k[k]
+                max_age = inst_gen.O_k[k]
                 if max_age > 1:
                     for o in range(2, max_age + 1):
                             inventory[k,o] = round(env.state[k,o - 1] - demand_compliance[k,o - 1],2)
                 
-                if inst_gen.other_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(env.O_k[k] + 1)) < inst_gen.W_d[env.t][k]:
-                    back_orders[k] = round(inst_gen.W_d[k] - sum(demand_compliance[k,o] for o in range(env.O_k[k] + 1)),2)
+                if inst_gen.other_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)) < inst_gen.W_d[env.t][k]:
+                    back_orders[k] = round(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),2)
 
                 if inst_gen.other_params['backorders'] == 'backlogs':
-                    new_backlogs = round(max(inst_gen.W_d[k] - sum(demand_compliance[k,o] for o in range(env.O_k[k] + 1)),0),2)
-                    inventory[k,'B'] = round(env.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(env.O_k[k]+1)),2)
+                    new_backlogs = round(max(inst_gen.W_d[k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),0),2)
+                    inventory[k,'B'] = round(env.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),2)
                 
                 if env.state[k, max_age] - demand_compliance[k,max_age] > 0:
                         perished[k] = env.state[k, max_age] - demand_compliance[k,max_age]
@@ -96,7 +96,7 @@ class Inventory_management():
                         print(colored(f'Warning! {env.state[k, max_age] - demand_compliance[k,max_age]} units of {k} were lost due to perishability','yellow'))
         
 
-                    if sum(demand_compliance[k,o] for o in range(env.O_k[k] + 1)) < inst_gen.W_d[env.t][k]:
+                    if sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)) < inst_gen.W_d[env.t][k]:
                         print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
 
             return inventory, back_orders, perished
@@ -105,13 +105,13 @@ class Inventory_management():
         def compute_costs(inst_gen, env, purchase, demand_compliance, s_tprime, perished):            
             purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)
         
-            holding_cost = sum(sum(s_tprime[k,o] for o in range(1, env.O_k[k] + 1)) * inst_gen.W_h[env.t][k] for k in inst_gen.Products)
+            holding_cost = sum(sum(s_tprime[k,o] for o in range(1, inst_gen.O_k[k] + 1)) * inst_gen.W_h[env.t][k] for k in inst_gen.Products)
             for k in perished.keys():
                 holding_cost += perished[k] * inst_gen.W_h[env.t][k]
 
             backorders_cost = 0
             if inst_gen.other_params['backorders'] == 'backorders':
-                backorders = sum(max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(env.O_k[k]+1)),0) for k in inst_gen.Products)
+                backorders = sum(max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),0) for k in inst_gen.Products)
                 backorders_cost = backorders * inst_gen.back_o_cost
             
             elif inst_gen.other_params['backorders'] == 'backlogs':
