@@ -9,45 +9,8 @@ from random import seed, randint
 import ast
 
 
-### Instance generator
-# SD-IB-IRP-PP model's parameters
-backorders = 'backorders'                                       # Feature's parameters
-stochastic_params = ['q','d']
-
-look_ahead = ['q','d']
-historical_data = ['*']
-
-env_config = { 'M': 5, 'K': 10, 'T': 7,  'F': 4,
-            'S': 8,  'LA_horizon': 4, 'back_o_cost': 2000}      # Other parameters
-
-q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
-p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
-
-d_params = {'dist': 'log-normal', 'r_f_params': [2,0.5]}        # Demand
-
-h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
-
-stoch_rd_seed = 0                                               # Random seeds
-det_rd_seed = 1
-
-# Creating instance generator object
-inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst_gen.generate_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params, discount=("strong","conc"))
-
-### Environment
-# Creating environment object
-routing = False
-inventory = True
-perishability = 'ages'
-env = steroid_IRP(routing, inventory, perishability)
-policy = policy_generator()
-
 
 #%%
-
-
-from Policies import policies
-policy2 = policies()
 
 def Policy_evaluation(inst_gen):  
     
@@ -70,7 +33,10 @@ def Policy_evaluation(inst_gen):
 
         # Transition
         #print(f"Day {env.t}")
-        action, la_dec = policy.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+        if inst_gen.other_params["demand_type"] == "aggregated":
+            action, la_dec = policy.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+        else:
+            action, la_dec = policy.Inventory.Stochastic_RH_Age_Demand(state,env,inst_gen)
 
         state, reward, done, real_action, _,  = env.step(action[1:],inst_gen)
         if done:   states[env.t] = state
@@ -88,22 +54,62 @@ def Policy_evaluation(inst_gen):
     return (rewards, states, real_actions, backorders, la_decisions, perished, actions)
 
 
-(rewards, states, real_actions, backorders, la_decisions, perished, actions) = Policy_evaluation(inst_gen)
+def run_instance(num_episodes, discount = ("strong","conc"), dem_dist = [2,0.5]):
+    
+    ''' Fixed Parameters '''
+    
+    backorders = 'backorders'                                       # Feature's parameters
+    stochastic_params = ['q','d']
 
+    look_ahead = ['q','d']
+    historical_data = ['*']
+
+    env_config = { 'M': 5, 'K': 10, 'T': 7,  'F': 4,
+                'S': 10,  'LA_horizon': 4, 'back_o_cost': 2000}      # Other parameters
+
+    q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
+    p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+
+    h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
+
+    ''' Demand Distribution and Price Discount '''
+
+    d_params = {'dist': 'log-normal', 'r_f_params': dem_dist}
+    disc = discount
+
+    demand_type = "age"
+
+    stoch_rd_seed = 0                                               # Random seeds
+    det_rd_seed = 1
+
+    policy1 = {}; policy2 = {}
+    ep = 0
+    det_rd_seed = randint(0,int(2e7))
+    while ep < num_episodes:
+        stoch_rd_seed = randint(0,int(2e7))
+
+        inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, demand_type, env_config = env_config)
+        inst_gen.generate_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params, discount = disc)
+
+        policy1[ep] = Policy_evaluation(inst_gen)
+        #policy2[ep] = Policy_evaluation(inst_gen)
+        print(f"Done episode {ep}")
+        ep += 1
+    
+    return policy1, policy2
 
 
 #%%
-### Step
-env.print_state(inst_gen)
 
-# Generating action
-purchase = policy_gen.Purchasing.det_purchase_all(env, inst_gen)
-demand_compliance = policy_gen.Inventory.det_FIFO(state, purchase, env, inst_gen)
 
-action = [purchase, demand_compliance]
-env.print_action(action, inst_gen)
 
-# Call step function, transition
-state, reward, done, real_action, _ = env.step(action, inst_gen)
+# Creating environment object
+routing = False; inventory = True; perishability = 'ages'
+env = steroid_IRP(routing, inventory, perishability)
+policy = policy_generator()
 
-#%%
+policy1, policy2 = run_instance(num_episodes=5,dem_dist={0:[1,0.5], 1:[1,0.5], 2:[1,0.5], 3:[1,0.5]})
+
+
+
+

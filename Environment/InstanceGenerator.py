@@ -20,7 +20,7 @@ class instance_generator():
 
     # Initalization method for an instange_generator object
     def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'],
-                  backorders = 'backorders', **kwargs):
+                  backorders = 'backorders', demand_type = "aggregated", **kwargs):
         '''
         Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance
         
@@ -97,7 +97,7 @@ class instance_generator():
             self.back_l_cost = 500
 
         ### Extra information ###
-        self.other_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
+        self.other_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders, "demand_type" : demand_type}
         self.s_params = stochastic_params
 
         ### Custom configurations ###
@@ -116,7 +116,8 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
-        self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
+        #self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
+        self.O_k = {k:3 for k in self.Products} 
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
 
         # Offer
@@ -128,7 +129,10 @@ class instance_generator():
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
-        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
+        if self.other_params["demand_type"] == "aggregated":
+            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
+        else:
+            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self, **kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
 
         # Selling prices
@@ -352,7 +356,24 @@ class demand():
 
         else:
             return hist_d, W_d, None
+    ### Demand of products
+    def gen_demand_age(inst_gen: instance_generator, **kwargs) -> tuple:
+        seed(inst_gen.d_rd_seed + 2)
+        if kwargs['dist'] == 'log-normal':   rd_function = lognormal
+        elif kwargs['dist'] == 'd_uniform': rd_function = randint
+
+        hist_d = demand.gen_hist_d_age(inst_gen, rd_function, **kwargs)
+        W_d, hist_d = demand.gen_W_d_age(inst_gen, rd_function, hist_d, **kwargs)
+
+        if 'd' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+            seed(inst_gen.s_rd_seed)
+            s_paths_d = demand.gen_empiric_d_sp_age(inst_gen, hist_d, W_d)
+            return hist_d, W_d, s_paths_d
+
+        else:
+            return hist_d, W_d, None
     
+
     # Historic demand
     def gen_hist_d(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]: 
         hist_d = {t:{} for t in inst_gen.Horizon}
@@ -360,6 +381,18 @@ class demand():
             hist_d[0] = {k:[round(rd_function(*kwargs['r_f_params']),2) for t in inst_gen.historical] for k in inst_gen.Products}
         else:
             hist_d[0] = {k:[] for k in inst_gen.Products}
+
+        return hist_d
+
+    # Historic demand for age-dependent demand
+    def gen_hist_d_age(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]: 
+        hist_d = {t:{} for t in inst_gen.Horizon}
+        if inst_gen.other_params['historical'] != False and ('d' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+            r_f_params = kwargs.get("r_f_params")
+            #hist_d[0] = {(k,o):[round(rd_function(*kwargs['r_f_params']),2) for t in inst_gen.historical] for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
+            hist_d[0] = {(k,o):[round(rd_function(r_f_params[o][0],r_f_params[o][1]),2) for t in inst_gen.historical] for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
+        else:
+            hist_d[0] = {(k,o):[] for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
 
         return hist_d
 
@@ -380,6 +413,23 @@ class demand():
 
         return W_d, hist_d
     
+    # Realized (real) availabilities
+    def gen_W_d_age(inst_gen: instance_generator, rd_function, hist_d, **kwargs) -> tuple:
+        '''
+        W_d: (dict) demand of k \in K  on t \in T
+        '''
+        r_f_params = kwargs.get("r_f_params")
+        W_d = {}
+        for t in inst_gen.Horizon:
+            W_d[t] = {}   
+            for k in inst_gen.Products:
+                for o in range(inst_gen.O_k[k]+1):
+                    W_d[t][k,o] = round(rd_function(r_f_params[o][0],r_f_params[o][1]),2)
+
+                    if t < inst_gen.T - 1:
+                        hist_d[t+1][k,o] = hist_d[t][k,o] + [W_d[t][k,o]]
+
+        return W_d, hist_d
 
     # Demand's sample paths
     def gen_empiric_d_sp(inst_gen: instance_generator, hist_d, W_d) -> dict[dict]:
@@ -394,6 +444,22 @@ class demand():
 
                 for day in range(1,inst_gen.sp_window_sizes[t]):
                     s_paths_d[t][day,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
+
+        return s_paths_d
+    
+    # Demand's sample paths
+    def gen_empiric_d_sp_age(inst_gen: instance_generator, hist_d, W_d) -> dict[dict]:
+        s_paths_d = {}
+        for t in inst_gen.Horizon: 
+            s_paths_d[t] = {}
+            for sample in inst_gen.Samples:
+                if inst_gen.s_params == False or ('d' not in inst_gen.s_params and '*' not in inst_gen.s_params):
+                    s_paths_d[t][0,sample] = W_d[t]
+                else:
+                    s_paths_d[t][0,sample] = {(k,o): inst_gen.sim([hist_d[t][k,o][obs] for obs in range(len(hist_d[t][k,o])) if hist_d[t][k,o][obs] > 0]) for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
+
+                for day in range(1,inst_gen.sp_window_sizes[t]):
+                    s_paths_d[t][day,sample] = {(k,o): inst_gen.sim([hist_d[t][k,o][obs] for obs in range(len(hist_d[t][k,o])) if hist_d[t][k,o][obs] > 0]) for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
 
         return s_paths_d
     
@@ -413,7 +479,7 @@ class offer():
         for k in inst_gen.Products:
             for t in inst_gen.TW:
                 # Random number of suppliers that offer k in t
-                sup = randint(1, inst_gen.M+1)
+                sup = randint(3, inst_gen.M+1)
                 M_kt[k,t] = list(inst_gen.Suppliers)
                 # Random suppliers are removed from subset, regarding {sup}
                 for ss in range(inst_gen.M - sup):
