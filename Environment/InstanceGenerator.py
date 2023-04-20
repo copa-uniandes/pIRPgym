@@ -105,7 +105,7 @@ class instance_generator():
 
 
     # Generates a complete, completely random instance with a given random seed
-    def generate_random_instance(self, d_rd_seed:int, s_rd_seed:int, **kwargs):
+    def generate_random_instance(self, d_rd_seed:int, s_rd_seed:int, I0:float, **kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -119,6 +119,8 @@ class instance_generator():
         #self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
         self.O_k = {k:3 for k in self.Products} 
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
+
+        self.i00 = self.gen_initial_inventory(I0)
 
         # Offer
         self.M_kt, self.K_it = offer.gen_availabilities(self)
@@ -146,7 +148,6 @@ class instance_generator():
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
-
 
 
     # Generates an CVRPTW instance of the literature
@@ -180,7 +181,12 @@ class instance_generator():
             self.historical: range = range(-self.hist_window, 0)
         else:
             self.TW: range = self.Horizon
-        
+    
+    def gen_initial_inventory(self,a):
+
+        i00 = {(k,o):a for k in self.Products for o in self.Ages[k]}
+
+        return i00
 
     # Auxuliary sample value generator function
     def sim(self, hist):
@@ -208,11 +214,6 @@ class instance_generator():
         sample = value[test.index(True)]
         
         return sample
-
-
-
-
-
 
 
 class costs():
@@ -345,17 +346,18 @@ class demand():
         if kwargs['dist'] == 'log-normal':   rd_function = lognormal
         elif kwargs['dist'] == 'd_uniform': rd_function = randint
 
-
         hist_d = demand.gen_hist_d(inst_gen, rd_function, **kwargs)
-        W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
 
         if 'd' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
             seed(inst_gen.s_rd_seed)
+            W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
             s_paths_d = demand.gen_empiric_d_sp(inst_gen, hist_d, W_d)
             return hist_d, W_d, s_paths_d
 
         else:
+            W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
             return hist_d, W_d, None
+    
     ### Demand of products
     def gen_demand_age(inst_gen: instance_generator, **kwargs) -> tuple:
         seed(inst_gen.d_rd_seed + 2)
@@ -363,16 +365,16 @@ class demand():
         elif kwargs['dist'] == 'd_uniform': rd_function = randint
 
         hist_d = demand.gen_hist_d_age(inst_gen, rd_function, **kwargs)
-        W_d, hist_d = demand.gen_W_d_age(inst_gen, rd_function, hist_d, **kwargs)
 
         if 'd' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
             seed(inst_gen.s_rd_seed)
+            W_d, hist_d = demand.gen_W_d_age(inst_gen, rd_function, hist_d, **kwargs)
             s_paths_d = demand.gen_empiric_d_sp_age(inst_gen, hist_d, W_d)
             return hist_d, W_d, s_paths_d
 
         else:
+            W_d, hist_d = demand.gen_W_d_age(inst_gen, rd_function, hist_d, **kwargs)
             return hist_d, W_d, None
-    
 
     # Historic demand
     def gen_hist_d(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]: 
@@ -497,14 +499,15 @@ class offer():
         seed(inst_gen.d_rd_seed + 4)
         if kwargs['dist'] == 'c_uniform':   rd_function = randint
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
-        W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
 
         if 'q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
             seed(inst_gen.s_rd_seed + 1)
+            W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
             s_paths_q = offer.gen_empiric_q_sp(inst_gen, hist_q, W_q)
             return hist_q, W_q, s_paths_q 
 
         else:
+            W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
             return hist_q, W_q, None
 
 

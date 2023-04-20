@@ -29,7 +29,7 @@ class Inventory_management():
         def reset(inst_gen):
             ## State ##
 
-            state = {(k,o):0   for k in inst_gen.Products for o in range(1, inst_gen.O_k[k] + 1)}
+            state = {(k,o):inst_gen.i00[k,o]  for k in inst_gen.Products for o in range(1, inst_gen.O_k[k] + 1)}
             if inst_gen.other_params['backorders'] == 'backlogs':
                 for k in inst_gen.Products:
                     state[k,'B'] = 0
@@ -162,6 +162,12 @@ class Inventory_management():
 
             return purchase_cost, holding_cost, backorders_cost
         
+        def compute_earnings(inst_gen, demand_compliance):
+            earnings = sum(inst_gen.sell_prices[k,o]*demand_compliance[k,o] for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1))
+        
+            return earnings
+
+
         def compute_costs_age(inst_gen, env, purchase, demand_compliance, s_tprime, perished):            
             purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)
         

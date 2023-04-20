@@ -154,6 +154,7 @@ class steroid_IRP(gym.Env):
                 else:
                     purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs_age(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
                 reward += [purchase_cost, holding_cost, backorders_cost]
+        reward += [Inventory_management.perish_per_age_inv.compute_earnings(inst_gen,real_demand_compliance)]
 
         # Time step update and termination check
         self.t += 1
@@ -251,12 +252,6 @@ class steroid_IRP(gym.Env):
                 for k in inst_gen.Products:
                     assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < inst_gen.W_d[self.t][k], \
                         f'Demand of product {k} was not fulfilled'
-
-
-
-
-
-
 
 
 

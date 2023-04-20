@@ -8,6 +8,7 @@ import scipy.stats as st; import imageio; import time; from IPython.display impo
 from random import seed, randint
 import ast
 
+import numpy as np
 
 
 #%%
@@ -51,7 +52,7 @@ def Policy_evaluation(inst_gen):
     
     #times = time.time() - run_time
 
-    return (rewards, states, real_actions, backorders, la_decisions, perished, actions)
+    return [rewards, states, real_actions, backorders, la_decisions, perished, actions]
 
 
 def run_instance(num_episodes, discount = ("strong","conc"), dem_dist = [2,0.5]):
@@ -78,6 +79,7 @@ def run_instance(num_episodes, discount = ("strong","conc"), dem_dist = [2,0.5])
     disc = discount
 
     demand_type = "age"
+    I0 = 5
 
     stoch_rd_seed = 0                                               # Random seeds
     det_rd_seed = 1
@@ -89,14 +91,37 @@ def run_instance(num_episodes, discount = ("strong","conc"), dem_dist = [2,0.5])
         stoch_rd_seed = randint(0,int(2e7))
 
         inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, demand_type, env_config = env_config)
-        inst_gen.generate_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params, discount = disc)
+        inst_gen.generate_random_instance(det_rd_seed, stoch_rd_seed, I0, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params, discount = disc)
 
-        policy1[ep] = Policy_evaluation(inst_gen)
-        #policy2[ep] = Policy_evaluation(inst_gen)
+        policy1[ep] = Policy_evaluation(inst_gen) + [inst_gen]
+        #policy2[ep] = Policy_evaluation(inst_gen) + [inst_gen]
         print(f"Done episode {ep}")
         ep += 1
     
     return policy1, policy2
+
+def plot_lognormal(mu,sigma):
+
+    cols = ["goldenrod","blueviolet","salmon","deepskyblue"]
+
+    fig, ax = plt.subplots(nrows=1,ncols=1,figsize=(6,4))
+
+    max_y = 0
+    for i in range(len(mu)):
+        s = np.random.lognormal(mu[i], sigma[i], 1000)
+        #count, bins, ignored = plt.hist(s, 100, density=True, align='mid')
+
+        x = np.linspace(min(s), max(s), 10000)
+        pdf = (np.exp(-(np.log(x) - mu[i])**2 / (2 * sigma[i]**2)) / (x * sigma[i] * np.sqrt(2 * np.pi)))
+
+        if max(pdf) > max_y: max_y = max(pdf)
+
+        ax.plot(x,pdf,linewidth=2,color=cols[i])
+        ax.fill_between(x,pdf,color=cols[i],alpha=0.6)
+    
+
+    ax.set_ylim(0,max_y+0.03)
+
 
 
 #%%
@@ -108,7 +133,17 @@ routing = False; inventory = True; perishability = 'ages'
 env = steroid_IRP(routing, inventory, perishability)
 policy = policy_generator()
 
-policy1, policy2 = run_instance(num_episodes=5,dem_dist={0:[1,0.5], 1:[1,0.5], 2:[1,0.5], 3:[1,0.5]})
+policy1, policy2 = run_instance(num_episodes=5,dem_dist={0:[0.85,0.25], 1:[0.55,0.25], 2:[0.35,0.25], 3:[0.35,0.25]})
+
+
+#%%
+
+
+plot_lognormal([0.85,0.55,0.35,0.25],[0.25,0.25,0.25,0.25])
+
+
+
+#%%
 
 
 
