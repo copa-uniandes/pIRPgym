@@ -251,19 +251,17 @@ class policy_generator():
         
         # Routing by nearest neighbor
         def nearest_neighbor(purchase:dict[float], inst_gen:instance_generator) -> dict:
-            if type(list(purchase.keys())[0]) == tuple:
-                pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
-            else:
-                pending_sup, requirements = list(purchase.keys()), purchase
+            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
 
-            routes: list = []
-            distance: int = 0
+            routes: list = list()
+            t_distance: int = 0
             while len(pending_sup) > 0:
                 node: int = 0
                 load: int = 0
                 route: list = [node]
+                distance: float = 0
                 while load < inst_gen.Q:
-                    target = routing_blocks.find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen)
+                    target = routing_blocks.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
                     if target == False:
                         break
                     else:
@@ -274,40 +272,55 @@ class policy_generator():
                         pending_sup.remove(node)
 
                 distance += inst_gen.c[node,0]
+                t_distance += distance
                 routes.append(route + [0])
             
-            return routes, distance
+            return routes, t_distance
 
+
+        # Hybrid Genetic Search (CVRP)   
+        def HyGeSe(purchase:dict[float], inst_gen:instance_generator):
+            # Solver initialization
+            ap = hgs.AlgorithmParameters(timeLimit=10)  # seconds
+            hgs_solver = hgs.Solver(parameters=ap, verbose=True)
+
+            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+
+            data = routing_blocks.generate_HyGeSe_data(inst_gen, requirements)
+            result = hgs_solver.solve_cvrp(data)
+
+            return result.routes, result.cost
         
-        # def HyGeSe(purchase:dict[float], inst_gen:instance_generator):
-        #     # Solver initialization
-        #     ap = hgs.AlgorithmParameters(timeLimit=3.2)  # seconds
-        #     hgs_solver = hgs.Solver(parameters=ap, verbose=True)
 
-        #     if type(list(purchase.keys())[0]) == tuple:
-        #         pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
-        #     else:
-        #         pending_sup, requirements = list(purchase.keys()), purchase
+        # Mixed Integer Problem
+        def MIP_routing(purchase:dict[float], inst_gen:instance_generator):
+            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+    
+            N, V, A = routing_blocks.generate_complete_graph(inst_gen, pending_sup)
 
-        #     data = dict()
-            
-        #     data['x_coordinates'] = np.array([x_coor for (x_coor,_) in inst_gen.coor.values()])
-        #     data['y_coordinates'] = np.array([y_coor for (_,y_coor) in inst_gen.coor.values()])
-            
-        #     data['service_times'] = np.zeros(inst_gen.M+1)
-        #     data['demands'] = np.array([0] + list(purchase.values()))
+            model = routing_blocks.generate_complete_MIP(inst_gen, N, V, A, requirements)
 
-        #     print(len(data['x_coordinates']))
-        #     print(len(data['y_coordinates']))
-        #     print(len(data['service_times']))
-        #     print(len(data['demands']))
+            model.update()
+            model.setParam('OutputFlag',1)
+            model.optimize()
 
-        #     data['vehicle_capacity'] = inst_gen.Q
-        #     data['num_vehicles'] = inst_gen.F
-        #     data['depot'] = 0
+            routes, cost = routing_blocks.get_MIP_decisions(model)
+        
 
-        #     result = hgs_solver.solve_cvrp(data)
-        #     return result
+        # Column generation algorithm
+        def column_generation(purchase:dict[float], inst_gen:instance_generator):
+            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+
+            N, V, A = routing_blocks.generate_complete_graph(inst_gen, pending_sup)
+
+            master = routing_blocks.MasterProblem()
+            master.buidModel()
+
+
+
+
+
+
 
 
 
@@ -327,66 +340,133 @@ class inventory_blocks():
 class routing_blocks():
     
     # Compute total product to recover from suppliers
-    def consolidate_purchase(purchase, inst_gen):
-        pending_suppliers = []
-        requirements = {}
-        for i in inst_gen.Suppliers:
-            req = sum(purchase[i,k] for k in inst_gen.Products)
-            if req > 0:
-                pending_suppliers.append(i)
-                requirements[i] = req
+    def consolidate_purchase(purchase, inst_gen) -> tuple[list,dict]:
+        # purchse is given for suppliers and products
+        if type(list(purchase.keys())[0]) == tuple:
+            pending_suppliers = list()
+            requirements = dict()
+            for i in inst_gen.Suppliers:
+                req = sum(purchase[i,k] for k in inst_gen.Products)
+                if req > 0:
+                    pending_suppliers.append(i)
+                    requirements[i] = req
 
-        return pending_suppliers, requirements
+            return pending_suppliers, requirements
+        # purchase is given for products
+        else:
+            return list(purchase.keys()), purchase
     
+
     # Find nearest feasible (by capacity) node
-    def find_nearest_feasible_node(node, load, pending_sup, requirements, inst_gen):
+    def find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen):
         target, dist = False, 1e6
         for candidate in pending_sup:
-            if inst_gen.c[node,candidate] < dist and load + requirements[candidate] <= inst_gen.Q:
+            if inst_gen.c[node,candidate] < dist and load + requirements[candidate] <= inst_gen.Q \
+                and distance + inst_gen.c[node,candidate] + inst_gen.c[candidate,0] <= inst_gen.d_max:
                 target = candidate
                 dist = inst_gen.c[node,target]
         
         return target
+    
 
+    # Generate data dict for HyGeSe algorithm
+    def generate_HyGeSe_data(inst_gen:instance_generator, requirements:dict) -> dict:
+        data = dict()
 
-    def generate_candidate_from_RCL(self, node: str, env: steroid_IRP, inst_gen: instance_generator):
-        feasible_candidates: list = []
-        feasible_energy_candidates: list = []
-        max_crit: float = -1e9
-        min_crit: float = 1e9
+        data['distance_matrix'] = [[inst_gen.c[i,j] if i!=j else 0 for j in inst_gen.V] for i in inst_gen.V]
+        data['demands'] = np.array([0] + list(requirements.values()))
+        data['vehicle_capacity'] = inst_gen.Q
+        data['num_vehicles'] = inst_gen.F
+        data['depot'] = 0
+    
+        return data
+    
 
-        RCL_mode: str = choice(['distance', 'TimeWindow'])
+    # Generate vertices and arches for a complete graph
+    def generate_complete_graph(inst_gen: instance_generator, pending_sup:list) -> tuple[list,list,list]:
+        N = pending_sup
+        V:list = [0]+N+[inst_gen.M+1]
+        A:list = [(i,j) for i in V for j in V if i!=j]
 
-        energy_feasible: bool = False     # Indicates if there is at least one candidate feasible by time and load but not charge
-        for target in self.pending_c:
-            distance = env.dist[node,target]
+        return N, V, A
+    
 
-            global_c, energy_feasible, feasible_energy_candidates = self.evaluate_candidate(env, target, distance, t, q, k, energy_feasible, feasible_energy_candidates)
+    # Generate complete MIP model
+    def generate_complete_MIP(inst_gen:instance_generator, N:list, V:range, A:list, requirements:dict) -> gu.Model:
+        model = gu.Model('d-CVRP')
 
-            if global_c:
-                feasible_candidates.append(target)
-            elif energy_feasible: 
-                feasible_energy_candidates.append(target)
-
-                if RCL_mode == 'distance':      crit = distance
-                elif RCL_mode == 'TimeWindow':  crit = env.C[target]['DueDate']
-                
-                max_crit = max(crit, max_crit)
-                min_crit = min(crit, min_crit)
-
-        upper_bound = min_crit + self.RCL_alpha * (max_crit - min_crit)
-        if RCL_mode == 'distance':
-            feasible_candidates = [i for i in feasible_candidates if env.dist[node, i] <= upper_bound]
-        else:
-            feasible_candidates = [i for i in feasible_candidates if env.C[i]['DueDate'] <= upper_bound]
+        # 1 if arch (i,j) is traveled by vehicle f, 0 otherwise
+        x = {(i,j,f):model.addVar(vtype = gu.GRB.BINARY, name = f'x_{i}{j}{f}') for (i,j) in A for f in inst_gen.Vehicles}
         
-        if node != 'D' and t + env.dist[node,'D'] / env.v >= env.T:
-            return False, False, feasible_energy_candidates
-        if len(feasible_candidates) != 0:
-            target = choice(feasible_candidates)
-            return target, energy_feasible, feasible_energy_candidates
-        else:
-            return False, energy_feasible, feasible_energy_candidates
+        # Cumulative distance until node i by vehicle f
+        w = {(i,f):model.addVar(vtype = gu.GRB.CONTINUOUS, name = f'w_{i}{f}') for i in N for f in inst_gen.Vehicles}
+
+        # 2. Every node is visited
+        for i in N:
+            model.addConstr(gu.quicksum(x[i,j,f] for f in inst_gen.Vehicles for j in N if (i,j) in A) == 1)
+
+        for f in inst_gen.Vehicles:
+            # 3. All vehicles start at depot
+            model.addConstr(gu.quicksum(x[0,j,f] for j in N if (0,j) in A) == 1)
+
+            # 4. All vehicles arrive at depot
+            model.addConstr(gu.quicksum(x[i,inst_gen.M+1,f] for i in N if (i,inst_gen.M+1) in A) == 1)
+
+            # 5. Flow preservation
+            for i in N:
+                model.addConstr(gu.quicksum(x[i,j,f] for j in N if (i,j) in A) - gu.quicksum(x[j,i,f] for j in N if (j,i) in A) == 0)
+
+            # 6. Max distance per vehicle
+            model.addConstr(gu.quicksum(inst_gen.c[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
+
+            # 7. Max capacity per vehicle
+            model.addConstr(gu.quicksum(requirements[i] * gu.quicksum(x[i,j,f] for j in N if (i,j) in A) for i in N) <= inst_gen.Q)
+
+            # 8. Distance tracking/No loops
+            for (i,j) in A:
+                model.addConstr(w[i,f] + inst_gen.c[i,j] - w[j,f] <= (1 - x[i,j,f])*1e6)
+
+        total_distance = gu.quicksum(inst_gen.c[i,j] * x[i,j,f] for f in inst_gen.Vehicles for (i,j) in A)
+        model.setObjective(total_distance)
+
+        return model
+    
+
+    # Retrieve and consolidate decisions from MIP
+    def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, x:gu.GRB.BINARY):
+        routes = list()
+        for f in inst_gen.Vehicles:
+            node = 0
+            route = [node]
+            while True:
+                for j in inst_gen.M:
+                    if x[node,j,f].x == 1:
+                        route.append(j)
+                        node = j
+                        break
+                if node == inst_gen.M+1:
+                    break
+        
+        return routes
+
+
+    class MasterProblem:
+
+        def __init__(self):
+            self.model = gu.Model('MasterProblem')
+
+        def buidModel(self, inst_gen:instance_generator):
+            pass
+            # self.generateVariables()
+            # self.generateConstraints()
+            # self.generateObjective()
+            # self.model.update()
+        
+        def generateVariables(self, inst_gen:instance_generator):
+            pass
+            # self.theta = {r:self.model.addVar() for r in Omega}
+    
+
 
 
 
