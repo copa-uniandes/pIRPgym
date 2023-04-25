@@ -101,10 +101,22 @@ class policy_generator():
             model = routing_blocks.generate_complete_MIP(inst_gen, N, V, A, requirements)
 
             model.update()
-            model.setParam('OutputFlag',0)
+            model.setParam('OutputFlag',1)
             model.optimize()
 
             routes, cost = routing_blocks.get_MIP_decisions(model)
+        
+
+        # Column generation algorithm
+        def column_generation(purchase:dict[float], inst_gen:instance_generator):
+            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+
+            N, V, A = routing_blocks.generate_complete_graph(inst_gen, pending_sup)
+
+            master = routing_blocks.MasterProblem()
+            master.buidModel()
+
+
 
 
 
@@ -184,10 +196,10 @@ class routing_blocks():
         model = gu.Model('d-CVRP')
 
         # 1 if arch (i,j) is traveled by vehicle f, 0 otherwise
-        x = {(i,j,f):model.addVar(vtype = gu.GRB.BINARY, name = f'x_{i}{j}{f}') for (i,j) in V for f in inst_gen.Vehicles}
+        x = {(i,j,f):model.addVar(vtype = gu.GRB.BINARY, name = f'x_{i}{j}{f}') for (i,j) in A for f in inst_gen.Vehicles}
         
         # Cumulative distance until node i by vehicle f
-        w = {(i,f):model.addVar(vtype = gu.GBR.CONTINUOUS, name = f'w_{i}{f}') for i in inst_gen.Suppiers for f in inst_gen.Vehicles}
+        w = {(i,f):model.addVar(vtype = gu.GRB.CONTINUOUS, name = f'w_{i}{f}') for i in N for f in inst_gen.Vehicles}
 
         # 2. Every node is visited
         for i in N:
@@ -221,12 +233,38 @@ class routing_blocks():
     
 
     # Retrieve and consolidate decisions from MIP
-    def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model):
+    def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, x:gu.GRB.BINARY):
         routes = list()
         for f in inst_gen.Vehicles:
-            route = list()
+            node = 0
+            route = [node]
+            while True:
+                for j in inst_gen.M:
+                    if x[node,j,f].x == 1:
+                        route.append(j)
+                        node = j
+                        break
+                if node == inst_gen.M+1:
+                    break
+        
+        return routes
 
 
+    class MasterProblem:
+
+        def __init__(self):
+            self.model = gu.Model('MasterProblem')
+
+        def buidModel(self, inst_gen:instance_generator):
+            pass
+            # self.generateVariables()
+            # self.generateConstraints()
+            # self.generateObjective()
+            # self.model.update()
+        
+        def generateVariables(self, inst_gen:instance_generator):
+            pass
+            # self.theta = {r:self.model.addVar() for r in Omega}
     
 
 
