@@ -19,7 +19,7 @@ import utils
 class instance_generator():
 
     # Initalization method for an instange_generator object
-    def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'],
+    def __init__(self, look_ahead = ['d','q'], stochastic_params = ['d','q'], historical_data = ['*'],
                   backorders = 'backorders', **kwargs):
         '''
         Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance
@@ -72,7 +72,7 @@ class instance_generator():
         
         ### Main parameters ###
         self.M = 10                                     # Suppliers
-        self.K = 1                                      # Products
+        self.K = 5                                      # Products
 
         self.T = 7                                      # Horizon
 
@@ -94,7 +94,7 @@ class instance_generator():
         if backorders == 'backorders':
             self.back_o_cost = 600
         elif backorders == 'backlogs':
-            self.back_l_cost = 500
+            self.back_l_cost = 600
 
         ### Extra information ###
         self.other_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders}
@@ -136,6 +136,40 @@ class instance_generator():
         self.opt_price = selling_prices.gen_optimal_price(self)
 
         self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        
+        # Inventory
+        self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
+
+        # Routing
+        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+
+    
+    # Generates a basic, completely random instance with a given random seed
+    def generate_basic_random_instance(self, d_rd_seed:int = 0, s_rd_seed:int = 1, **kwargs):
+        # Random seeds
+        self.d_rd_seed = d_rd_seed
+        self.s_rd_seed = s_rd_seed
+        
+        self.gen_sets()
+
+        # Historical and sample paths arrays
+        self.hist_data = {t:{} for t in self.historical}
+        self.s_paths = {t:{} for t in self.Horizon}
+
+        self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
+        self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
+
+        # Offer
+        self.M_kt, self.K_it = offer.gen_availabilities(self)
+        self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self, **kwargs['q_params'])
+        if self.s_paths_q == None: del self.s_paths_q
+
+        self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self, **kwargs['p_params'])
+        if self.s_paths_p == None: del self.s_paths_p
+
+        # Demand
+        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
+        if self.s_paths_d == None: del self.s_paths_d
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
@@ -239,9 +273,9 @@ class costs():
         '''
         W_h: (dict) holding cost of k \in K  on t \in T
         '''
-        W_h = {}
+        W_h = dict()
         for t in inst_gen.Horizon:
-            W_h[t] = {}   
+            W_h[t] = dict()   
             for k in inst_gen.Products:
                 W_h[t][k] = round(rd_function(*kwargs['r_f_params']),2)
 
@@ -257,7 +291,7 @@ class selling_prices():
     def get_selling_prices(inst_gen:instance_generator, discount) -> dict:
         
         #discount = kwargs["discount"]
-        sell_prices = {}
+        sell_prices = dict()
 
         if  discount[0] == "no": sell_prices = selling_prices.gen_sell_price_null_discount(inst_gen)
         elif discount[0] == "lin": sell_prices = selling_prices.gen_sell_price_linear_discount(inst_gen)
@@ -267,7 +301,7 @@ class selling_prices():
         return sell_prices
     
     def gen_salvage_price(inst_gen, **kwargs) -> dict:
-        salv_price = {}
+        salv_price = dict()
         for k in inst_gen.Products:
             li = []
             for t in inst_gen.Horizon:
@@ -290,7 +324,7 @@ class selling_prices():
         def ff(k):
             return k*(k+1)/2
 
-        sell_prices = {}
+        sell_prices = dict()
         for k in inst_gen.Products:
             for o in range(inst_gen.O_k[k] + 1):
                 if conv_discount == "conc":
@@ -307,7 +341,7 @@ class selling_prices():
         def ff(k):
             return k*(k+1)/2
         
-        sell_prices = {}
+        sell_prices = dict()
         for k in inst_gen.Products:
             for o in range(inst_gen.O_k[k] + 1):
                 if conv_discount == "conc":
@@ -324,7 +358,7 @@ class selling_prices():
     
     def gen_sell_price_linear_discount(inst_gen: instance_generator, **kwargs) -> dict:
         
-        sell_prices = {}
+        sell_prices = dict()
         for k in inst_gen.Products:
             for o in range(inst_gen.O_k[k] + 1):
                 sell_prices[k,o] = inst_gen.salv_price[k] + (inst_gen.opt_price[k]-inst_gen.salv_price[k])*(inst_gen.O_k[k]-o)/inst_gen.O_k[k]
@@ -355,7 +389,7 @@ class demand():
     
     # Historic demand
     def gen_hist_d(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]: 
-        hist_d = {t:{} for t in inst_gen.Horizon}
+        hist_d = {t:dict() for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('d' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
             hist_d[0] = {k:[round(rd_function(*kwargs['r_f_params']),2) for t in inst_gen.historical] for k in inst_gen.Products}
         else:
@@ -369,9 +403,9 @@ class demand():
         '''
         W_d: (dict) demand of k \in K  on t \in T
         '''
-        W_d = {}
+        W_d = dict()
         for t in inst_gen.Horizon:
-            W_d[t] = {}   
+            W_d[t] = dict()   
             for k in inst_gen.Products:
                 W_d[t][k] = round(rd_function(*kwargs['r_f_params']),2)
 
@@ -383,9 +417,9 @@ class demand():
 
     # Demand's sample paths
     def gen_empiric_d_sp(inst_gen: instance_generator, hist_d, W_d) -> dict[dict]:
-        s_paths_d = {}
+        s_paths_d = dict()
         for t in inst_gen.Horizon: 
-            s_paths_d[t] = {}
+            s_paths_d[t] = dict()
             for sample in inst_gen.Samples:
                 if inst_gen.s_params == False or ('d' not in inst_gen.s_params and '*' not in inst_gen.s_params):
                     s_paths_d[t][0,sample] = W_d[t]
@@ -408,7 +442,7 @@ class offer():
         K_it: (dict) subset of products offered by i \in M on t \in T
         '''
         seed(inst_gen.d_rd_seed + 3)
-        M_kt = {}
+        M_kt = dict()
         # In each time period, for each product
         for k in inst_gen.Products:
             for t in inst_gen.TW:
@@ -444,7 +478,7 @@ class offer():
 
     # Historic availabilities
     def gen_hist_q(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]:
-        hist_q = {t:{} for t in inst_gen.Horizon}
+        hist_q = {t:dict() for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
             hist_q[0] = {(i,k):[round(rd_function(*kwargs['r_f_params']),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
         else:
@@ -458,9 +492,9 @@ class offer():
         '''
         W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
-        W_q = {}
+        W_q = dict()
         for t in inst_gen.Horizon:
-            W_q[t] = {}   
+            W_q[t] = dict()  
             for i in inst_gen.Suppliers:
                 for k in inst_gen.Products:
                     if i in inst_gen.M_kt[k,t]:
@@ -475,9 +509,9 @@ class offer():
 
     # Availabilitie's sample paths
     def gen_empiric_q_sp(inst_gen: instance_generator, hist_q, W_q) -> dict[dict]:
-        s_paths_q = {}
+        s_paths_q = dict()
         for t in inst_gen.Horizon: 
-            s_paths_q[t] = {}
+            s_paths_q[t] = dict()
             for sample in inst_gen.Samples:
                 if inst_gen.s_params == False or ('q' not in inst_gen.s_params and '*' not in inst_gen.s_params):
                     s_paths_q[t][0,sample] = W_q[t]
@@ -508,7 +542,7 @@ class offer():
     
     # Historic prices
     def gen_hist_p(inst_gen, rd_function, **kwargs) -> dict[dict]:
-        hist_p = {t:{} for t in inst_gen.Horizon}
+        hist_p = {t:dict() for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('p' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
             hist_p[0] = {(i,k):[round(rd_function(*kwargs['r_f_params']),2) if i in inst_gen.M_kt[k,t] else 1000 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
         else:
@@ -522,9 +556,9 @@ class offer():
         '''
         W_p: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
-        W_p = {}
+        W_p = dict()
         for t in inst_gen.Horizon:
-            W_p[t] = {}   
+            W_p[t] = dict()   
             for i in inst_gen.Suppliers:
                 for k in inst_gen.Products:
                     if i in inst_gen.M_kt[k,t]:
@@ -539,9 +573,9 @@ class offer():
 
     # Prices's sample paths
     def gen_empiric_p_sp(inst_gen: instance_generator, hist_p, W_p) -> dict[dict]:
-        s_paths_p = {}
+        s_paths_p = dict()
         for t in inst_gen.Horizon: 
-            s_paths_p[t] = {}
+            s_paths_p[t] = dict()
             for sample in inst_gen.Samples:
                 if inst_gen.s_params == False or ('p' not in inst_gen.s_params and '*' not in inst_gen.s_params):
                     s_paths_p[t][0,sample] = W_p[t]

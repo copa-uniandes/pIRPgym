@@ -3,7 +3,7 @@
 
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
-# import hygese as hgs
+import hygese as hgs
 
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
@@ -46,6 +46,7 @@ class policy_generator():
             
             return demand_compliance
         
+
         def Stochastic_Rolling_Horizon(state, env, inst_gen):
 
             solucionTTP = {0:[  np.zeros(inst_gen.M+1, dtype=bool), 
@@ -243,8 +244,6 @@ class policy_generator():
             la_decisions = [I0, zz, bb, yy]
 
             return action, la_decisions
-
-
 
 
     class Routing():
