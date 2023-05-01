@@ -23,7 +23,7 @@ class policy_generator():
 
     class Purchasing():
 
-        def det_purchase_all(env:steroid_IRP, inst_gen:instance_generator) -> dict[float]:
+        def det_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[float]:
             purchase = {}
             for i in inst_gen.Suppliers:
                 for k in inst_gen.Products:

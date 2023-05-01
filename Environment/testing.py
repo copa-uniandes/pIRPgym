@@ -11,14 +11,28 @@ import ast
 
 ### Instance generator
 # SD-IB-IRP-PP model's parameters
-backorders = 'backorders'                                       # Feature's parameters
-stochastic_params = ['q','d']
+T = 5
+M = 5
+K = 3
+F = 1
 
 look_ahead = ['q','d']
+S = 8
+LA_horizon = 4
+
+backorders = 'backorders'                                       # Feature's parameters
+back_o_cost = 600
+
+stochastic_params = ['q','d']
+hist_window = 10
+
 historical_data = ['*']
 
-env_config = { 'M': 5, 'K': 10, 'T': 7,  'F': 4,
-            'S': 8,  'LA_horizon': 4, 'back_o_cost': 2000}      # Other parameters
+env_config = { 'M': M, 'K': K, 'T': T,  'F': F, 'S': S,  'LA_horizon': LA_horizon,
+             'hist_window':hist_window, 'back_o_cost': back_o_cost}      # Other parameters
+
+inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
+
 
 q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
 p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
@@ -30,9 +44,12 @@ h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
 
-# Creating instance generator object
-inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
-inst_gen.generate_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params, discount=("strong","conc"))
+#%%
+
+inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+
+#%%
+
 
 ### Environment
 # Creating environment object
@@ -44,6 +61,13 @@ policy = policy_generator()
 
 
 #%%
+
+
+
+
+
+
+
 
 
 from Policies import policies

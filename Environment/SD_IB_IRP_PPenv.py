@@ -250,15 +250,15 @@ class steroid_IRP(gym.Env):
     # Generates empty dicts 
     def generate_empty_inv_action(self, inst_gen: instance_generator) -> tuple[dict,dict]:
         purchase = {(i,k):0 for i in inst_gen.Suppliers for k in inst_gen.Products}
-        demand_compliance = {(k,o):0 for k in inst_gen.Products for o in [0]+self.Ages[k]}
+        demand_compliance = {(k,o):0 for k in inst_gen.Products for o in [0]+inst_gen.Ages[k]}
 
         return purchase, demand_compliance
 
 
     # Visualize the inventory
     def print_inventory(self, inst_gen: instance_generator) -> None:
-        max_O = max([self.O_k[k] for k in inst_gen.Products])
-        listamax = [[self.state[k,o] for o in self.Ages[k]] for k in inst_gen.Products]
+        max_O = max([inst_gen.O_k[k] for k in inst_gen.Products])
+        listamax = [[self.state[k,o] for o in inst_gen.Ages[k]] for k in inst_gen.Products]
         df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in inst_gen.Products], name='Products'),
         columns=pd.Index([str(o) for o in range(1, max_O + 1)], name='Ages'))
 
@@ -269,13 +269,13 @@ class steroid_IRP(gym.Env):
     def print_state(self, inst_gen: instance_generator) -> None:
         print(f'################################### STEP {self.t} ###################################')
         print('INVENTORY')
-        max_age = max(list(self.O_k.values()))
+        max_age = max(list(inst_gen.O_k.values()))
         string = 'K \ O \t '
         for o in range(1, max_age + 1):     string += f'{o} \t'
         print(string)
         for k in inst_gen.Products:
             string = f'k{k} \t '
-            for o in self.Ages[k]:  string += f'{self.state[k,o]} \t'
+            for o in inst_gen.Ages[k]:  string += f'{self.state[k,o]} \t'
             print(string)
         
         print('\n')

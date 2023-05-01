@@ -78,13 +78,14 @@ class instance_generator():
 
         self.F = 4                                      # Fleet
         self.Q = 40                                     # Vehicles capacity
+        self.d_max = 500                                # Max distance per route
                 
 
         ### Look-ahead parameters ###
         if look_ahead:    
             self.S = 4              # Number of sample paths
             self.LA_horizon = 5     # Look-ahead time window's size (includes current period)
-            self.sp_window_sizes = {t:min(self.LA_horizon, self.T - t) for t in range(self.T)}
+            
         
         ### historical log parameters ###
         if historical_data:        
@@ -102,6 +103,9 @@ class instance_generator():
 
         ### Custom configurations ###
         utils.assign_env_config(self, kwargs)
+
+        ### Look-ahead parameters
+        self.sp_window_sizes = {t:min(self.LA_horizon, self.T - t) for t in range(self.T)}
 
 
     # Generates a complete, completely random instance with a given random seed
@@ -176,7 +180,6 @@ class instance_generator():
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
-
 
 
     # Generates an CVRPTW instance of the literature
@@ -518,7 +521,7 @@ class offer():
                 else:
                     s_paths_q[t][0,sample] = {(i,k): inst_gen.sim([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,0] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
 
-                for day in range(1,inst_gen.sp_window_sizes[t]):
+                for day in range(1,inst_gen.sp_window_sizes[t]-1):
                     s_paths_q[t][day,sample] = {(i,k): inst_gen.sim([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,t+day] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
 
         return s_paths_q
