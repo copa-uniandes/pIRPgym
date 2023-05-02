@@ -1,17 +1,14 @@
+"""
+@author: juanbeta
+"""
 ################################## Modules ##################################
 ### Basic Librarires
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
-import sys; import pandas as pd; import math; import numpy as np
+import numpy as np
 import time
 #from random import random, seed, randint, shuffle, uniform
 from numpy.random import seed, random, randint, lognormal
 
-
-### Renderizing
-import imageio
-
-### Gym & OR-Gym
-import gym; from gym import spaces
 # TODO Check if import or_gym works
 import utils
 
@@ -105,7 +102,8 @@ class instance_generator():
         utils.assign_env_config(self, kwargs)
 
         ### Look-ahead parameters
-        self.sp_window_sizes = {t:min(self.LA_horizon, self.T - t) for t in range(self.T)}
+        if look_ahead:
+            self.sp_window_sizes = {t:min(self.LA_horizon, self.T - t) for t in range(self.T)}
 
 
     # Generates a complete, completely random instance with a given random seed
@@ -382,7 +380,7 @@ class demand():
         hist_d = demand.gen_hist_d(inst_gen, rd_function, **kwargs)
         W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
 
-        if 'd' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+        if inst_gen.other_params['look_ahead'] != False and ('d' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
             seed(inst_gen.s_rd_seed)
             s_paths_d = demand.gen_empiric_d_sp(inst_gen, hist_d, W_d)
             return hist_d, W_d, s_paths_d
@@ -470,7 +468,7 @@ class offer():
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
         W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
 
-        if 'q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+        if inst_gen.other_params['look_ahead'] != False and ('q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
             seed(inst_gen.s_rd_seed + 1)
             s_paths_q = offer.gen_empiric_q_sp(inst_gen, hist_q, W_q)
             return hist_q, W_q, s_paths_q 
@@ -534,7 +532,7 @@ class offer():
         hist_p = offer.gen_hist_p(inst_gen, rd_function, **kwargs)
         W_p, hist_p = offer.gen_W_p(inst_gen, rd_function, hist_p, **kwargs)
 
-        if 'p' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']:
+        if inst_gen.other_params['look_ahead'] != False and ('p' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
             seed(inst_gen.s_rd_seed + 3)
             s_paths_p = offer.gen_empiric_p_sp(inst_gen, hist_p, W_p)
             return hist_p, W_p, s_paths_p 
