@@ -37,7 +37,7 @@ class policy_generator():
 
     class Inventory():
         
-        def det_FIFO(state:dict[float], purchase:dict[float], env: steroid_IRP, inst_gen:instance_generator) -> dict[float]:
+        def det_FIFO(state:dict[float], purchase:dict[float], inst_gen:instance_generator, env: steroid_IRP) -> dict[float]:
             demand_compliance = {}
             for k in inst_gen.Products:
                 left_to_comply = inst_gen.W_d[env.t][k]

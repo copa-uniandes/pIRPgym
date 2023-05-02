@@ -2,6 +2,7 @@
 from InstanceGenerator import instance_generator, locations
 from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policy_generator
+from Visualizations import Routing_Visualizations
 
 import matplotlib.pyplot as plt; from matplotlib.gridspec import GridSpec; from matplotlib.transforms import Affine2D
 import scipy.stats as st; import imageio; import time; from IPython.display import Image
@@ -16,6 +17,9 @@ M = 20
 K = 10
 F = 30
 
+Q = 1e9
+d_max = 2500
+
 backorders = False              # Feature's parameters
 stochastic_params = ['d','q']
 
@@ -24,8 +28,8 @@ look_ahead = False
 historical_data = ['*']
 hist_window = 40
 
-env_config = { 'M': M, 'K': K, 'T': T,  'F': F,
-             'hist_window':hist_window}                    # Other parameters
+env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q, 
+             'd_max':d_max, 'hist_window':hist_window}                    # Other parameters
 
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
@@ -46,20 +50,31 @@ inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q
 ### Environment
 # Creating environment object
 routing = True
-inventory = False
-perishability = False
+inventory = True
+perishability = 'ages'
 env = steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
-env.reset(inst_gen)
+state = env.reset(inst_gen, return_state = True)
 
 
-### Policies
-# Creating policy generator object
-policy_gen = policy_generator()
+purchase = policy_generator.Purchasing.det_purchase_all(inst_gen, env)
+demand_complience = policy_generator.Inventory.det_FIFO(state, purchase, inst_gen, env)
+nn_routes, nn_distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
 
+#%% 
+product = 0
+Routing_Visualizations.route_availability_per_product(nn_routes[1], product, inst_gen, env)
 
 #%%
+Routing_Visualizations.route_total_availability(nn_routes[1], inst_gen, env)
+
+#%%
+product = 0
+Routing_Visualizations.routes_availability_per_product(nn_routes, product, inst_gen, env)
+
+#%%
+Routing_Visualizations.routes_total_availability(nn_routes, inst_gen, env)
 
 
 
@@ -92,11 +107,7 @@ policy_gen = policy_generator()
 
 
 
-
-
-
-
-#%% Routing instance and generation 
+#%% Routing d-CVRP instance  
 set = 'Li'
 instance = 'Li_21.vrp'
 # set = 'Golden'

@@ -480,8 +480,9 @@ class offer():
     # Historic availabilities
     def gen_hist_q(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]:
         hist_q = {t:dict() for t in inst_gen.Horizon}
+        factor = {i:1+random()*2 for i in inst_gen.Suppliers}
         if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
-            hist_q[0] = {(i,k):[round(rd_function(*kwargs['r_f_params']),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
+            hist_q[0] = {(i,k):[round(rd_function(*kwargs['r_f_params']),2)*factor[i] if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
         else:
             hist_q[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
 
