@@ -2,7 +2,6 @@
 @author: juanbeta
 Independent transition blocks of a Supply Chain
 """
-
 ################################## Modules ##################################
 ### Basic Librarires
 from numpy.random import seed, random, randint, lognormal

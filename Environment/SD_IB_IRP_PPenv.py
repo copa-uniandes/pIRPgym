@@ -1,9 +1,6 @@
-
 """
-@author: juanbeta
-
+@author: Juan Betancourt
 """
-
 ################################## Modules ##################################
 ### Basic Librarires
 from copy import copy, deepcopy

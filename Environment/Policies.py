@@ -1,10 +1,13 @@
+"""
+@author: juanbeta
+"""
 ################################## Modules ##################################
-### Basic Librarires
-
+### SC classes
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
 import hygese as hgs
 
+### Basic Librarires
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
 import time; from termcolor import colored
