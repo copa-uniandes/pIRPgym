@@ -1,13 +1,8 @@
 #%%
-from InstanceGenerator import instance_generator, locations
+from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policy_generator
 from Visualizations import Routing_Visualizations
-
-import matplotlib.pyplot as plt; from matplotlib.gridspec import GridSpec; from matplotlib.transforms import Affine2D
-import scipy.stats as st; import imageio; import time; from IPython.display import Image
-from random import seed, randint
-import ast
 
 
 ### Instance generator
