@@ -40,13 +40,15 @@ h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
 
-inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+# inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+purchase = inst_gen.CVRP_instance()
+
 
 ### Environment
 # Creating environment object
 routing = True
-inventory = True
-perishability = 'ages'
+inventory = False
+perishability = False
 env = steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
@@ -56,6 +58,16 @@ state = env.reset(inst_gen, return_state = True)
 purchase = policy_generator.Purchasing.det_purchase_all(inst_gen, env)
 demand_complience = policy_generator.Inventory.det_FIFO(state, purchase, inst_gen, env)
 nn_routes, nn_distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
+
+
+
+
+
+
+
+
+
+
 
 #%% 
 product = 0
