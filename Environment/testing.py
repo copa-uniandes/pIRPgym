@@ -55,7 +55,7 @@ inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q
 ### Environment
 # Creating environment object
 routing = True
-inventory = True
+inventory = False
 perishability = 'ages'
 env = steroid_IRP(routing, inventory, perishability)
 policy = policy_generator()

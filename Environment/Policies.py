@@ -316,7 +316,66 @@ class policy_generator():
             N, V, A = routing_blocks.generate_complete_graph(inst_gen, pending_sup)
 
             master = routing_blocks.MasterProblem()
-            master.buidModel()
+            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N)
+
+            card_omega = len(theta)
+
+            print("Entering Column Generation Algorithm",flush = True)
+            while True:
+                print('Solving Master Problem (MP)...', flush = True)
+                modelMP.optimize()
+                print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
+
+                for j in range(card_omega): #Retrieving solution of RMP
+                    if(theta[j].x!=0):
+                        print(f'theta({j}) = {theta[j].x}', flush = True)
+                
+                #Retrieving duals of master problem
+                lambdas = list()
+                lambdas.append(master.getAttr("Pi", RouteLimitCtr)[0])
+                lambdas+= modelMP.getAttr("Pi", NodeCtr)
+
+                for i in range(len(lambdas)):
+                    print('lambda(',i,')=', lambdas[i], sep ='', flush = True)  
+
+                # Solve subproblem (passing dual variables)
+                print('Solving subproblem (AP):', card_omega, flush = True)
+                
+                a_star = {i:0 for i in N}
+                shortest_path = routing_blocks.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, requirements)
+                minReducedCost = shortest_path[0]
+                c_k = shortest_path[1]
+
+                # Check termination condition
+                if  minReducedCost >= -0.0005:
+                    print("Column generation stops! \n", flush = True)
+                    break
+                else:
+                    print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
+                    print('Adding column...', flush = True)
+                    card_omega+=1
+                    a_star = list(a_star.values())
+                    a_star.append(1) #We add the 1 of the number of routes restrictions
+                    newCol = gu.Column(a_star, modelMP.getConstrs())
+                    theta.append(modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = c_k, lb = 0, column = newCol, name = f"y[{card_omega}]"))
+                    # Update master model
+                    modelMP.update()
+
+            for v in modelMP.getVars():
+                if v.x>0.5:
+                    print('%s=%g' % (v.varName, v.x))
+            
+            for v in modelMP.getVars():
+                v.setAttr("Vtype", GRB.INTEGER)
+
+            modelMP.optimize()
+
+            print('(Heuristic) integer master problem:')
+            print('Route time: %g' % modelMP.objVal)
+            for v in modelMP.getVars():
+                if v.x > 0.5:
+                    print('%s %g' % (v.varName, v.x))
+            
 
 
 
@@ -454,19 +513,94 @@ class routing_blocks():
 
     class MasterProblem:
 
-        def __init__(self):
-            self.model = gu.Model('MasterProblem')
+        def __init__(self, name = 'MasterProblem'):
+            self.modelMP = gu.Model(name)
 
-        def buidModel(self, inst_gen:instance_generator):
-            pass
-            # self.generateVariables()
-            # self.generateConstraints()
-            # self.generateObjective()
-            # self.model.update()
+            self.modelMP.Params.Presolve = 0
+            self.modelMP.Params.Cuts = 0
+            self.modelMP.Params.OutputFlag = 0
+
+        def buidModel(self, inst_gen:instance_generator, N:list):
+            self.generateVariables(inst_gen, N)
+            RouteLimitCtr, NodeCtr = self.generateConstraints(inst_gen)
+            self.generateObjective()
+            self.model.update()
+
+            return self.modelMP, self.theta, RouteLimitCtr, NodeCtr
         
-        def generateVariables(self, inst_gen:instance_generator):
-            pass
-            # self.theta = {r:self.model.addVar() for r in Omega}
+        def generateVariables(self, inst_gen:instance_generator, N:list):
+            self.theta = list()
+            for i in N:
+                route_cost = inst_gen.c[0,i] + inst_gen.c[i,inst_gen.M+1]
+                self.theta.append(self.modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = route_cost, lb = 0, name = f"y[{i}]"))
+        
+
+        def generateConstraints(self, inst_gen:instance_generator):
+            RouteLimitCtr = list()          #Limits the number of routes
+            RouteLimitCtr.append(self.modelMP.addConstr(sum(self.theta[i] for i in range(len(self.theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
+
+            NodeCtr = list()                #Node covering constraints
+            for i in range(len(self.theta)):
+                NodeCtr.append(self.modelMP.addConstr(1*self.theta[i]>=1, f"Set_Covering_[{i}]")) #Set covering constraints
+            
+            return RouteLimitCtr, NodeCtr
+
+        def generateObjective(self):
+            self.modelMP.modelSense = gu.GRB.MINIMIZE
+    
+    class SubProblem:
+
+        def solveAPModel(self, lambdas, a_star, inst_gen, N, V, A, requirements):
+            
+            modelAP = gu.Model('SubProblem')
+            modelAP.Params.OutputFlag = 0
+            modelAP.Params.BestObjStop = -0.01
+
+            x = dict()                          #Flow variables     
+            for (i,j) in A:
+                x[i,j] = modelAP.addVar(vtype = gu.GRB.BINARY, lb = 0, name = f"x_{i},{j}")
+            w = dict()        
+            for i in V:
+                w[i] = modelAP.addVar(vtype = gu.GRB.CONTINUOUS, name = f"w_{i}")
+
+            #A path should depart from the depot
+            modelAP.addConstr(sum(x[0,i] for i in N) == 1, "Depart from depot")
+            
+            #A path should reach the depot
+            modelAP.addConstr(sum(x[i,inst_gen.M+1] for i in N) == 1, "Reach the depot")
+
+            #Flow conservation
+            for i in N:
+                modelAP.addConstr(sum(x[i,j] for j in V if (i,j) in A) - sum(x[j,i] for j in V if (j,i) in A) == 0, 'Flow conservation')
+            
+            #Vehicle capacity
+            modelAP.addConstr(sum(requirements[i]*sum(x[i,j] for j in V if (i,j) in A) for i in N) <= inst_gen.Q, "Capacity")
+
+            #Cumulative distance
+            for (i,j) in A:
+                modelAP.addConstr(w[i]+inst_gen.c[i,j]-w[j]<=(1-x[i,j])*1e9, 'Cumulative Distance')
+
+            #Shortest path objective
+            c_trans = dict()
+            for (i,j) in A:
+                if i in N:
+                    c_trans[i,j] = inst_gen.c[i,j]-lambdas[i]
+                else:
+                    c_trans[i,j] = inst_gen.c[i,j]-lambdas[0]
+            
+            modelAP.setObjective(sum(c_trans[i,j]*x[i,j] for (i,j) in A), gu.GRB.MINIMIZE)
+            modelAP.update()
+            modelAP.optimize()
+            route_cost = sum(inst_gen.c[i,j]*x[i,j].x for (i,j) in A)
+            for i in N:
+                for j in V:
+                    if (i,j) in A and x[i,j].x>0.5:
+                        a_star[i] = 1
+            return [modelAP.objVal, route_cost]
+
+
+
+
     
 
 
