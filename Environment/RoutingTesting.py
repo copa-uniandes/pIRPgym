@@ -5,14 +5,14 @@ from Policies import policy_generator
 from Visualizations import Routing_Visualizations
 
 
-### Instance generator
+########################################## Instance generator ##########################################
 # SD-IB-IRP-PP model's parameters
 T = 7
 M = 20
 K = 10
-F = 30
+F = 10
 
-Q = 1e9
+Q = 1e5
 d_max = 2500
 
 backorders = False              # Feature's parameters
@@ -29,7 +29,10 @@ env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q,
 # Creating instance generator object
 inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
 
-# Random instance parameters
+
+
+
+#%%######################################### Random Instance ##########################################
 q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
 p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
 
@@ -40,24 +43,49 @@ h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
 
-# inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
-purchase = inst_gen.CVRP_instance()
+inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
 
 
-### Environment
+#%%######################################### CVRP Instance ##########################################
+# set = 'Li'
+# instance = 'Li_21.vrp'
+# # set = 'Golden'
+# # instance = 'Golden_1.vrp'
+
+# purchase = inst_gen.CVRP_instance(set, instance)
+
+
+#%%######################################### Environment ##########################################
 # Creating environment object
 routing = True
-inventory = False
-perishability = False
+inventory = True
+perishability = 'ages'
 env = steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
 state = env.reset(inst_gen, return_state = True)
 
 
+#%%######################################### Diverse Routing Strategies ##########################################
+# Policies
+# nn_routes, nn_distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)      # Nearest neighbor
+# HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)        # Hybrid Genetic Search
+
+
 purchase = policy_generator.Purchasing.det_purchase_all(inst_gen, env)
-demand_complience = policy_generator.Inventory.det_FIFO(state, purchase, inst_gen, env)
-nn_routes, nn_distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
+MIP_routes, MIP_distance = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
+#policy_generator.Routing.column_generation(purchase, inst_gen)
+
+
+#%%######################################### Step ##########################################
+routes = []
+# Call step function, transition
+action = [routes, purchase]
+state, reward, done, real_action, _ = env.step(action, inst_gen, False)
+
+# purchase = policy_generator.Purchasing.det_purchase_all(inst_gen, env)
+# demand_complience = policy_generator.Inventory.det_FIFO(state, purchase, inst_gen, env)
+# nn_routes, nn_distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
 
 
 
