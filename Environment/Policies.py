@@ -41,7 +41,7 @@ class policy_generator():
             purchase = dict()
             for i in inst_gen.Suppliers:
                 for k in inst_gen.Products:
-                    purchase[(i,k)] = sum(inst_gen.s_paths_q[env.t][s,0][i,k] for s in inst_gen.Samples)/inst_gen.S
+                    purchase[(i,k)] = sum(inst_gen.s_paths_q[env.t][0,s][i,k] for s in inst_gen.Samples)/inst_gen.S
             
             return purchase
 
@@ -309,25 +309,27 @@ class policy_generator():
         def MIP_routing(purchase:dict[float], inst_gen:instance_generator):
             pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
     
-            N, V, A = routing_blocks.generate_complete_graph(inst_gen, pending_sup)
+            N, V, A, distances, requirements = routing_blocks.generate_complete_graph(inst_gen, pending_sup, requirements)
 
-            model = routing_blocks.generate_complete_MIP(inst_gen, N, V, A, requirements)
+            model = routing_blocks.generate_complete_MIP(inst_gen, N, V, A, distances, requirements)
 
             model.update()
             model.setParam('OutputFlag',1)
             model.optimize()
 
-            routes, cost = routing_blocks.get_MIP_decisions(model)
+            routes = routing_blocks.get_MIP_decisions(inst_gen, model, A)
+
+            return routes
         
 
         # Column generation algorithm
         def Column_Generation(purchase:dict[float], inst_gen:instance_generator):
             pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
 
-            N, V, A = routing_blocks.generate_complete_graph(inst_gen, pending_sup)
+            N, V, A, distances, requirements = routing_blocks.generate_complete_graph(inst_gen, pending_sup, requirements)
 
             master = routing_blocks.MasterProblem()
-            modelMP, theta, RouteLimitCtr, NodeCtr, distances, requirements = master.buidModel(inst_gen, requirements, N, V)
+            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, requirements, N, V)
 
             card_omega = len(theta)
 
@@ -455,24 +457,37 @@ class routing_blocks():
     
 
     # Generate vertices and arches for a complete graph
-    def generate_complete_graph(inst_gen: instance_generator, pending_sup:list) -> tuple[list,list,list]:
+    def generate_complete_graph(inst_gen: instance_generator, pending_sup:list, requirements:dict) -> tuple[list,list,list]:
         N = pending_sup
         V:list = [0]+N+[inst_gen.M+1]
         A:list = [(i,j) for i in V for j in V if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1)]
 
-        return N, V, A
+        coors = deepcopy(inst_gen.coor)
+        coors.update({(inst_gen.M+1):inst_gen.coor[0]})
+        distances = dict()
+        for i in V:
+            for j in V:
+                if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1):
+                    x1, y1 = coors[i]; x2, y2 = coors[j]
+                    distances[i,j] = ((x2-x1)**2+(y2-y1)**2)**(1/2)
+        
+        requirements[0] = 0
+        requirements[inst_gen.M+1] = 0
+
+        return N, V, A, distances, requirements
     
 
     # Generate complete MIP model
-    def generate_complete_MIP(inst_gen:instance_generator, N:list, V:range, A:list, requirements:dict) -> gu.Model:
+    def generate_complete_MIP(inst_gen:instance_generator, N:list, V:range, A:list, distances:dict, requirements:dict) -> gu.Model:
         model = gu.Model('d-CVRP')
 
         # 1 if arch (i,j) is traveled by vehicle f, 0 otherwise
         x = {(i,j,f):model.addVar(vtype = gu.GRB.BINARY, name = f'x_{i}{j}{f}') for (i,j) in A for f in inst_gen.Vehicles}
         
         # Cumulative distance until node i by vehicle f
-        w = {(i,f):model.addVar(vtype = gu.GRB.CONTINUOUS, name = f'w_{i}{f}') for i in N for f in inst_gen.Vehicles}
+        w = {(i,f):model.addVar(vtype = gu.GRB.CONTINUOUS, name = f'w_{i}{f}') for i in V for f in inst_gen.Vehicles}
 
+        print(N)
         # 2. Every node is visited
         for i in N:
             model.addConstr(gu.quicksum(x[i,j,f] for f in inst_gen.Vehicles for j in N if (i,j) in A) == 1)
@@ -489,36 +504,42 @@ class routing_blocks():
                 model.addConstr(gu.quicksum(x[i,j,f] for j in N if (i,j) in A) - gu.quicksum(x[j,i,f] for j in N if (j,i) in A) == 0)
 
             # 6. Max distance per vehicle
-            model.addConstr(gu.quicksum(inst_gen.c[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
+            model.addConstr(gu.quicksum(distances[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
 
             # 7. Max capacity per vehicle
             model.addConstr(gu.quicksum(requirements[i] * gu.quicksum(x[i,j,f] for j in N if (i,j) in A) for i in N) <= inst_gen.Q)
 
             # 8. Distance tracking/No loops
             for (i,j) in A:
-                model.addConstr(w[i,f] + inst_gen.c[i,j] - w[j,f] <= (1 - x[i,j,f])*1e6)
+                model.addConstr(w[i,f] + distances[i,j] - w[j,f] <= (1 - x[i,j,f])*1e7)
 
-        total_distance = gu.quicksum(inst_gen.c[i,j] * x[i,j,f] for f in inst_gen.Vehicles for (i,j) in A)
+        total_distance = gu.quicksum(distances[i,j] * x[i,j,f] for f in inst_gen.Vehicles for (i,j) in A)
         model.setObjective(total_distance)
+        model.modelSense = gu.GRB.MINIMIZE
 
         return model
     
 
     # Retrieve and consolidate decisions from MIP
-    def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, x:gu.GRB.BINARY):
+    def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, A:list):
         routes = list()
         for f in inst_gen.Vehicles:
             node = 0
             route = [node]
             while True:
-                for j in inst_gen.M:
-                    if x[node,j,f].x == 1:
+                for (i,j) in A:
+                    if i == node and model.getVarByName(f'x_{node}{j}{f}').x == 1:
+                        print(i,j,f)
                         route.append(j)
                         node = j
                         break
+
                 if node == inst_gen.M+1:
+                    del route[-1]
+                    route.append(0)
+                    routes.append(route)
                     break
-        
+
         return routes
 
 
@@ -531,14 +552,13 @@ class routing_blocks():
             self.modelMP.Params.Cuts = 0
             self.modelMP.Params.OutputFlag = 0
 
-        def buidModel(self, inst_gen:instance_generator, requirements:dict, N:list, V:list):
-            distances, requirements = self.generateParameters(inst_gen, requirements, V)
+        def buidModel(self, inst_gen:instance_generator, N:list, V:list):
             self.generateVariables(inst_gen, N)
             RouteLimitCtr, NodeCtr = self.generateConstraints(inst_gen)
             self.generateObjective()
             self.modelMP.update()
 
-            return self.modelMP, self.theta, RouteLimitCtr, NodeCtr, distances, requirements
+            return self.modelMP, self.theta, RouteLimitCtr, NodeCtr
     
 
         def generateVariables(self, inst_gen:instance_generator, N:list):
@@ -548,7 +568,7 @@ class routing_blocks():
                 self.theta.append(self.modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = route_cost, lb = 0, name = f"y[{i}]"))
         
 
-        def generateParameters(self, inst_gen, requirements, V):
+        def generateParameters(self, inst_gen, V):
             coors = deepcopy(inst_gen.coor)
             coors.update({(inst_gen.M+1):inst_gen.coor[0]})
             distances = dict()
@@ -558,10 +578,7 @@ class routing_blocks():
                         x1, y1 = coors[i]; x2, y2 = coors[j]
                         distances[i,j] = ((x2-x1)**2+(y2-y1)**2)**(1/2)
             
-            requirements[0] = 0
-            requirements[inst_gen.M+1] = 0
-            
-            return distances, requirements
+            return distances
 
         def generateConstraints(self, inst_gen:instance_generator):
             RouteLimitCtr = list()          #Limits the number of routes

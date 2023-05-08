@@ -593,7 +593,6 @@ class offer():
 class locations():
 
     def generate_grid(V: range): 
-        seed()
         # Suppliers locations in grid
         size_grid = 1000
         coor = {i:(randint(0, size_grid+1), randint(0, size_grid+1)) for i in V}
