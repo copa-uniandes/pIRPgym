@@ -25,13 +25,24 @@ class policy_generator():
         pass
 
     class Purchasing():
-
+        
+        # Purchases all available quantities assuming deterministic available quantities
         def det_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[float]:
-            purchase = {}
+            purchase = dict()
             for i in inst_gen.Suppliers:
                 for k in inst_gen.Products:
                     purchase[(i,k)] = inst_gen.W_q[env.t][i,k]
 
+            return purchase
+        
+
+        # Purchases expected value of available quantities 
+        def avg_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[float]:
+            purchase = dict()
+            for i in inst_gen.Suppliers:
+                for k in inst_gen.Products:
+                    purchase[(i,k)] = sum(inst_gen.s_paths_q[env.t][s,0][i,k] for s in inst_gen.Samples)/inst_gen.S
+            
             return purchase
 
 
@@ -252,7 +263,7 @@ class policy_generator():
     class Routing():
         
         # Routing by nearest neighbor
-        def nearest_neighbor(purchase:dict[float], inst_gen:instance_generator) -> dict:
+        def Nearest_Neighbor(purchase:dict[float], inst_gen:instance_generator) -> dict:
             pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
 
             routes: list = list()
@@ -310,7 +321,7 @@ class policy_generator():
         
 
         # Column generation algorithm
-        def column_generation(purchase:dict[float], inst_gen:instance_generator):
+        def Column_Generation(purchase:dict[float], inst_gen:instance_generator):
             pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
 
             N, V, A = routing_blocks.generate_complete_graph(inst_gen, pending_sup)
@@ -565,6 +576,7 @@ class routing_blocks():
         def generateObjective(self):
             self.modelMP.modelSense = gu.GRB.MINIMIZE
     
+
     class SubProblem:
 
         def solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements):
