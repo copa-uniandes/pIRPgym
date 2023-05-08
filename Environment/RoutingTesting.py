@@ -8,12 +8,12 @@ from Visualizations import Routing_Visualizations
 ########################################## Instance generator ##########################################
 # SD-IB-IRP-PP model's parameters
 T = 7
-M = 8
+M = 10
 K = 10
-F = 10
+F = 5
 
-Q = 1e5
-d_max = 2500
+Q = 1e6 
+d_max = 1e6 
 
 backorders = False              # Feature's parameters
 stochastic_params = ['d','q']
@@ -26,7 +26,7 @@ historical_data = ['*']
 hist_window = 40
 
 env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q, 
-              'S':S, 'LA_horizon':3,
+              'S':S, 'LA_horizon':LA_horizon,
              'd_max':d_max, 'hist_window':hist_window}                    # Other parameters
 
 # Creating instance generator object
@@ -71,12 +71,12 @@ state = env.reset(inst_gen, return_state = True)
 
 #%%######################################### Diverse Routing Strategies ##########################################
 # Policies
+purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
+
 # nn_routes, nn_distance = policy_generator.Routing.Nearest_Neighbor(purchase, inst_gen)      # Nearest neighbor
 # HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)        # Hybrid Genetic Search
 
-
-purchase = policy_generator.Purchasing.det_purchase_all(inst_gen, env)
-MIP_routes, MIP_distance = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
+MIP_routes = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
 #policy_generator.Routing.Column_Generation(purchase, inst_gen)
 
 
