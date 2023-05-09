@@ -320,7 +320,7 @@ class policy_generator():
             routes = routing_blocks.get_MIP_decisions(inst_gen, model, V, A)
             cost = model.getObjective().getValue()
 
-            return routes
+            return routes, cost
         
 
         # Column generation algorithm
@@ -371,9 +371,10 @@ class policy_generator():
                     a_star = list(a_star.values())
                     a_star.append(1) #We add the 1 of the number of routes restrictions
                     newCol = gu.Column(a_star, modelMP.getConstrs())
-                    theta.append(modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = c_k, lb = 0, column = newCol, name = f"y[{card_omega}]"))
+                    theta.append(modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = c_k, lb = 0, column = newCol, name = f"theta[{card_omega}]"))
                     # Update master model
                     modelMP.update()
+
 
             for v in modelMP.getVars():
                 if v.x>0.5:
@@ -389,6 +390,8 @@ class policy_generator():
             for v in modelMP.getVars():
                 if v.x > 0.5:
                     print('%s %g' % (v.varName, v.x))
+            
+            print('Normal termination. -o-')
             
 
 
@@ -613,23 +616,26 @@ class routing_blocks():
             w = dict()        
             for i in V:
                 w[i] = modelAP.addVar(vtype = gu.GRB.CONTINUOUS, name = f"w_{i}")
+    
+            # 3. All vehicles start at depot
+            modelAP.addConstr(gu.quicksum(x[0,j] for j in V if (0,j) in A) == 1, "Depart from depot")
 
-            #A path should depart from the depot
-            modelAP.addConstr(sum(x[0,i] for i in N) == 1, "Depart from depot")
-            
-            #A path should reach the depot
-            modelAP.addConstr(sum(x[i,inst_gen.M+1] for i in N) == 1, "Reach the depot")
+            # 4. All vehicles arrive at depot
+            modelAP.addConstr(gu.quicksum(x[i,inst_gen.M+1] for i in V if (i,inst_gen.M+1) in A) == 1, "Reach the depot")
 
-            #Flow conservation
+            # 5. Flow preservation
             for i in N:
-                modelAP.addConstr(sum(x[i,j] for j in V if (i,j) in A) - sum(x[j,i] for j in V if (j,i) in A) == 0, 'Flow conservation')
-            
-            #Vehicle capacity
-            modelAP.addConstr(sum(requirements[i]*sum(x[i,j] for j in V if (i,j) in A) for i in N) <= inst_gen.Q, "Capacity")
+                modelAP.addConstr(gu.quicksum(x[i,j] for j in V if (i,j) in A) - gu.quicksum(x[j,i] for j in V if (j,i) in A) == 0, 'Flow conservation')
 
-            #Cumulative distance
+            # 6. Max distance per vehicle
+            modelAP.addConstr(gu.quicksum(distances[i,j]*x[i,j] for (i,j) in A) <= inst_gen.d_max, 'Max distance')
+
+            # 7. Max capacity per vehicle
+            modelAP.addConstr(gu.quicksum(requirements[i] * gu.quicksum(x[i,j] for j in V if (i,j) in A) for i in N) <= inst_gen.Q, "Capacity")
+
+            # 8. Distance tracking/No loops
             for (i,j) in A:
-                modelAP.addConstr(w[i]+distances[i,j]-w[j]<=(1-x[i,j])*1e9, 'Cumulative Distance')
+                modelAP.addConstr(w[i] + distances[i,j] - w[j] <= (1 - x[i,j])*1e6, 'Distance tracking')
 
             #Shortest path objective
             c_trans = dict()
@@ -640,9 +646,12 @@ class routing_blocks():
                     c_trans[i,j] = distances[i,j]-lambdas[0]
             
             modelAP.setObjective(sum(c_trans[i,j]*x[i,j] for (i,j) in A), gu.GRB.MINIMIZE)
+            # modelAP.setParam('OutputFlag',1)
             modelAP.update()
             modelAP.optimize()
+
             route_cost = sum(distances[i,j]*x[i,j].x for (i,j) in A)
+
             for i in N:
                 for j in V:
                     if (i,j) in A and x[i,j].x>0.5:
