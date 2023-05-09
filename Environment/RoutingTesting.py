@@ -10,7 +10,7 @@ from Visualizations import Routing_Visualizations
 T = 7
 M = 15
 K = 10
-F = 4
+F = 15
 
 Q = 2000
 d_max = 2000 
@@ -80,8 +80,8 @@ purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 
 # HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)        # Hybrid Genetic Search
 
-MIP_routes, MIP_distance = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
-# policy_generator.Routing.Column_Generation(purchase, inst_gen)
+# MIP_routes, MIP_distance = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
+policy_generator.Routing.Column_Generation(purchase, inst_gen)
 
 
 #%%######################################### Visualizations ##########################################
