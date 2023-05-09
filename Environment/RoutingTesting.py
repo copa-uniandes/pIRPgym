@@ -76,11 +76,11 @@ state = env.reset(inst_gen, return_state = True)
 # Policies
 purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 
-nn_routes, nn_distance = policy_generator.Routing.Nearest_Neighbor(purchase, inst_gen)      # Nearest neighbor
+# nn_routes, nn_distance = policy_generator.Routing.Nearest_Neighbor(purchase, inst_gen)      # Nearest neighbor
 
 # HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)        # Hybrid Genetic Search
 
-# MIP_routes = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
+MIP_routes = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
 #policy_generator.Routing.Column_Generation(purchase, inst_gen)
 
 

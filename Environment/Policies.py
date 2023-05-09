@@ -459,7 +459,7 @@ class routing_blocks():
     # Generate vertices and arches for a complete graph
     def generate_complete_graph(inst_gen: instance_generator, pending_sup:list, requirements:dict) -> tuple[list,list,list]:
         N = pending_sup
-        V:list = [0]+N+[inst_gen.M+1]
+        V:list = [0]+ N +[inst_gen.M+1]
         A:list = [(i,j) for i in V for j in V if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1)]
 
         coors = deepcopy(inst_gen.coor)
@@ -467,7 +467,8 @@ class routing_blocks():
         distances = dict()
         for i in V:
             for j in V:
-                if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1):
+                if (i,j) in A:
+                # if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1):
                     x1, y1 = coors[i]; x2, y2 = coors[j]
                     distances[i,j] = ((x2-x1)**2+(y2-y1)**2)**(1/2)
         
@@ -487,27 +488,26 @@ class routing_blocks():
         # Cumulative distance until node i by vehicle f
         w = {(i,f):model.addVar(vtype = gu.GRB.CONTINUOUS, name = f'w_{i}{f}') for i in V for f in inst_gen.Vehicles}
 
-        print(N)
         # 2. Every node is visited
         for i in N:
-            model.addConstr(gu.quicksum(x[i,j,f] for f in inst_gen.Vehicles for j in N if (i,j) in A) == 1)
+            model.addConstr(gu.quicksum(x[i,j,f] for f in inst_gen.Vehicles for j in V if (i,j) in A) == 1)
 
         for f in inst_gen.Vehicles:
             # 3. All vehicles start at depot
-            model.addConstr(gu.quicksum(x[0,j,f] for j in N if (0,j) in A) == 1)
+            model.addConstr(gu.quicksum(x[0,j,f] for j in V if (0,j) in A) == 1)
 
             # 4. All vehicles arrive at depot
-            model.addConstr(gu.quicksum(x[i,inst_gen.M+1,f] for i in N if (i,inst_gen.M+1) in A) == 1)
+            model.addConstr(gu.quicksum(x[i,inst_gen.M+1,f] for i in V if (i,inst_gen.M+1) in A) == 1)
 
             # 5. Flow preservation
             for i in N:
-                model.addConstr(gu.quicksum(x[i,j,f] for j in N if (i,j) in A) - gu.quicksum(x[j,i,f] for j in N if (j,i) in A) == 0)
+                model.addConstr(gu.quicksum(x[i,j,f] for j in V if (i,j) in A) - gu.quicksum(x[j,i,f] for j in V if (j,i) in A) == 0)
 
             # 6. Max distance per vehicle
             model.addConstr(gu.quicksum(distances[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
 
             # 7. Max capacity per vehicle
-            model.addConstr(gu.quicksum(requirements[i] * gu.quicksum(x[i,j,f] for j in N if (i,j) in A) for i in N) <= inst_gen.Q)
+            model.addConstr(gu.quicksum(requirements[i] * gu.quicksum(x[i,j,f] for j in V if (i,j) in A) for i in V) <= inst_gen.Q)
 
             # 8. Distance tracking/No loops
             for (i,j) in A:
