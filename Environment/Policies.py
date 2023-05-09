@@ -317,7 +317,8 @@ class policy_generator():
             model.setParam('OutputFlag',1)
             model.optimize()
 
-            routes = routing_blocks.get_MIP_decisions(inst_gen, model, A)
+            routes = routing_blocks.get_MIP_decisions(inst_gen, model, V, A)
+            cost = model.getObjective().getValue()
 
             return routes
         
@@ -329,7 +330,7 @@ class policy_generator():
             N, V, A, distances, requirements = routing_blocks.generate_complete_graph(inst_gen, pending_sup, requirements)
 
             master = routing_blocks.MasterProblem()
-            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, requirements, N, V)
+            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N)
 
             card_omega = len(theta)
 
@@ -339,9 +340,9 @@ class policy_generator():
                 modelMP.optimize()
                 print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
 
-                for j in range(card_omega): #Retrieving solution of RMP
-                    if(theta[j].x!=0):
-                        print(f'theta({j}) = {theta[j].x}', flush = True)
+                # for j in range(card_omega): #Retrieving solution of RMP
+                #     if(theta[j].x!=0):
+                #         print(f'theta({j}) = {theta[j].x}', flush = True)
                 
                 #Retrieving duals of master problem
                 lambdas = list()
@@ -467,8 +468,8 @@ class routing_blocks():
         distances = dict()
         for i in V:
             for j in V:
-                if (i,j) in A:
-                # if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1):
+                # if (i,j) in A:
+                if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1):
                     x1, y1 = coors[i]; x2, y2 = coors[j]
                     distances[i,j] = ((x2-x1)**2+(y2-y1)**2)**(1/2)
         
@@ -521,15 +522,19 @@ class routing_blocks():
     
 
     # Retrieve and consolidate decisions from MIP
-    def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, A:list):
+    def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, V:list, A:list):
         routes = list()
+
+        # for (i,j) in A:
+        #     if model.getVarByName(f'x_{i}{j}{4}').x > 0.5:
+        #         print((i,j), model.getVarByName(f'x_{i}{j}{4}').x)
+
         for f in inst_gen.Vehicles:
             node = 0
             route = [node]
             while True:
-                for (i,j) in A:
-                    if i == node and model.getVarByName(f'x_{node}{j}{f}').x == 1:
-                        print(i,j,f)
+                for j in V:
+                    if (node,j) in A and model.getVarByName(f'x_{node}{j}{f}').x > 0.5:
                         route.append(j)
                         node = j
                         break
@@ -552,7 +557,7 @@ class routing_blocks():
             self.modelMP.Params.Cuts = 0
             self.modelMP.Params.OutputFlag = 0
 
-        def buidModel(self, inst_gen:instance_generator, N:list, V:list):
+        def buidModel(self, inst_gen:instance_generator, N:list):
             self.generateVariables(inst_gen, N)
             RouteLimitCtr, NodeCtr = self.generateConstraints(inst_gen)
             self.generateObjective()
