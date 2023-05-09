@@ -330,7 +330,7 @@ class policy_generator():
             N, V, A, distances, requirements = routing_blocks.generate_complete_graph(inst_gen, pending_sup, requirements)
 
             master = routing_blocks.MasterProblem()
-            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N)
+            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
 
             card_omega = len(theta)
 
@@ -347,7 +347,7 @@ class policy_generator():
                 #Retrieving duals of master problem
                 lambdas = list()
                 lambdas.append(modelMP.getAttr("Pi", RouteLimitCtr)[0])
-                lambdas+= modelMP.getAttr("Pi", NodeCtr)
+                lambdas += modelMP.getAttr("Pi", NodeCtr)
 
                 # for i in range(len(lambdas)):
                 #     print('lambda(',i,')=', lambdas[i], sep ='', flush = True)  
@@ -355,8 +355,9 @@ class policy_generator():
                 # Solve subproblem (passing dual variables)
                 print('Solving subproblem (AP):', card_omega, flush = True)
                 
-                a_star = {i:0 for i in N}
-                shortest_path = routing_blocks.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements)
+                a_star = dict()
+                a_star.update({i:0 for i in N})
+                shortest_path, a_star = routing_blocks.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements)
                 minReducedCost = shortest_path[0]
                 c_k = shortest_path[1]
 
@@ -370,6 +371,7 @@ class policy_generator():
                     card_omega+=1
                     a_star = list(a_star.values())
                     a_star.append(1) #We add the 1 of the number of routes restrictions
+
                     newCol = gu.Column(a_star, modelMP.getConstrs())
                     theta.append(modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = c_k, lb = 0, column = newCol, name = f"theta[{card_omega}]"))
                     # Update master model
@@ -399,10 +401,6 @@ class policy_generator():
 
 
 
-
-
-
-        
 
 
 
@@ -469,12 +467,12 @@ class routing_blocks():
         coors = deepcopy(inst_gen.coor)
         coors.update({(inst_gen.M+1):inst_gen.coor[0]})
         distances = dict()
-        for i in V:
-            for j in V:
-                # if (i,j) in A:
-                if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1):
-                    x1, y1 = coors[i]; x2, y2 = coors[j]
-                    distances[i,j] = ((x2-x1)**2+(y2-y1)**2)**(1/2)
+        distances.update({(i,j):((coors[j][0]-coors[i][0])**2+(coors[j][1]-coors[i][1])**2)**(1/2) for (i,j) in A})
+        # for i in V:
+        #     for j in V:
+        #         if (i,j) in A:
+        #             x1, y1 = coors[i]; x2, y2 = coors[j]
+        #             distances[i,j] = ((x2-x1)**2+(y2-y1)**2)**(1/2)
         
         requirements[0] = 0
         requirements[inst_gen.M+1] = 0
@@ -528,11 +526,12 @@ class routing_blocks():
     def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, V:list, A:list):
         routes = list()
 
-        # for (i,j) in A:
-        #     if model.getVarByName(f'x_{i}{j}{4}').x > 0.5:
-        #         print((i,j), model.getVarByName(f'x_{i}{j}{4}').x)
+        for (i,j) in A:
+            if model.getVarByName(f'x_{i}{j}{4}').x != 0:
+                print((i,j), model.getVarByName(f'x_{i}{j}{4}').x)
 
         for f in inst_gen.Vehicles:
+            print(f)
             node = 0
             route = [node]
             while True:
@@ -547,60 +546,64 @@ class routing_blocks():
                     route.append(0)
                     routes.append(route)
                     break
+            print(route)
 
         return routes
 
 
     class MasterProblem:
 
-        def __init__(self, name = 'MasterProblem'):
-            self.modelMP = gu.Model(name)
+        def buidModel(self, inst_gen:instance_generator, N:list, distances:dict, name:str = 'MasterProblem'):
+            modelMP = gu.Model(name)
 
-            self.modelMP.Params.Presolve = 0
-            self.modelMP.Params.Cuts = 0
-            self.modelMP.Params.OutputFlag = 0
+            modelMP.Params.Presolve = 0
+            modelMP.Params.Cuts = 0
+            modelMP.Params.OutputFlag = 0
 
-        def buidModel(self, inst_gen:instance_generator, N:list):
-            self.generateVariables(inst_gen, N)
-            RouteLimitCtr, NodeCtr = self.generateConstraints(inst_gen)
-            self.generateObjective()
-            self.modelMP.update()
+            modelMP, theta = self.generateVariables(inst_gen, modelMP, N, distances)
+            modelMP, RouteLimitCtr, NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
+            modelMP = self.generateObjective(modelMP)
+            modelMP.update()
 
-            return self.modelMP, self.theta, RouteLimitCtr, NodeCtr
+            return modelMP, theta, RouteLimitCtr, NodeCtr
     
 
-        def generateVariables(self, inst_gen:instance_generator, N:list):
-            self.theta = list()
-            for i in N:
-                route_cost = inst_gen.c[0,i] + inst_gen.c[i,0]
-                self.theta.append(self.modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = route_cost, lb = 0, name = f"y[{i}]"))
-        
-
-        def generateParameters(self, inst_gen, V):
-            coors = deepcopy(inst_gen.coor)
-            coors.update({(inst_gen.M+1):inst_gen.coor[0]})
-            distances = dict()
-            for i in V:
-                for j in V:
-                    if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1):
-                        x1, y1 = coors[i]; x2, y2 = coors[j]
-                        distances[i,j] = ((x2-x1)**2+(y2-y1)**2)**(1/2)
+        def generateVariables(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, distances):
+            theta = list()
             
-            return distances
+                        #Initial set-covering model  (DUMMY INITIALIZATION)
+            def calculateDummyCost():
+                c_0 = 0
+                for i in N:
+                    c_0+=2*distances[i,inst_gen.M+1]
+                return c_0
 
-        def generateConstraints(self, inst_gen:instance_generator):
+            dummyCost = calculateDummyCost()
+            theta.append(modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = dummyCost, lb = 0, name = "theta[0]"))
+
+            for i in N:
+                route_cost = distances[0,i] + distances[i,inst_gen.M+1]
+                theta.append(modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = route_cost, lb = 0, name = f"theta[{i}]"))
+
+            return modelMP, theta
+
+
+        def generateConstraints(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, theta:list):
             RouteLimitCtr = list()          #Limits the number of routes
-            RouteLimitCtr.append(self.modelMP.addConstr(sum(self.theta[i] for i in range(len(self.theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
+            RouteLimitCtr.append(modelMP.addConstr(gu.quicksum(1*theta[i] for i in range(len(theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
 
             NodeCtr = list()                #Node covering constraints
-            for i in range(len(self.theta)):
-                NodeCtr.append(self.modelMP.addConstr(1*self.theta[i]>=1, f"Set_Covering_[{i}]")) #Set covering constraints
+            for i in N:
+                NodeCtr.append(modelMP.addConstr(1*theta[i]>=1, f"Set_Covering_[{i}]")) #Set covering constraints
             
-            return RouteLimitCtr, NodeCtr
+            return modelMP, RouteLimitCtr, NodeCtr
 
-        def generateObjective(self):
-            self.modelMP.modelSense = gu.GRB.MINIMIZE
-    
+
+        def generateObjective(self, modelMP:gu.Model):
+            modelMP.modelSense = gu.GRB.MINIMIZE
+            return modelMP
+        
+
 
     class SubProblem:
 
@@ -618,14 +621,14 @@ class routing_blocks():
                 w[i] = modelAP.addVar(vtype = gu.GRB.CONTINUOUS, name = f"w_{i}")
     
             # 3. All vehicles start at depot
-            modelAP.addConstr(gu.quicksum(x[0,j] for j in V if (0,j) in A) == 1, "Depart from depot")
+            modelAP.addConstr(gu.quicksum(x[0,j] for j in N) == 1, "Depart from depot")
 
             # 4. All vehicles arrive at depot
-            modelAP.addConstr(gu.quicksum(x[i,inst_gen.M+1] for i in V if (i,inst_gen.M+1) in A) == 1, "Reach the depot")
+            modelAP.addConstr(gu.quicksum(x[i,inst_gen.M+1] for i in N) == 1, "Reach the depot")
 
             # 5. Flow preservation
             for i in N:
-                modelAP.addConstr(gu.quicksum(x[i,j] for j in V if (i,j) in A) - gu.quicksum(x[j,i] for j in V if (j,i) in A) == 0, 'Flow conservation')
+                modelAP.addConstr(gu.quicksum(x[i,j] for j in V if (i,j) in A) - gu.quicksum(x[j,i] for j in V if (j,i) in A) == 0, f'Flow conservation_{i}')
 
             # 6. Max distance per vehicle
             modelAP.addConstr(gu.quicksum(distances[i,j]*x[i,j] for (i,j) in A) <= inst_gen.d_max, 'Max distance')
@@ -635,7 +638,7 @@ class routing_blocks():
 
             # 8. Distance tracking/No loops
             for (i,j) in A:
-                modelAP.addConstr(w[i] + distances[i,j] - w[j] <= (1 - x[i,j])*1e6, 'Distance tracking')
+                modelAP.addConstr(w[i] + distances[i,j] - w[j] <= (1 - x[i,j])*1e5, f'Distance tracking_{i}{j}')
 
             #Shortest path objective
             c_trans = dict()
@@ -656,7 +659,7 @@ class routing_blocks():
                 for j in V:
                     if (i,j) in A and x[i,j].x>0.5:
                         a_star[i] = 1
-            return [modelAP.objVal, route_cost]
+            return [modelAP.objVal, route_cost], a_star
 
 
 
