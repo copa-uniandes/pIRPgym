@@ -87,7 +87,7 @@ policy_generator.Routing.Column_Generation(purchase, inst_gen)
 #%%######################################### Visualizations ##########################################
 # Visualizations
 product = 0
-Routing_Visualizations.route_availability_per_product(nn_routes[1], product, inst_gen, env)
+Routing_Visualizations.route_availability_per_product(nn_routes[1], product, inst_gen, env, True)
 
 #%%
 Routing_Visualizations.route_total_availability(nn_routes[1], inst_gen, env)
