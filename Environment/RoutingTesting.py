@@ -80,7 +80,7 @@ purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 
 # HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)        # Hybrid Genetic Search
 
-MIP_routes = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
+MIP_routes, MIP_distance = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
 # policy_generator.Routing.Column_Generation(purchase, inst_gen)
 
 
