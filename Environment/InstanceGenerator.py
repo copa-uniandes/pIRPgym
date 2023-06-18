@@ -9,9 +9,6 @@ import time
 #from random import random, seed, randint, shuffle, uniform
 from numpy.random import seed, random, randint, lognormal
 
-# TODO Check if import or_gym works
-import utils
-
 
 class instance_generator():
 
@@ -99,7 +96,7 @@ class instance_generator():
         self.s_params = stochastic_params
 
         ### Custom configurations ###
-        utils.assign_env_config(self, kwargs)
+        self.assign_env_config(self, kwargs)
 
         ### Look-ahead parameters
         if look_ahead:
@@ -239,6 +236,23 @@ class instance_generator():
         sample = value[test.index(True)]
         
         return sample
+    
+
+    # Auxiliary method to assign custom configurations the instance
+    def assign_env_config(self, kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        if hasattr(self, 'env_config'):
+            for key, value in self.env_config.items():
+                # Check types based on default settings
+                if hasattr(self, key):
+                    if type(getattr(self,key)) == np.ndarray:
+                        setattr(self, key, value)
+                    else:
+                        setattr(self, key,
+                            type(getattr(self, key))(value))
+                else:
+                    raise AttributeError(f"{self} has no attribute, {key}")
 
 
 
@@ -590,6 +604,7 @@ class offer():
         return s_paths_p
     
 
+
 class locations():
 
     def generate_grid(V: range): 
@@ -651,10 +666,4 @@ class locations():
 
         return M-1, Q, d_max, coor, purchase
         
-
-
-
-
-    
-
 

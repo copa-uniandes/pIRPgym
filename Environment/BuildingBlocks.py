@@ -13,7 +13,6 @@ class Routing_management():
     def __init__(self):
         pass
     
-
     def evaluate_routes(inst_gen, routes):
         transport_cost = 0
         for route in routes:

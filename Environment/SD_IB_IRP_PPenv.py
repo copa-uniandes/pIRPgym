@@ -86,7 +86,6 @@ class steroid_IRP(gym.Env):
             if return_state:
                 return self.state
 
-
     # Step 
     def step(self, action:list, inst_gen: instance_generator, validate_action:bool = False, warnings:bool = False):
         if validate_action:
@@ -166,6 +165,7 @@ class steroid_IRP(gym.Env):
         else:
             return None, reward, done, real_action, _
 
+
     # Checking for episode's termination
     def check_termination(self, inst_gen: instance_generator) -> bool:
         done = self.t >= inst_gen.T
@@ -235,13 +235,6 @@ class steroid_IRP(gym.Env):
                 for k in inst_gen.Products:
                     assert not sum(demand_compliance[k,o] for o in range(self.O_k[k] + 1)) < inst_gen.W_d[self.t][k], \
                         f'Demand of product {k} was not fulfilled'
-
-
-
-
-
-
-
 
 
     # Generates empty dicts 
