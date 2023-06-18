@@ -20,7 +20,7 @@ stochastic_params = ['d','q']
 
 look_ahead = ['d','q']
 S = 6
-LA_horizon = 3
+LA_horizon = 3 
 
 historical_data = ['*']
 hist_window = 40
@@ -77,9 +77,9 @@ purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 # Routing Policies
 route_planner = policy_generator.Routing
 
-# nn_routes, nn_distances = route_planner.Nearest_Neighbor(purchase, inst_gen)       # Nearest neighbor
+nn_routes, nn_distances = route_planner.Nearest_Neighbor.NN_routing(purchase, inst_gen)       # Nearest neighbor
 
-# RCLc_routes, RCLc_distances = route_planner.RCL_constructive(purchase, inst_gen)  # RCL based constructive
+# RCLc_routes, RCLc_distances = route_planner.RCL_constructive.RCL_routing(purchase, inst_gen)  # RCL based constructive
 
 # HyGeSe_routes, HyGeSe_distance = route_planner.HyGeSe(purchase, inst_gen)         # Hybrid Genetic Search (CVRP)
 
