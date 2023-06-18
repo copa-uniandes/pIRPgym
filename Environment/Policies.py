@@ -10,6 +10,7 @@ import hygese as hgs
 ### Basic Librarires
 import numpy as np; from copy import deepcopy; import matplotlib.pyplot as plt
 from random import random, seed, randint, shuffle, choice
+from time import process_time
 
 ### Optimizer
 import gurobipy as gu
@@ -263,6 +264,7 @@ class policy_generator():
         class Nearest_Neighbor():
             # Generate routes
             def NN_routing(purchase:dict[float], inst_gen:instance_generator) -> dict:
+                start = process_time()
                 pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
 
                 routes: list = list()
@@ -291,7 +293,7 @@ class policy_generator():
                     t_distance += distance
                     distances.append(distance)
                 
-                return routes, distances
+                return routes, distances, process_time() - start
             
             # Find nearest feasible (by capacity) node
             def find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen):
@@ -308,21 +310,22 @@ class policy_generator():
         # RCL based constructive
         class RCL_constructive():
             # Generate routes
-            def RCL_routing(purchase:dict[float], inst_gen:instance_generator) -> dict:
+            def RCL_routing(purchase:dict[float], inst_gen:instance_generator, RCL_alpha:float = 0.35) -> dict:
+                start = process_time()
                 pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
 
                 routes:list = list()
                 t_distance:int = 0
                 distances:list = list()
 
-                while len(pending_sup > 0):
+                while len(pending_sup) > 0:
                     node:int = 0
                     load:int = 0
                     route:list = [node]
                     distance:float = 0
 
                     while load < inst_gen.Q:
-                        target = policy_generator.Routing.RCL_constructive.generate_RCL_candidate(node, load, distance, pending_sup, requirements, inst_gen)
+                        target = policy_generator.Routing.RCL_constructive.generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen)
                         if target == False:
                             break
                         else:
@@ -338,7 +341,7 @@ class policy_generator():
                     t_distance += distance
                     distances.append(distance)
                     
-                return routes, distances
+                return routes, distances, process_time() - start
 
             # Generate candidate from RCL
             def generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen):
@@ -366,9 +369,10 @@ class policy_generator():
         # Hybrid Genetic Search (CVRP)
         class HyGeSe(): 
             # Generate routes  
-            def HyGeSe(purchase:dict[float], inst_gen:instance_generator):    
+            def HyGeSe_routing(purchase:dict[float], inst_gen:instance_generator):    
+                start = process_time()
                 # Solver initialization
-                ap = hgs.AlgorithmParameters(timeLimit=10)  # seconds
+                ap = hgs.AlgorithmParameters(timeLimit=10,)  # seconds
                 hgs_solver = hgs.Solver(parameters=ap, verbose=True)
 
                 pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
@@ -376,7 +380,8 @@ class policy_generator():
                 data = policy_generator.Routing.HyGeSe.generate_HyGeSe_data(inst_gen, requirements)
                 result = hgs_solver.solve_cvrp(data)
 
-                return result.routes, result.cost
+                return result.routes, result.cost, process_time() - start
+
 
             # Generate data dict for HyGeSe algorithm
             def generate_HyGeSe_data(inst_gen:instance_generator, requirements:dict) -> dict:

@@ -10,10 +10,19 @@ from SD_IB_IRP_PPenv import steroid_IRP
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
+import pandas as pd
 
 
 class Routing_Visualizations():
-
+    # Sumarizes and compares routing solutions
+    def compare_routing_strategies(data:dict[list]):
+        print('Policy \t#Veh \tDist \tTime')
+        for strategy, performance in data.items():
+            if strategy != 'HyGeSe':
+                print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]),2)} \t{round(performance[2],2)}')
+            else:
+                print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t{round(performance[2],2)}')
+ 
     # Displays the historic availability of a given route for a given product
     def route_availability_per_product(route:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
         series = list()

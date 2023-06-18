@@ -35,6 +35,7 @@ inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, ba
 
 
 
+
 #%%######################################### Random Instance ##########################################
 # Random Instance
 q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
@@ -77,18 +78,25 @@ purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 # Routing Policies
 route_planner = policy_generator.Routing
 
-nn_routes, nn_distances = route_planner.Nearest_Neighbor.NN_routing(purchase, inst_gen)       # Nearest neighbor
+nn_routes, nn_distances, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase, inst_gen)       # Nearest neighbor
 
-# RCLc_routes, RCLc_distances = route_planner.RCL_constructive.RCL_routing(purchase, inst_gen)  # RCL based constructive
+RCLc_routes, RCLc_distances, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase, inst_gen)  # RCL based constructive
 
-# HyGeSe_routes, HyGeSe_distance = route_planner.HyGeSe(purchase, inst_gen)         # Hybrid Genetic Search (CVRP)
+HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase, inst_gen)         # Hybrid Genetic Search (CVRP)
 
 # MIP_routes, MIP_distance = route_planner.MIP_routing(purchase, inst_gen)          # Complete MIP
 
 # CG_routes, CG_distance = route_planner.Column_Generation(purchase, inst_gen)      # Column Generation algorithm
 
-
 #%%######################################### Visualizations ##########################################
+# Routing strategies comparison
+data = {'NN':[nn_routes,nn_distances, nn_time], 
+        'RCL':[RCLc_routes, RCLc_distances, RCLc_time], 
+        'HyGeSe':[HyGeSe_routes, HyGeSe_distance, HyGeSe_time]}
+
+Routing_Visualizations.compare_routing_strategies(data)
+
+#%% Routes analytics
 routes = nn_routes; distances = nn_distances
 
 # Visualizations
