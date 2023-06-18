@@ -317,6 +317,7 @@ class policy_generator():
                 routes:list = list()
                 t_distance:int = 0
                 distances:list = list()
+                loads:list = list()
 
                 while len(pending_sup) > 0:
                     node:int = 0
@@ -340,8 +341,9 @@ class policy_generator():
                     distance += inst_gen.c[node,0]
                     t_distance += distance
                     distances.append(distance)
+                    loads.append(load)
                     
-                return routes, distances, process_time() - start
+                return routes, distances, loads, process_time() - start, [pending_sup]
 
             # Generate candidate from RCL
             def generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen):
@@ -364,6 +366,75 @@ class policy_generator():
                     return target
                 else:
                     return False
+
+
+        # Genetic Algorithm
+        class GA():
+            # Generate routes
+            def GA_routing(purchase, inst_gen, time_limit:float=30):
+                start = process_time()
+                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
+
+                # Parameters
+                verbose = False
+                Population_size:int = 1500
+                training_time:float = 0.25 * time_limit
+                Elite_size:int = int(Population_size * 0.25)
+
+                crossover_rate:float = 0.5
+                mutation_rate:float = 0.5
+
+                Population, Distances, Details, incumbent, best_individual, alpha_performance \
+                                policy_generator.Routing.GA.generate_population(inst_gen, start, pending_sup, requirements, start, 
+                                                                                verbose, Population_size, training_time, Elite_size,
+                                                                                crossover_rate, mutation_rate)
+
+                return best_individual, distances, loads, process_time() - start
+
+            def generate_population(inst_gen, start, pending_sup, requirements, verbose, Population_size, training_time, Elite_size, 
+                                    crossover_rate, mutation_rate):
+                # Initalizing data storage
+                Population:list = list()
+                Distances:list[float] = list()
+                Details:list[tuple] = list()
+
+                incumbent:float = 1e9
+                best_individual:list = list()
+                
+                # Adaptative-Reactive Constructive
+                RCL_alpha_list:list[float] = [0.15, 0.25, 0.35, 0.5]
+                alpha_performance = {alpha:0 for alpha in RCL_alpha_list}
+
+                # Calibrating alphas
+                training_ind = 0
+                while process_time() - start <= training_time:
+                    tr_distance: float = 0
+                    RCL_alpha = choice(RCL_alpha_list)
+                    while len(pending_sup) > 0:
+                        routes, distances, loads, _ = policy_generator.Routing.RCL_constructive.RCL_routing(requirements, inst_gen, RCL_alpha)
+                        tr_distance += sum(distances)
+                    alpha_performance[RCL_alpha] += 1/tr_distance
+                    training_ind += 1
+                
+                if verbose:
+                    print(f'\n- Generated {training_ind} training ind in {round(process_time() - start,2)}s')
+                    print(f'\n- Starting real population generation')
+                    print(f'\nTime \t \tInd \t \tIncumbent \tgap \t \t#EV')
+                
+                # Generating initial population
+                for ind in range(Population_size):
+                    # Storing individual
+                    individual:list = list()
+                    distances:list = list()
+                    loads:list = list()
+                    dep_d_details:list = list()
+
+                    # Choosing alpha
+                    RCL_alpha = choice(RCL_alpha_list, p = [alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alpha_list])    
+                
+                    # CONTINUE
+                return Population, Distances, Details, incumbent, best_individual, alpha_performance
+
 
 
         # Hybrid Genetic Search (CVRP)
@@ -402,7 +473,7 @@ class policy_generator():
             def MIP_routing(purchase:dict[float], inst_gen:instance_generator):
                 pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
         
-                N, V, A, distances, requirements = routing_blocks.generate_complete_graph(inst_gen, pending_sup, requirements)
+                N, V, A, distances, requirements = policy_generator.Routing.generate_complete_graph(inst_gen, pending_sup, requirements)
 
                 model = policy_generator.Routing.MIP.generate_complete_MIP(inst_gen, N, V, A, distances, requirements)
 
