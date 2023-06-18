@@ -96,7 +96,7 @@ class instance_generator():
         self.s_params = stochastic_params
 
         ### Custom configurations ###
-        self.assign_env_config(self, kwargs)
+        assign_env_config(self,kwargs)
 
         ### Look-ahead parameters
         if look_ahead:
@@ -178,7 +178,7 @@ class instance_generator():
 
 
     # Generates an CVRPTW instance of the literature
-    def CVRP_instance(self, set:str = 'Li', instance:str = 'Li_21.vrp') -> dict[float]:
+    def upload_CVRP_instance(self, set:str = 'Li', instance:str = 'Li_21.vrp') -> dict[float]:
         self.K:int = 1         # One product
         self.T:int = 1         # One period 
         self.F:int = 100       # 100 vehicles
@@ -237,22 +237,6 @@ class instance_generator():
         
         return sample
     
-
-    # Auxiliary method to assign custom configurations the instance
-    def assign_env_config(self, kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        if hasattr(self, 'env_config'):
-            for key, value in self.env_config.items():
-                # Check types based on default settings
-                if hasattr(self, key):
-                    if type(getattr(self,key)) == np.ndarray:
-                        setattr(self, key, value)
-                    else:
-                        setattr(self, key,
-                            type(getattr(self, key))(value))
-                else:
-                    raise AttributeError(f"{self} has no attribute, {key}")
 
 
 
@@ -667,3 +651,18 @@ class locations():
         return M-1, Q, d_max, coor, purchase
         
 
+''' Auxiliary method to assign custom configurations the instance '''
+def assign_env_config(self, kwargs):
+    for key, value in kwargs.items():
+        setattr(self, key, value)
+    if hasattr(self, 'env_config'):
+        for key, value in self.env_config.items():
+            # Check types based on default settings
+            if hasattr(self, key):
+                if type(getattr(self,key)) == np.ndarray:
+                    setattr(self, key, value)
+                else:
+                    setattr(self, key,
+                        type(getattr(self, key))(value))
+            else:
+                raise AttributeError(f"{self} has no attribute, {key}")

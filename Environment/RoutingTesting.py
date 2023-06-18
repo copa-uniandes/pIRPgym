@@ -49,7 +49,6 @@ det_rd_seed = 1
 
 inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
 
-
 #%%######################################### CVRP Instance ##########################################
 # CVRP Instance
 # set = 'Li'
@@ -57,7 +56,7 @@ inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q
 # # set = 'Golden'
 # # instance = 'Golden_1.vrp'
 
-# purchase = inst_gen.CVRP_instance(set, instance)
+# purchase = inst_gen.upload_CVRP_instance(set, instance)
 
 
 #%%######################################### Environment ##########################################
@@ -73,44 +72,42 @@ state = env.reset(inst_gen, return_state = True)
 
 
 #%%######################################### Diverse Routing Strategies ##########################################
-# Policies
 purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 
-# nn_routes, nn_distance = policy_generator.Routing.Nearest_Neighbor(purchase, inst_gen)      # Nearest neighbor
+# Routing Policies
+route_planner = policy_generator.Routing
 
-# HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)        # Hybrid Genetic Search
+# nn_routes, nn_distances = route_planner.Nearest_Neighbor(purchase, inst_gen)       # Nearest neighbor
 
-# MIP_routes, MIP_distance = policy_generator.Routing.MIP_routing(purchase, inst_gen)         # Complete MIP
-policy_generator.Routing.Column_Generation(purchase, inst_gen)
+# RCLc_routes, RCLc_distances = route_planner.RCL_constructive(purchase, inst_gen)  # RCL based constructive
+
+# HyGeSe_routes, HyGeSe_distance = route_planner.HyGeSe(purchase, inst_gen)         # Hybrid Genetic Search (CVRP)
+
+# MIP_routes, MIP_distance = route_planner.MIP_routing(purchase, inst_gen)          # Complete MIP
+
+# CG_routes, CG_distance = route_planner.Column_Generation(purchase, inst_gen)      # Column Generation algorithm
 
 
 #%%######################################### Visualizations ##########################################
+routes = nn_routes; distances = nn_distances
+
 # Visualizations
 product = 0
-Routing_Visualizations.route_availability_per_product(nn_routes[1], product, inst_gen, env, True)
+Routing_Visualizations.route_availability_per_product(routes[1], product, inst_gen, env, True)
 
 #%%
-Routing_Visualizations.route_total_availability(nn_routes[1], inst_gen, env)
+Routing_Visualizations.route_total_availability(routes[1], inst_gen, env)
 
 #%%
 product = 0
-Routing_Visualizations.routes_availability_per_product(nn_routes, product, inst_gen, env)
+Routing_Visualizations.routes_availability_per_product(routes, product, inst_gen, env)
 
 #%%
-Routing_Visualizations.routes_total_availability(nn_routes, inst_gen, env)
+Routing_Visualizations.routes_total_availability(routes, inst_gen, env)
 
 
 
 #%%######################################### Step ##########################################
-# Step
-routes = []
-# Call step function, transition
-action = [routes, purchase]
-state, reward, done, real_action, _ = env.step(action, inst_gen, False)
-
-# purchase = policy_generator.Purchasing.det_purchase_all(inst_gen, env)
-# demand_complience = policy_generator.Inventory.det_FIFO(state, purchase, inst_gen, env)
-# nn_routes, nn_distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)
 
 
 

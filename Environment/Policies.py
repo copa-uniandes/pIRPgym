@@ -10,7 +10,7 @@ import hygese as hgs
 ### Basic Librarires
 import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
 import networkx as nx; import sys; import pandas as pd; import math; import numpy as np
-import time; from termcolor import colored
+import time
 from random import random, seed, randint, shuffle, choice
 import networkx as nx
 
@@ -23,6 +23,7 @@ class policy_generator():
 
     def __init__(self) -> None:
         pass
+
 
     class Purchasing():
         
@@ -268,6 +269,8 @@ class policy_generator():
 
             routes: list = list()
             t_distance: int = 0
+            distances:list = list()
+
             while len(pending_sup) > 0:
                 node: int = 0
                 load: int = 0
@@ -284,11 +287,47 @@ class policy_generator():
                         route.append(node)
                         pending_sup.remove(node)
 
+                routes.append(route + [0])
+
                 distance += inst_gen.c[node,0]
                 t_distance += distance
-                routes.append(route + [0])
+                distances.append(distance)
             
-            return routes, t_distance
+            return routes, distances
+
+        
+        # RCL based constructive
+        def RCL_based_constructive(purchase:dict[float], inst_gen:instance_generator) -> dict:
+            pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
+
+            routes:list = list()
+            t_distance:int = 0
+            distances:list = list()
+
+            while len(pending_sup > 0):
+                node:int = 0
+                load:int = 0
+                route:list = [node]
+                distance:float = 0
+
+                while load < inst_gen.Q:
+                    target = routing_blocks.generate_RCL_candidate(node, load, distance, pending_sup, requirements, inst_gen)
+                    if target == False:
+                        break
+                    else:
+                        load += requirements[target]
+                        distance += inst_gen.c[node, target]
+                        node = target
+                        route.append(node)
+                        pending_sup.remove(node)
+
+                routes.append(route + [0])
+
+                distance += inst_gen.c[node,0]
+                t_distance += distance
+                distances.append(distance)
+                
+            return routes, distances
 
 
         # Hybrid Genetic Search (CVRP)   
@@ -305,7 +344,7 @@ class policy_generator():
             return result.routes, result.cost
         
 
-        # Mixed Integer Problem
+        # Mixed Integer Program
         def MIP_routing(purchase:dict[float], inst_gen:instance_generator):
             pending_sup, requirements = routing_blocks.consolidate_purchase(purchase, inst_gen)
     
@@ -444,6 +483,30 @@ class routing_blocks():
         
         return target
     
+
+    # Generate candidate from RCL
+    def generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen):
+        feasible_candidates:list = list()
+        max_crit:float = -1e9
+        min_crit:float = 1e9
+
+        for candidate in pending_sup:
+            d = inst_gen.c[node,candidate] 
+
+            if distance + d + inst_gen.c[candidate,0] <= inst_gen.d_max and load + requirements[candidate] <= inst_gen.Q:
+                feasible_candidates.append(candidate)
+                max_crit = max(d, max_crit)
+                min_crit = min(d, min_crit)
+
+        upper_bound:float = min_crit + RCL_alpha * (max_crit - min_crit)
+        feasible_candidates:list = [i for i in feasible_candidates if inst_gen.c[node, i] <= upper_bound]
+        if len(feasible_candidates) != 0:
+            target = choice(feasible_candidates)
+            return target
+        else:
+            return False
+
+
 
     # Generate data dict for HyGeSe algorithm
     def generate_HyGeSe_data(inst_gen:instance_generator, requirements:dict) -> dict:
@@ -673,7 +736,7 @@ class routing_blocks():
 
 
 
-
+#%% !!!!!!!!!!!!!!!!!!!!!!! old policies !!!!!!!!!!!!!!!!!!!!!!!
 class policies():
 
     def __init__(self) -> None:
