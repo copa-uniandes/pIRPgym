@@ -9,7 +9,7 @@ import hygese as hgs
 
 ### Basic Librarires
 import numpy as np; from copy import deepcopy; import matplotlib.pyplot as plt
-from random import random, seed, randint, shuffle, choice
+from numpy.random import randint, choice
 from time import process_time
 
 ### Optimizer
@@ -260,7 +260,8 @@ class policy_generator():
 
 
     class Routing():
-        # Nearest Neighbor (NN) heuristic
+
+        ''' Nearest Neighbor (NN) heuristic '''
         class Nearest_Neighbor():
             # Generate routes
             def NN_routing(purchase:dict[float], inst_gen:instance_generator) -> dict:
@@ -307,7 +308,7 @@ class policy_generator():
                 return target
             
         
-        # RCL based constructive
+        ''' RCL based constructive '''
         class RCL_constructive():
             # Generate routes
             def RCL_routing(purchase:dict[float], inst_gen:instance_generator, RCL_alpha:float = 0.35) -> dict:
@@ -320,30 +321,15 @@ class policy_generator():
                 loads:list = list()
 
                 while len(pending_sup) > 0:
-                    node:int = 0
-                    load:int = 0
-                    route:list = [node]
-                    distance:float = 0
+                    route, distance, load, pending_sup = policy_generator.Routing.RCL_constructive.generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen)
 
-                    while load < inst_gen.Q:
-                        target = policy_generator.Routing.RCL_constructive.generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen)
-                        if target == False:
-                            break
-                        else:
-                            load += requirements[target]
-                            distance += inst_gen.c[node, target]
-                            node = target
-                            route.append(node)
-                            pending_sup.remove(node)
-
-                    routes.append(route + [0])
-
-                    distance += inst_gen.c[node,0]
+                    routes.append(route)
                     t_distance += distance
                     distances.append(distance)
                     loads.append(load)
                     
-                return routes, distances, loads, process_time() - start, [pending_sup]
+                return routes, distances, loads, process_time() - start
+
 
             # Generate candidate from RCL
             def generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen):
@@ -368,10 +354,34 @@ class policy_generator():
                     return False
 
 
-        # Genetic Algorithm
+            # Generate route from RCL
+            def generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen):
+                node:int = 0
+                load:int = 0
+                route:list = [node]
+                distance:float = 0
+
+                while load < inst_gen.Q:
+                    target = policy_generator.Routing.RCL_constructive.generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen)
+                    if target == False:
+                        break
+                    else:
+                        load += requirements[target]
+                        distance += inst_gen.c[node, target]
+                        node = target
+                        route.append(node)
+                        pending_sup.remove(node)
+
+                route.append(0)
+                distance += inst_gen.c[node,0]
+
+                return route, distance, load, pending_sup
+
+
+        ''' Genetic Algorithm '''
         class GA():
             # Generate routes
-            def GA_routing(purchase, inst_gen, time_limit:float=30):
+            def GA_routing(purchase:dict, inst_gen:instance_generator, time_limit:float=30):
                 start = process_time()
                 pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
 
@@ -384,19 +394,74 @@ class policy_generator():
                 crossover_rate:float = 0.5
                 mutation_rate:float = 0.5
 
-                Population, Distances, Details, incumbent, best_individual, alpha_performance \
-                                policy_generator.Routing.GA.generate_population(inst_gen, start, pending_sup, requirements, start, 
-                                                                                verbose, Population_size, training_time, Elite_size,
-                                                                                crossover_rate, mutation_rate)
+                Population, Distances, Loads, incumbent, best_individual, alpha_performance =\
+                                policy_generator.Routing.GA.generate_population(inst_gen, start, requirements, verbose, 
+                                                                                Population_size, training_time)
+                
+                # Print progress
+                if verbose: 
+                    print('\n')
+                    print(f'Population generation finished at {round(process_time() - start,2)}s')
+                    print('\tFO \tV \ttime to find')
+                    print(f'dist\t{round(incumbent,1)} \t{len(best_individual[0])} \t{round(best_individual[2],2)}')
+                    print('\n')
+                    print('Genetic process started')
+                    print(f'\nTime \t \tgen \t \tIncumbent \tgap \t \t#EV')
 
-                return best_individual, distances, loads, process_time() - start
 
-            def generate_population(inst_gen, start, pending_sup, requirements, verbose, Population_size, training_time, Elite_size, 
-                                    crossover_rate, mutation_rate):
+                # Genetic process
+                generation = 0
+                while process_time() - start < time_limit:
+                    ### Elitism
+                    Elite = policy_generator.Routing.GA.elite_class(Distances, Population_size, Elite_size)
+
+                    ### Selection: From a population, which parents are able to reproduce
+                    # Intermediate population: Sample of the initial population 
+                    inter_population = policy_generator.Routing.GA.intermediate_population(Distances, Population_size, Elite_size)            
+                    inter_population = Elite + list(inter_population)
+
+                    ### Tournament: Select two individuals and leave the best to reproduce
+                    Parents = policy_generator.Routing.GA.tournament(inter_population, Distances)
+
+                    ### Evolution
+                    New_Population:list = list();   New_Distances:list = list();   New_Loads:list = list()
+                    for i in range(Population_size):
+                        individual_i = Parents[i][randint(0,2)]
+                        mutated = False
+
+                        ###################
+                        # TODO: Operators
+                        ###################
+
+                        # No operator is performed
+                        if not mutated: 
+                            new_individual = Population[individual_i]; new_distance = sum(Distances[individual_i]); new_load = sum(Loads[individual_i])
+
+                        # Store new individual
+                        New_Population.append(new_individual); New_Distances.append(new_distance); New_Loads.append(new_load)
+
+                        # Updating incumbent
+                        if new_distance < incumbent:
+                            incumbent = new_distance
+                            best_individual: list = [new_individual, new_distance, new_load, process_time() - start]
+
+                    # Update population
+                    Population = New_Population
+                    Distances = New_Distances
+                    Loads = New_Loads
+                    generation += 1
+
+
+                return best_individual, incumbent, process_time() - start
+
+
+            ''' Generate initial population '''
+            def generate_population(inst_gen:instance_generator, start:float, requirements:dict, verbose:bool, Population_size:int,
+                                    training_time: float):
                 # Initalizing data storage
                 Population:list = list()
                 Distances:list[float] = list()
-                Details:list[tuple] = list()
+                Loads:list[float] = list()
 
                 incumbent:float = 1e9
                 best_individual:list = list()
@@ -408,12 +473,7 @@ class policy_generator():
                 # Calibrating alphas
                 training_ind = 0
                 while process_time() - start <= training_time:
-                    tr_distance: float = 0
-                    RCL_alpha = choice(RCL_alpha_list)
-                    while len(pending_sup) > 0:
-                        routes, distances, loads, _ = policy_generator.Routing.RCL_constructive.RCL_routing(requirements, inst_gen, RCL_alpha)
-                        tr_distance += sum(distances)
-                    alpha_performance[RCL_alpha] += 1/tr_distance
+                    alpha_performance = policy_generator.Routing.GA.calibrate_alpha(RCL_alpha_list, alpha_performance, requirements, inst_gen)
                     training_ind += 1
                 
                 if verbose:
@@ -423,6 +483,8 @@ class policy_generator():
                 
                 # Generating initial population
                 for ind in range(Population_size):
+                    requirements2 = deepcopy(requirements)
+
                     # Storing individual
                     individual:list = list()
                     distances:list = list()
@@ -432,12 +494,70 @@ class policy_generator():
                     # Choosing alpha
                     RCL_alpha = choice(RCL_alpha_list, p = [alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alpha_list])    
                 
-                    # CONTINUE
-                return Population, Distances, Details, incumbent, best_individual, alpha_performance
+                    # Generating individual
+                    individual, distances, loads, _ = policy_generator.Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
+
+                    # Updating incumbent
+                    if sum(distances) < incumbent:
+                        incumbent = sum(distances)
+                        best_individual: list = [individual, distances, process_time() - start]
+
+                    # Saving individual
+                    Population.append(individual)
+                    Distances.append(distances)
+                    Loads.append(loads)
+
+                return Population, Distances, Loads, incumbent, best_individual, alpha_performance
 
 
+            ''' Calibrate alphas for RCL '''
+            def calibrate_alpha(RCL_alpha_list:list, alpha_performance:dict, requirements:dict, inst_gen:instance_generator) -> dict:
+                requirements2 = deepcopy(requirements)
+                tr_distance:float = 0
+                RCL_alpha:float = choice(RCL_alpha_list)
+                routes, distances, loads, _ = policy_generator.Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
+                tr_distance += sum(distances)
+                alpha_performance[RCL_alpha] += 1/tr_distance
 
-        # Hybrid Genetic Search (CVRP)
+                return alpha_performance
+
+
+            ''' Elite class '''
+            def elite_class(Distances:list, Population_size:int, Elite_size:int) -> list:
+                return [x for _, x in sorted(zip(Distances,[i for i in range(Population_size)]))][:Elite_size] 
+            
+
+            ''' Intermediate population '''
+            def intermediate_population(Distances:list, Population_size:int, Elite_size:int):
+                # Fitness function
+                tots = sum(Distances)
+                fit_f:list = list()
+                probs:list = list()
+                for i in range(len(Distances)):
+                    fit_f.append(tots/Distances[i])
+                    probs.append(fit_f[i]/sum(fit_f))
+
+                return choice([i for i in range(Population_size)], size = int(Population_size - Elite_size), replace = True, p = probs)
+
+
+            ''' Tournament '''
+            def tournament(inter_population: list, Distances: list) -> list:
+                Parents:list = list()
+                for i in range(self.Population_size):
+                    parents:list = list()
+                    for j in range(2):
+                        candidate1 = choice(inter_population);  val1 = Distances[candidate1]
+                        candidate2 = choice(inter_population);  val2 = Distances[candidate2]
+
+                        if val1 < val2:     parents.append(candidate1)
+                        else:               parents.append(candidate2)
+                    
+                    Parents.append(parents)
+                
+                return Parents
+
+
+        ''' Hybrid Genetic Search (CVRP) '''
         class HyGeSe(): 
             # Generate routes  
             def HyGeSe_routing(purchase:dict[float], inst_gen:instance_generator):    
@@ -467,7 +587,7 @@ class policy_generator():
                 return data
 
 
-        # Mixed Integer Program
+        ''' Mixed Integer Program '''
         class MIP():
             # Generate routes
             def MIP_routing(purchase:dict[float], inst_gen:instance_generator):
@@ -557,13 +677,13 @@ class policy_generator():
                 return routes
         
 
-        # Column generation algorithm
+        ''' Column generation algorithm '''
         class Column_Generation():
             # Generate routes
             def CG_routing(purchase:dict[float], inst_gen:instance_generator):
                 pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
 
-                N, V, A, distances, requirements = policy_generator.Routing.Network_methods.generate_complete_graph(inst_gen, pending_sup, requirements)
+                N, V, A, distances, requirements = policy_generator.Routing.Network_aux_methods.generate_complete_graph(inst_gen, pending_sup, requirements)
 
                 master = policy_generator.Routing.Column_Generation.MasterProblem()
                 modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
@@ -744,8 +864,8 @@ class policy_generator():
                     return [modelAP.objVal, route_cost], a_star
 
 
-        # Auxiliary methods for network management
-        class Network_methods():
+        ''' Auxiliary methods for network management '''
+        class Network_aux_methods():
             # Generate vertices and arches for a complete graph
             def generate_complete_graph(inst_gen: instance_generator, pending_sup:list, requirements:dict) -> tuple[list,list,list]:
                 N = pending_sup
@@ -768,7 +888,7 @@ class policy_generator():
                 return N, V, A, distances, requirements
 
 
-        # Auxiliary method to compute total product to recover from suppliers
+        ''' Auxiliary method to compute total product to recover from suppliers '''
         def consolidate_purchase(purchase, inst_gen) -> tuple[list,dict]:
             # purchse is given for suppliers and products
             if type(list(purchase.keys())[0]) == tuple:
