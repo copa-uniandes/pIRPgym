@@ -15,14 +15,17 @@ import pandas as pd
 
 class Routing_Visualizations():
     # Sumarizes and compares routing solutions
-    def compare_routing_strategies(data:dict[list]):
-        print('Policy \t#Veh \tDist \tTime')
+    def compare_routing_strategies(inst_gen:instance_generator, data:dict[list]):
+        print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tTime')
         for strategy, performance in data.items():
             if strategy != 'HyGeSe':
-                print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]),2)} \t{round(performance[2],2)}')
+                avg_ut = round(sum(performance[2])/(len(performance[0]*inst_gen.Q)), 2)
+                avg_eff = round(sum(performance[1])/len(performance[0]*inst_gen.d_max), 2)
+                print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[3],2)}')
             else:
-                print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t{round(performance[2],2)}')
+                print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t- \t- \t{round(performance[2],2)}')
  
+
     # Displays the historic availability of a given route for a given product
     def route_availability_per_product(route:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
         series = list()

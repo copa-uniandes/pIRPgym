@@ -65,12 +65,12 @@ class instance_generator():
         '''
         
         ### Main parameters ###
-        self.M = 10                                     # Suppliers
+        self.M = 15                                     # Suppliers
         self.K = 5                                      # Products
 
         self.T = 7                                      # Horizon
 
-        self.F = 4                                      # Fleet
+        self.F = 15                                      # Fleet
         self.Q = 40                                     # Vehicles capacity
         self.d_max = 500                                # Max distance per route
                 

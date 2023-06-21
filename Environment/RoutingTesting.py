@@ -10,7 +10,7 @@ from Visualizations import Routing_Visualizations
 T = 7
 M = 15
 K = 10
-F = 15
+F = 4
 
 Q = 2000
 d_max = 2000 
@@ -30,18 +30,19 @@ env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q,
              'd_max':d_max, 'hist_window':hist_window}                    # Other parameters
 
 # Creating instance generator object
-inst_gen = instance_generator(look_ahead, stochastic_params, historical_data, backorders, env_config = env_config)
+inst_gen = instance_generator(look_ahead, stochastic_params, 
+                              historical_data, backorders, env_config = env_config)
 
 
 
 
 
-#%%######################################### Random Instance ##########################################
+######################################### Random Instance ##########################################
 # Random Instance
 q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
 p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
 
-d_params = {'dist': 'log-normal', 'r_f_params': [2,0.5]}        # Demand
+d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}        # Demand
 
 h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
@@ -50,7 +51,7 @@ det_rd_seed = 1
 
 inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
 
-#%%######################################### CVRP Instance ##########################################
+######################################### CVRP Instance ##########################################
 # CVRP Instance
 # set = 'Li'
 # instance = 'Li_21.vrp'
@@ -60,7 +61,7 @@ inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q
 # purchase = inst_gen.upload_CVRP_instance(set, instance)
 
 
-#%%######################################### Environment ##########################################
+######################################### Environment ##########################################
 # Environment
 # Creating environment object
 routing = True
@@ -78,25 +79,24 @@ purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 # Routing Policies
 route_planner = policy_generator.Routing
 
-nn_routes, nn_distances, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase, inst_gen)       # Nearest neighbor
-
-RCLc_routes, RCLc_distances, RCL_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase, inst_gen)  # RCL based constructive
-
-GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen)         # Hybrid Genetic Search (CVRP)
-
-HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase, inst_gen)         # Hybrid Genetic Search (CVRP)
-
-# MIP_routes, MIP_distance = route_planner.MIP_routing(purchase, inst_gen)          # Complete MIP
+nn_routes, nn_distances, nn_loads, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase, inst_gen)                      # Nearest Neighbor
+RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase, inst_gen)         # RCL based constructive
+GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen, rd_seed=0, time_limit=30)         # Genetic Algorithm
+HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase, inst_gen)                          # Hybrid Genetic Search (CVRP)
+MIP_routes, MIP_distances, MIP_loads, MIP_time = route_planner.MIP.MIP_routing(purchase, inst_gen)                                                        # Complete MIP
 
 # CG_routes, CG_distance = route_planner.Column_Generation(purchase, inst_gen)      # Column Generation algorithm
 
 #%%######################################### Visualizations ##########################################
 # Routing strategies comparison
-data = {'NN':[nn_routes,nn_distances, nn_time], 
-        'RCL':[RCLc_routes, RCLc_distances, RCLc_time], 
-        'HyGeSe':[HyGeSe_routes, HyGeSe_distance, HyGeSe_time]}
+data = {'NN':[nn_routes,nn_distances, nn_loads, nn_time],
+        'RCL':[RCLc_routes, RCLc_distances, RCLc_loads, RCLc_time],
+        'GA':[GA_routes, GA_distances, GA_loads, GA_time],
+        'HyGeSe':[HyGeSe_routes, HyGeSe_distance, HyGeSe_time],
+        'MIP':[MIP_routes, MIP_distances, MIP_loads, MIP_time]}
 
-Routing_Visualizations.compare_routing_strategies(data)
+
+Routing_Visualizations.compare_routing_strategies(inst_gen, data)
 
 #%% Routes analytics
 routes = nn_routes; distances = nn_distances

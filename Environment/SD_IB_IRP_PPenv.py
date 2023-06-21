@@ -68,8 +68,9 @@ class steroid_IRP(gym.Env):
     # Reseting the environment
     def reset(self, inst_gen: instance_generator, strong_rate:bool = True, return_state:bool = False):
         '''
-        Reseting the environment. Genrate or upload the instance.
-        PARAMETER:
+        Reseting the environment. Generate or upload the instance.
+        
+        PARAMETERS:
         return_state: Indicates whether the state is returned
         '''  
         # EDITABLE The return statement can be set to return any of the parameters, historics, 
