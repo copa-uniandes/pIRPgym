@@ -150,7 +150,7 @@ class instance_generator():
 
     
     # Generates a basic, completely random instance with a given random seed
-    def generate_basic_random_instance(self, d_rd_seed:int = 0, s_rd_seed:int = 1, **kwargs):
+    def generate_basic_random_instance(self, d_rd_seed:int=0, s_rd_seed:int=1, I_0:float=0,**kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -163,6 +163,8 @@ class instance_generator():
 
         self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
+
+        self.i00 = self.gen_initial_inventory(I0)
 
         # Offer
         self.M_kt, self.K_it = offer.gen_availabilities(self)
@@ -587,7 +589,7 @@ class offer():
                 else:
                     s_paths_q[t][0,sample] = {(i,k): inst_gen.sim([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,0] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
 
-                for day in range(1,inst_gen.sp_window_sizes[t]-1):
+                for day in range(1,inst_gen.sp_window_sizes[t]):
                     s_paths_q[t][day,sample] = {(i,k): inst_gen.sim([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,t+day] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
 
         return s_paths_q

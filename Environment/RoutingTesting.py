@@ -82,7 +82,7 @@ route_planner = policy_generator.Routing
 nn_routes, nn_distances, nn_loads, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase, inst_gen)                      # Nearest Neighbor
 RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase, inst_gen)         # RCL based constructive
 GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen, rd_seed=0, time_limit=30)         # Genetic Algorithm
-HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase, inst_gen)                          # Hybrid Genetic Search (CVRP)
+# HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase, inst_gen)                          # Hybrid Genetic Search (CVRP)
 MIP_routes, MIP_distances, MIP_loads, MIP_time = route_planner.MIP.MIP_routing(purchase, inst_gen)                                                        # Complete MIP
 
 # CG_routes, CG_distance = route_planner.Column_Generation(purchase, inst_gen)      # Column Generation algorithm
