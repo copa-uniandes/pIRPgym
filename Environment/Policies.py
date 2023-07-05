@@ -453,6 +453,7 @@ class policy_generator():
 
             return action, la_decisions
 
+
     class Routing():
 
         ''' Nearest Neighbor (NN) heuristic '''
@@ -750,33 +751,33 @@ class policy_generator():
 
 
         ''' Hybrid Genetic Search (CVRP) '''
-        class HyGeSe(): 
-            # Generate routes  
-            def HyGeSe_routing(purchase:dict[float], inst_gen:instance_generator):    
-                start = process_time()
-                # Solver initialization
-                ap = hgs.AlgorithmParameters(timeLimit=10,)  # seconds
-                hgs_solver = hgs.Solver(parameters=ap, verbose=True)
+        # class HyGeSe(): 
+        #     # Generate routes  
+        #     def HyGeSe_routing(purchase:dict[float], inst_gen:instance_generator):    
+        #         start = process_time()
+        #         # Solver initialization
+        #         ap = hgs.AlgorithmParameters(timeLimit=10,)  # seconds
+        #         hgs_solver = hgs.Solver(parameters=ap, verbose=True)
 
-                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
+        #         pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen)
 
-                data = policy_generator.Routing.HyGeSe.generate_HyGeSe_data(inst_gen, requirements)
-                result = hgs_solver.solve_cvrp(data)
+        #         data = policy_generator.Routing.HyGeSe.generate_HyGeSe_data(inst_gen, requirements)
+        #         result = hgs_solver.solve_cvrp(data)
 
-                return result.routes, result.cost, process_time() - start
+        #         return result.routes, result.cost, process_time() - start
 
 
-            # Generate data dict for HyGeSe algorithm
-            def generate_HyGeSe_data(inst_gen:instance_generator, requirements:dict) -> dict:
-                data = dict()
+        #     # Generate data dict for HyGeSe algorithm
+        #     def generate_HyGeSe_data(inst_gen:instance_generator, requirements:dict) -> dict:
+        #         data = dict()
 
-                data['distance_matrix'] = [[inst_gen.c[i,j] if i!=j else 0 for j in inst_gen.V] for i in inst_gen.V]
-                data['demands'] = np.array([0] + list(requirements.values()))
-                data['vehicle_capacity'] = inst_gen.Q
-                data['num_vehicles'] = inst_gen.F
-                data['depot'] = 0
+        #         data['distance_matrix'] = [[inst_gen.c[i,j] if i!=j else 0 for j in inst_gen.V] for i in inst_gen.V]
+        #         data['demands'] = np.array([0] + list(requirements.values()))
+        #         data['vehicle_capacity'] = inst_gen.Q
+        #         data['num_vehicles'] = inst_gen.F
+        #         data['depot'] = 0
             
-                return data
+        #         return data
 
 
         ''' Mixed Integer Program '''
