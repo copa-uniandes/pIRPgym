@@ -150,7 +150,7 @@ class instance_generator():
 
     
     # Generates a basic, completely random instance with a given random seed
-    def generate_basic_random_instance(self, d_rd_seed:int=0, s_rd_seed:int=1, I_0:float=0,**kwargs):
+    def generate_basic_random_instance(self, d_rd_seed:int=0, s_rd_seed:int=1, I0:float=0,**kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
