@@ -106,9 +106,16 @@ class steroid_IRP(gym.Env):
                 if not self.config['routing']:
                     real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
                 if self.config['perishability'] == 'ages' and not self.config['routing']:
-                    real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[1],real_purchase,self.strong_rate)
+                    if inst_gen.other_params["demand_type"] == "aggregated":
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[1],real_purchase,self.strong_rate)
+                    else:
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action[1],real_purchase,self.strong_rate)
                 elif  self.config['perishability'] == 'ages':
-                    real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[2],real_purchase,self.strong_rate)
+                    if inst_gen.other_params["demand_type"] == "aggregated":
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[2],real_purchase,self.strong_rate)
+                    else:
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action[2],real_purchase,self.strong_rate)
+                
                 #real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
             
         else:
@@ -127,7 +134,10 @@ class steroid_IRP(gym.Env):
         # Update inventory
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
-                s_tprime, back_orders, perished = Inventory_management.perish_per_age_inv.update_inventory(inst_gen, self, real_purchase, real_demand_compliance, warnings)
+                if inst_gen.other_params["demand_type"] == "aggregated":
+                    s_tprime, back_orders, perished = Inventory_management.perish_per_age_inv.update_inventory(inst_gen, self, real_purchase, real_demand_compliance, warnings)
+                else:
+                    s_tprime, back_orders, perished = Inventory_management.perish_per_age_inv.update_inventory_age(inst_gen, self, real_purchase, real_demand_compliance, warnings)
 
         # Reward
         reward = []
@@ -136,8 +146,12 @@ class steroid_IRP(gym.Env):
             reward.append(transport_cost)
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
-                purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
+                if inst_gen.other_params["demand_type"] == "aggregated":
+                    purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
+                else:
+                    purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs_age(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
                 reward += [purchase_cost, holding_cost, backorders_cost]
+        reward += [Inventory_management.perish_per_age_inv.compute_earnings(inst_gen,real_demand_compliance)]
 
         # Time step update and termination check
         self.t += 1
