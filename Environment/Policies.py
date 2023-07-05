@@ -5,7 +5,7 @@
 ### SC classes
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
-import hygese as hgs
+#import hygese as hgs
 
 ### Basic Librarires
 import numpy as np; from copy import deepcopy; import matplotlib.pyplot as plt
