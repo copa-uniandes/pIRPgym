@@ -88,9 +88,9 @@ for k in K:
 
     for i in M:
         if k in K_i[i]:
-            q[i,k] = target_demand * service_level[i,k] / total_vals
+            q[i,k] = target_demand*service_level[i,k]/total_vals
         else:
-            q[i,k]
+            q[i,k] = 0
 
 
 
