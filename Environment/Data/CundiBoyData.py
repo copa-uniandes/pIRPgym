@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 data_suppliers = pd.read_excel('Data_Fruver_0507.xlsx', sheet_name='provider_orders')
 data_demand = pd.read_excel("./Data_Fruver_0507.xlsx",sheet_name="daily_sales_historic")
@@ -21,15 +22,17 @@ K = list(df_sorted.head(30).index)
 hist_demand = {k:hist_demand[k] for k in K}
 
 
-#%% Subset of suppliers
+#%% Subset of suppliers & expected demand
 M = list()
-K = list()
+K_pur = list()
 
 M_k = dict()
 K_i = dict()
 
 ordered = dict()
 delivered = dict()
+
+d = dict()
 
 for obs in data_suppliers.index:
     i = data_suppliers['provider_id'][obs]
@@ -39,9 +42,10 @@ for obs in data_suppliers.index:
         M.append(i)
         K_i[i] = list()
     
-    if k not in K:
-        K.append(k)
+    if k not in K_pur:
+        K_pur.append(k)
         M_k[k] = list()
+        d[k] = 0
 
     M_k[k].append(i)
     K_i[i].append(k)
@@ -57,10 +61,37 @@ for i in M:
     K_i[i] = set(K_i[i])
     K_i[i] = list(K_i[i])
 
-for k in K:
+for k in K_pur:
     M_k[k] = set(M_k[k])
     M_k[k] = list(M_k[k])
 
 service_level = dict()
 for (i,k) in ordered.keys():
     service_level[i,k] = delivered[i,k]/ordered[i,k]
+
+
+#%% Compute the average demand per product
+ex_d_per_day = {}
+for k in K:
+    ex_d_per_day[k] = sum(hist_demand[k])/321
+
+plt.bar(range(len(K)),list(ex_d_per_day.values()))
+plt.show()
+
+
+#%% Compute availability
+q = dict()
+for k in K:
+    target_demand = ex_d_per_day[k]*1.5
+
+    total_vals = sum([service_level[i,k] for i in M_k[k]])
+
+    for i in M:
+        if k in K_i[i]:
+            q[i,k] = target_demand * service_level[i,k] / total_vals
+        else:
+            q[i,k]
+
+
+
+# %%
