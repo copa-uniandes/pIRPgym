@@ -3,10 +3,9 @@
 """
 ################################## Modules ##################################
 ### Basic Librarires
-import numpy as np; from copy import copy, deepcopy; import matplotlib.pyplot as plt
-import numpy as np
+import numpy as np; import pandas as pd; import matplotlib.pyplot as plt
+from copy import copy, deepcopy
 import time
-#from random import random, seed, randint, shuffle, uniform
 from numpy.random import seed, random, randint, lognormal
 
 
@@ -27,7 +26,7 @@ class instance_generator():
             - S: Number of sample paths
             - LA_horizon: Number of look-ahead periods
                 
-        historical data: Generation or usage of historical data (historical_data = ['d'])   
+        historical data: Generation or usage of historical data (historical_data = ['d'])
         Three historical data options:
         1.  ['d', 'p', ...]: List with the parameters the historical info will be generated for
         2.  ['*']: historical info generated for all parameters
@@ -70,7 +69,7 @@ class instance_generator():
 
         self.T = 7                                      # Horizon
 
-        self.F = 15                                      # Fleet
+        self.F = 15                                     # Fleet
         self.Q = 40                                     # Vehicles capacity
         self.d_max = 500                                # Max distance per route
                 
@@ -185,6 +184,58 @@ class instance_generator():
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
 
 
+    # Generates a (dummy) instance of CundiBoy
+    def generate_CundiBoy_instance(self, d_rd_seed:int=0, s_rd_seed:int=1, I0:float=0,**kwargs):
+        # Random seeds
+        self.d_rd_seed = d_rd_seed
+        self.s_rd_seed = s_rd_seed
+        
+        ''' Provitional '''
+        M, M_names, K, M_k, K_i, ex_q, ex_d, service_level, hist_demand = CundiBoy.upload_instance()
+
+        self.gen_sets()
+        self.Suppliers = M[:self.M]
+        self.Products = K[:self.K]
+
+
+        # Historical and sample paths arrays
+        self.hist_data = {t:{} for t in self.historical}
+        self.s_paths = {t:{} for t in self.Horizon}
+
+        self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
+        self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
+
+        self.i00 = self.gen_initial_inventory(I0)
+
+        # Offer
+        self.M_kt = {(k,t):M_k[k] for t in self.TW for k in self.Products}; self.K_it = {(i,t):K_i[i] for t in self.TW for i in self.Suppliers}
+        self.hist_q, self.W_q, self.s_paths_q = CundiBoy.offer.gen_quantities(self, ex_q, **kwargs['q_params'])
+        if self.s_paths_q == None: del self.s_paths_q
+
+        self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self, **kwargs['p_params'])
+        if self.s_paths_p == None: del self.s_paths_p
+
+        # Demand
+        if self.other_params["demand_type"] == "aggregated":
+            self.hist_d, self.W_d, self.s_paths_d = CundiBoy.demand.gen_demand(self,ex_d,hist_demand,**kwargs['d_params'])
+        else:
+            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self, **kwargs['d_params'])
+        if self.s_paths_d == None: del self.s_paths_d
+
+        # Selling prices
+        # self.salv_price = selling_prices.gen_salvage_price(self)
+        # self.opt_price = selling_prices.gen_optimal_price(self)
+
+
+        # self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        
+        # Inventory
+        self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
+
+        # Routing
+        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+
+
     # Generates an CVRPTW instance of the literature
     def upload_CVRP_instance(self, set:str = 'Li', instance:str = 'Li_21.vrp') -> dict[float]:
         self.K:int = 1         # One product
@@ -217,6 +268,7 @@ class instance_generator():
         else:
             self.TW: range = self.Horizon
     
+
     def gen_initial_inventory(self,a):
 
         i00 = {(k,o):a for k in self.Products for o in self.Ages[k]}
@@ -499,8 +551,8 @@ class demand():
                     s_paths_d[t][day,sample] = {(k,o): inst_gen.sim([hist_d[t][k,o][obs] for obs in range(len(hist_d[t][k,o])) if hist_d[t][k,o][obs] > 0]) for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
 
         return s_paths_d
-    
-    
+        
+
 
 class offer():
     
@@ -643,7 +695,7 @@ class offer():
     
 
     # Prices's sample paths
-    def gen_empiric_p_sp(inst_gen: instance_generator, hist_p, W_p) -> dict[dict]:
+    def gen_empiric_p_sp(inst_gen:instance_generator, hist_p, W_p) -> dict[dict]:
         s_paths_p = dict()
         for t in inst_gen.Horizon: 
             s_paths_p[t] = dict()
@@ -722,7 +774,229 @@ class locations():
         return M-1, Q, d_max, coor, purchase
         
 
+
+class CundiBoy():
+    def upload_instance():
+        data_suppliers = pd.read_excel('/Users/juanbeta/My Drive/Research/Supply Chain Analytics/SD-IB-IRP-PP/Environment/Data/Data_Fruver_0507.xlsx', sheet_name='provider_orders')
+        data_demand = pd.read_excel("/Users/juanbeta/My Drive/Research/Supply Chain Analytics/SD-IB-IRP-PP/Environment/Data/Data_Fruver_0507.xlsx",sheet_name="daily_sales_historic")
+        data_demand = data_demand[["date","store_product_id","sales"]]
+
+        K = list(pd.unique(data_demand["store_product_id"]))
+
+        data_demand = data_demand.groupby(by=["date","store_product_id"],as_index=False).sum()
+        hist_demand = {k:[data_demand.loc[i,"sales"] for i in data_demand.index if data_demand.loc[i,"store_product_id"] == k and data_demand.loc[i,"sales"] > 0] for k in K}
+        total_sales = pd.DataFrame.from_dict({k:sum(hist_demand[k]) for k in K},orient="index")
+        df_sorted = total_sales.sort_values(by=0, ascending=False)
+
+        # Retrieve the top 30 products with the highest sales
+        K = list(df_sorted.head(30).index)
+        hist_demand = {k:hist_demand[k] for k in K}
+
+
+        M = list()
+        M_names = list()
+        K_pur = list()
+
+        M_k = dict()
+        K_i = dict()
+
+        ordered = dict()
+        delivered = dict()
+
+        for obs in data_suppliers.index:
+            i = data_suppliers['provider_id'][obs]
+            k = data_suppliers['store_product_id'][obs]
+
+            if i not in M:
+                M.append(i)
+                M_names.append(data_suppliers["provider_name"])
+                K_i[i] = list()
+            
+            if k not in K_pur:
+                K_pur.append(k)
+                M_k[k] = list()
+
+            M_k[k].append(i)
+            K_i[i].append(k)
+
+            if (i,k) not in ordered.keys():
+                ordered[i,k] = 0
+                delivered[i,k] = 0
+            
+            ordered[i,k] += data_suppliers['quantity_order'][obs]
+            delivered[i,k] += data_suppliers['quantity_received'][obs]
+
+        for i in M:
+            K_i[i] = set(K_i[i])
+            K_i[i] = list(K_i[i])
+
+        for k in K_pur:
+            M_k[k] = set(M_k[k])
+            M_k[k] = list(M_k[k])
+
+        service_level = dict()
+        for (i,k) in ordered.keys():
+            service_level[i,k] = delivered[i,k]/ordered[i,k]
+
+        ex_d = {}
+        for k in K:
+            ex_d[k] = sum(hist_demand[k])/321
+
+
+        ex_q = dict()
+        for k in K:
+            target_demand = ex_d[k]*1.5
+            total_vals = sum([service_level[i,k] for i in M_k[k]])
+
+            for i in M:
+                if k in K_i[i]:
+                    ex_q[i,k] = target_demand*service_level[i,k]/total_vals
+                else:
+                    ex_q[i,k] = 0
+
+        return M, M_names, K, M_k, K_i, ex_q, ex_d, service_level, hist_demand
+    
+
+    class demand():
+        ### Demand of products
+        def gen_demand(inst_gen:instance_generator,ex_d,hist_demand,**kwargs) -> tuple:
+            seed(inst_gen.d_rd_seed + 2)
+            if kwargs['dist'] == 'log-normal':   rd_function = lognormal
+            elif kwargs['dist'] == 'd_uniform': rd_function = randint
+
+            hist_d = {t:dict() for t in inst_gen.Horizon}
+            hist_d.update({0:{k:hist_demand[k] for k in inst_gen.Products}})
+            
+
+            if inst_gen.other_params['look_ahead'] != False and ('d' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
+                seed(inst_gen.s_rd_seed)
+                W_d, hist_d = CundiBoy.demand.gen_W_d(inst_gen,ex_d,rd_function,hist_d,**kwargs)
+                s_paths_d = CundiBoy.demand.gen_empiric_d_sp(inst_gen, hist_d, W_d)
+                return hist_d, W_d, s_paths_d
+
+            else:
+                W_d, hist_d = demand.gen_W_d(inst_gen, rd_function, hist_d, **kwargs)
+                return hist_d, W_d, None
+
+        # Historic demand
+        def gen_hist_d(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]: 
+            hist_d = {t:dict() for t in inst_gen.Horizon}
+            if inst_gen.other_params['historical'] != False and ('d' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+                hist_d[0] = {k:[round(rd_function(*kwargs['r_f_params']),2) for t in inst_gen.historical] for k in inst_gen.Products}
+            else:
+                hist_d[0] = {k:[] for k in inst_gen.Products}
+
+            return hist_d
+
+
+        # Realized (real) availabilities
+        def gen_W_d(inst_gen:instance_generator,ex_d,rd_function,hist_d,**kwargs) -> tuple:
+            '''
+            W_d: (dict) demand of k \in K  on t \in T
+            '''
+            W_d = dict()
+            for t in inst_gen.Horizon:
+                W_d[t] = dict()
+                for k in inst_gen.Products:
+                    W_d[t][k] = round(rd_function(ex_d[k], kwargs['r_f_params']),2)
+
+                    if t < inst_gen.T - 1:
+                        hist_d[t+1][k] = hist_d[t][k] +[W_d[t][k]]
+
+            return W_d, hist_d
+        
+
+        # Demand's sample paths
+        def gen_empiric_d_sp(inst_gen: instance_generator, hist_d, W_d) -> dict[dict]:
+            s_paths_d = dict()
+            for t in inst_gen.Horizon: 
+                s_paths_d[t] = dict()
+                for sample in inst_gen.Samples:
+                    if inst_gen.s_params == False or ('d' not in inst_gen.s_params and '*' not in inst_gen.s_params):
+                        s_paths_d[t][0,sample] = W_d[t]
+                    else:
+                        s_paths_d[t][0,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
+
+                    for day in range(1,inst_gen.sp_window_sizes[t]):
+                        s_paths_d[t][day,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
+
+            return s_paths_d
+
+        
+    class offer():
+        pass
+        ### Available quantities of products on suppliers
+        def gen_quantities(inst_gen:instance_generator,ex_q,**kwargs) -> tuple:
+            seed(inst_gen.d_rd_seed + 4)
+            if kwargs['dist'] == 'c_uniform':   rd_function = randint
+            hist_q = CundiBoy.offer.gen_hist_q(inst_gen, ex_q, rd_function, **kwargs)
+
+            if inst_gen.other_params['look_ahead'] != False and ('q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
+                seed(inst_gen.s_rd_seed + 1)
+                W_q, hist_q = CundiBoy.offer.gen_W_q(inst_gen, ex_q, rd_function, hist_q, **kwargs)
+                s_paths_q = CundiBoy.offer.gen_empiric_q_sp(inst_gen, hist_q, W_q)
+                return hist_q, W_q, s_paths_q 
+
+            else:
+                W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
+                return hist_q, W_q, None
+
+
+        # Historic availabilities
+        def gen_hist_q(inst_gen:instance_generator,ex_q,rd_function,**kwargs) -> dict[dict]:
+            hist_q = {t:dict() for t in inst_gen.Horizon}
+            factor = {i:1+random()*2 for i in inst_gen.Suppliers}
+            if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+                hist_q[0] = {(i,k):[round(rd_function(ex_q[i,k]-kwargs['r_f_params'], ex_q[i,k]+rd_function(kwargs['r_f_params'])),2)*factor[i] if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
+            else:
+                hist_q[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
+
+            return hist_q
+
+        
+        # Realized (real) availabilities
+        def gen_W_q(inst_gen:instance_generator,ex_q,rd_function,hist_q,**kwargs) -> tuple:
+            '''
+            W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
+            '''
+            W_q = dict()
+            for t in inst_gen.Horizon:
+                W_q[t] = dict()  
+                for i in inst_gen.Suppliers:
+                    for k in inst_gen.Products:
+                        if i in inst_gen.M_kt[k,t]:
+                            W_q[t][(i,k)] = round(rd_function(ex_q[i,k]-kwargs['r_f_params'],ex_q[i,k]+kwargs['r_f_params']),2)
+                        else:   W_q[t][(i,k)] = 0
+
+                        if t < inst_gen.T - 1:
+                            hist_q[t+1][i,k] = hist_q[t][i,k] + [W_q[t][i,k]]
+
+            return W_q, hist_q
+
+
+        # Availabilitie's sample paths
+        def gen_empiric_q_sp(inst_gen: instance_generator, hist_q, W_q) -> dict[dict]:
+            s_paths_q = dict()
+            for t in inst_gen.Horizon: 
+                s_paths_q[t] = dict()
+                for sample in inst_gen.Samples:
+                    if inst_gen.s_params == False or ('q' not in inst_gen.s_params and '*' not in inst_gen.s_params):
+                        s_paths_q[t][0,sample] = W_q[t]
+                    else:
+                        s_paths_q[t][0,sample] = {(i,k): inst_gen.sim([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,0] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
+
+                    for day in range(1,inst_gen.sp_window_sizes[t]):
+                        s_paths_q[t][day,sample] = {(i,k): inst_gen.sim([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,t+day] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
+
+            return s_paths_q
+
+
+
+
+
 ''' Auxiliary method to assign custom configurations the instance '''
+
+
 def assign_env_config(self, kwargs):
     for key, value in kwargs.items():
         setattr(self, key, value)

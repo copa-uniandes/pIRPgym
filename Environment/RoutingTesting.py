@@ -2,7 +2,7 @@
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policy_generator
-from Visualizations import Routing_Visualizations
+from Visualizations import Routing_V
 
 
 ########################################## Instance generator ##########################################
@@ -49,7 +49,8 @@ h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 stoch_rd_seed = 3                                               # Random seeds
 det_rd_seed = 1
 
-inst_gen.generate_basic_random_instance(det_rd_seed, stoch_rd_seed, q_params = q_params, p_params = p_params, d_params = d_params, h_params = h_params)
+inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+                                        p_params=p_params,d_params=d_params,h_params=h_params)
 
 ######################################### CVRP Instance ##########################################
 # CVRP Instance

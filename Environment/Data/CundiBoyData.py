@@ -83,7 +83,6 @@ plt.show()
 q = dict()
 for k in K:
     target_demand = ex_d_per_day[k]*1.5
-
     total_vals = sum([service_level[i,k] for i in M_k[k]])
 
     for i in M:

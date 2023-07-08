@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 
-class Routing_Visualizations():
+class RoutingV():
     # Sumarizes and compares routing solutions
     def compare_routing_strategies(inst_gen:instance_generator, data:dict[list]):
         print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tTime')
@@ -170,3 +170,11 @@ class Routing_Visualizations():
     # Auxiliary function to return limits of std interval
     def return_brackets(values:list, mean:float):
         return mean + np.std(values), mean - np.std(values)
+
+
+class InventoryV():
+    
+    pass
+
+class PerishabilityV():
+    pass
