@@ -10,21 +10,176 @@ from SD_IB_IRP_PPenv import steroid_IRP
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
-import pandas as pd
+import networkx as nx
+from copy import deepcopy
 
 
 class RoutingV():
     # Sumarizes and compares routing solutions
     def compare_routing_strategies(inst_gen:instance_generator, data:dict[list]):
-        print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tTime')
+        print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tTime \tRealCost')
         for strategy, performance in data.items():
-            if strategy != 'HyGeSe':
+            if strategy in ['MIP','CG'] :
+                num_routes = len([i for i in performance[0] if i != [0,0]])
+                avg_ut = round(sum(performance[2])/(num_routes*inst_gen.Q), 2)
+                avg_eff = round(sum(performance[1])/(num_routes*inst_gen.d_max), 2)
+                print(f'{strategy} \t{len([i for i in performance[0] if i != [0,0]])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[3],2)} \t{round(performance[4],2)}')
+            elif strategy == 'HyGeSe':
+                print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t- \t- \t{round(performance[2],2)} \t{round(performance[3],2)}')
+            else:
                 avg_ut = round(sum(performance[2])/(len(performance[0]*inst_gen.Q)), 2)
                 avg_eff = round(sum(performance[1])/len(performance[0]*inst_gen.d_max), 2)
-                print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[3],2)}')
-            else:
-                print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t- \t- \t{round(performance[2],2)}')
- 
+                print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[3],2)} \t{round(performance[4],2)}')
+                
+        # print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tRealCost')
+        # for strategy, performance in data.items():
+        #     if strategy in ['MIP','CG'] :
+        #         num_routes = len([i for i in performance[0] if i != [0,0]])
+        #         avg_ut = round(sum(performance[2])/(num_routes*inst_gen.Q), 2)
+        #         avg_eff = round(sum(performance[1])/(num_routes*inst_gen.d_max), 2)
+        #         print(f'{strategy} \t{len([i for i in performance[0] if i != [0,0]])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[4],2)}')
+        #     elif strategy == 'HyGeSe':
+        #         print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t- \t-  \t{round(performance[3],2)}')
+        #     else:
+        #         avg_ut = round(sum(performance[2])/(len(performance[0]*inst_gen.Q)), 2)
+        #         avg_eff = round(sum(performance[1])/len(performance[0]*inst_gen.d_max), 2)
+        #         print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[4],2)}')
+
+
+    # Plot routes
+    def render_routes(inst_gen:instance_generator,routes:list,save:bool=False):
+        G = nx.MultiDiGraph()
+
+        # Nodes
+        node_list = [0]
+        node_list += inst_gen.Suppliers
+        G.add_nodes_from(node_list)
+
+        node_color = ['green']
+        node_color += ['tab:purple' for i in inst_gen.Suppliers]
+        nodes_to_draw = deepcopy(node_list)  
+
+        # Edges
+        edges = []
+        edge_colors = []
+        orders = {}
+        for i in range(len(routes)):
+            route = routes[i]
+            for node in range(len(route) - 1):
+                edge = (route[node], route[node + 1])
+                edges.append(edge)
+                orders[edge] = i
+
+        G.add_edges_from(edges) 
+        edges = G.edges()
+        colors = ['black', 'red', 'green', 'blue', 'purple', 'orange', 'pink', 'grey', 
+                       'yellow', 'tab:red', 'tab:green', 'tab:blue', 'tab:purple', 'tab:orange', 
+                       'tab:pink', 'tab:grey', 
+                       'black', 'red', 'green', 'blue', 'purple', 'orange', 'pink', 'grey', 
+                       'yellow', 'tab:red', 'tab:green', 'tab:blue', 'tab:purple', 'tab:orange', 
+                        'tab:pink', 'tab:grey']
+        for edge in edges:
+            color = colors[orders[edge]]
+            edge_colors.append(color)
+
+        # pos = {c: (self.C[c]['x'], self.C[c]['y']) for c in self.Costumers}
+        # pos.update({s: (self.S[s]['x'], self.S[s]['y']) for s in self.Stations})
+        # pos['D'] = (self.D['x'], self.D['y'])
+
+        nx.draw_networkx(G,pos=inst_gen.coor, with_labels = True, nodelist = nodes_to_draw, 
+                         node_color = node_color, edge_color = edge_colors, alpha = 0.8, 
+                         font_size = 7, node_size = 200)
+        if save:
+            plt.savefig(inst_gen.path + 'routes.png', dpi = 600)
+        plt.show()
+
+
+    # Plot routes of various routing strategies to compare
+    def render_routes_diff_strategies(inst_gen:instance_generator,solutions:list,save:bool=False):
+        G = nx.MultiDiGraph()
+
+        # Nodes
+        node_list = [0]
+        node_list += inst_gen.Suppliers
+        G.add_nodes_from(node_list)
+
+        node_color = ['green']
+        node_color += ['tab:purple' for i in inst_gen.Suppliers]
+        nodes_to_draw = deepcopy(node_list)
+
+        # Edges
+        edges = []
+        edge_colors = []
+        orders = {}
+        for idx, routes in enumerate(solutions):
+            for i in range(len(routes)):
+                route = routes[i]
+                for node in range(len(route) - 1):
+                    edge = (route[node], route[node + 1])
+                    edges.append(edge)
+                    orders[edge] = idx
+            
+        G.add_edges_from(edges) 
+        edges = G.edges()
+        colors = ['black', 'red', 'green', 'blue', 'purple', 'orange', 'pink', 'grey', 
+                       'yellow', 'tab:red', 'tab:green', 'tab:blue', 'tab:purple', 'tab:orange', 
+                       'tab:pink', 'tab:grey', 
+                       'black', 'red', 'green', 'blue', 'purple', 'orange', 'pink', 'grey', 
+                       'yellow', 'tab:red', 'tab:green', 'tab:blue', 'tab:purple', 'tab:orange', 
+                        'tab:pink', 'tab:grey']
+        for edge in edges:
+            color = colors[orders[edge]]
+            edge_colors.append(color)
+
+        nx.draw_networkx(G,pos=inst_gen.coor, with_labels = True, nodelist = nodes_to_draw, 
+                         node_color = node_color, edge_color = edge_colors, alpha = 0.8, 
+                         font_size = 7, node_size = 200)
+        if save:
+            plt.savefig(inst_gen.path + 'routing_strategies_comparison.png', dpi = 600)
+        plt.show()
+
+
+    # Scatter plot of solutions (transport cost vs. Purchasing delta)
+    def plot_solutions(inst_gen:instance_generator,routing_performance:dict):
+        x = dict()
+        y = dict()
+        for strategy in routing_performance[1].keys():
+            x[strategy] = list()
+            y[strategy] = list()
+        
+        for ep,data in list(routing_performance.items()):
+            for strategy in x.keys():
+                if strategy != 'HyGeSe':
+                    x[strategy].append(routing_performance[ep][strategy][4])
+                    y[strategy].append(routing_performance[ep][strategy][4])
+                else:
+                    x[strategy].append(routing_performance[ep][strategy][3])
+                    y[strategy].append(routing_performance[ep][strategy][3])
+
+        # Set up figure and axes
+        fig, ax = plt.subplots()
+
+        # Plot scatter plots for each series
+        for series_name in x.keys():
+            ax.scatter(x[series_name], y[series_name], label=series_name)
+
+        # Add labels and title
+        ax.set_xlabel('Transport cost')
+        ax.set_ylabel('Purchase delta')
+        ax.set_title('Routing strategies')
+
+        # Add legend
+        ax.legend()
+
+        # Set aspect ratio to equal
+        ax.set_aspect('equal')
+
+        # Gridlines
+        ax.grid(True, linestyle='--')
+
+        # Show plot
+        plt.show()
+
 
     # Displays the historic availability of a given route for a given product
     def route_availability_per_product(route:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
@@ -36,8 +191,8 @@ class RoutingV():
             
             labels.append(str(i))
 
-        avg = Routing_Visualizations.return_mean([serie[j] for serie in series for j in range(len(serie))])
-        bracket = Routing_Visualizations.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
+        avg = RoutingV.return_mean([serie[j] for serie in series for j in range(len(serie))])
+        bracket = RoutingV.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
 
         plt.hist(series, density = True, histtype = 'bar', label = labels)
         
@@ -173,8 +328,8 @@ class RoutingV():
 
 
 class InventoryV():
-    
     pass
+
 
 class PerishabilityV():
     pass

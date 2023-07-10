@@ -2,7 +2,7 @@
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policy_generator
-from Visualizations import Routing_V
+from Visualizations import RoutingV
 
 
 ########################################## Instance generator ##########################################
@@ -10,7 +10,7 @@ from Visualizations import Routing_V
 T = 7
 M = 15
 K = 10
-F = 4
+F = 15
 
 Q = 2000
 d_max = 2000 
@@ -46,7 +46,7 @@ d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}        # Demand
 
 h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
-stoch_rd_seed = 3                                               # Random seeds
+stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
 
 inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
@@ -66,7 +66,7 @@ inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_par
 # Environment
 # Creating environment object
 routing = True
-inventory = True
+inventory = True    
 perishability = 'ages'
 env = steroid_IRP(routing, inventory, perishability)
 
@@ -80,42 +80,44 @@ purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 # Routing Policies
 route_planner = policy_generator.Routing
 
-nn_routes, nn_distances, nn_loads, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase, inst_gen)                      # Nearest Neighbor
-RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase, inst_gen)         # RCL based constructive
-GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen, rd_seed=0, time_limit=30)         # Genetic Algorithm
-# HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase, inst_gen)                        # Hybrid Genetic Search (CVRP)
-# MIP_routes, MIP_distances, MIP_loads, MIP_time = route_planner.MIP.MIP_routing(purchase, inst_gen)                                                        # Complete MIP
+# nn_routes, nn_distances, nn_loads, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t)                      # Nearest Neighbor
+# RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase,inst_gen,env.t)         # RCL based constructive
+# GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen,env.t,rd_seed=0,time_limit=30)         # Genetic Algorithm
+# HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t)                        # Hybrid Genetic Search (CVRP)
+# MIP_routes, MIP_distances, MIP_loads, MIP_time = route_planner.MIP.MIP_routing(purchase,inst_gen)                                                        # Complete MIP
 
-# CG_routes, CG_distance = route_planner.Column_Generation(purchase, inst_gen)      # Column Generation algorithm
+CG_routes, CG_distances, CG_loads, CG_time = route_planner.Column_Generation.CG_routing(purchase,inst_gen,env.t)      # Column Generation algorithm
 
 #%%######################################### Visualizations ##########################################
 # Routing strategies comparison
-data = {'NN':[nn_routes,nn_distances, nn_loads, nn_time],
-        'RCL':[RCLc_routes, RCLc_distances, RCLc_loads, RCLc_time],
-        'GA':[GA_routes, GA_distances, GA_loads, GA_time],
-        #'HyGeSe':[HyGeSe_routes, HyGeSe_distance, HyGeSe_time],
-        # 'MIP':[MIP_routes, MIP_distances, MIP_loads, MIP_time]
+data = {
+        # 'NN':[nn_routes,nn_distances, nn_loads, nn_time,0],
+        # 'RCL':[RCLc_routes, RCLc_distances, RCLc_loads, RCLc_time,0],
+        # 'GA':[GA_routes, GA_distances, GA_loads, GA_time,0],
+        # 'HyGeSe':[HyGeSe_routes, HyGeSe_distance, HyGeSe_time,0],
+        # 'MIP':[MIP_routes, MIP_distances, MIP_loads, MIP_time,0]
+        'ColGen':[CG_routes, CG_distances, CG_loads, CG_time,0]
         }
 
 
-Routing_Visualizations.compare_routing_strategies(inst_gen, data)
+RoutingV.compare_routing_strategies(inst_gen, data)
 
 #%% Routes analytics
-routes = nn_routes; distances = nn_distances
+routes = CG_routes; distances = CG_distances
 
 # Visualizations
 product = 0
-Routing_Visualizations.route_availability_per_product(routes[1], product, inst_gen, env, True)
+RoutingV.route_availability_per_product(routes[1], product, inst_gen, env, True)
 
 #%%
-Routing_Visualizations.route_total_availability(routes[1], inst_gen, env)
+RoutingV.route_total_availability(routes[1], inst_gen, env)
 
 #%%
 product = 0
-Routing_Visualizations.routes_availability_per_product(routes, product, inst_gen, env)
+RoutingV.routes_availability_per_product(routes, product, inst_gen, env)
 
 #%%
-Routing_Visualizations.routes_total_availability(routes, inst_gen, env)
+RoutingV.routes_total_availability(routes, inst_gen, env)
 
 
 

@@ -6,7 +6,7 @@
 from copy import copy, deepcopy
 import pandas as pd
 import gym
-import networkx as nx
+
 
 ### Instance generator
 from InstanceGenerator import instance_generator
@@ -59,14 +59,14 @@ Exogenous information (W): The stochastic factors considered on the environment:
 class steroid_IRP(gym.Env): 
     
     # Initialization method
-    def __init__(self, routing = True, inventory = True, perishability = True):
+    def __init__(self,routing=True,inventory=True,perishability=True):
         
         assert inventory >= bool(perishability), 'Perishability only available with Inventory Problem'
         self.config = {'routing': routing, 'inventory': inventory, 'perishability': perishability}
         
 
     # Reseting the environment
-    def reset(self, inst_gen: instance_generator, strong_rate:bool = True, return_state:bool = False):
+    def reset(self,inst_gen:instance_generator,strong_rate:bool=True,return_state:bool = False):
         '''
         Reseting the environment. Generate or upload the instance.
         
@@ -88,7 +88,7 @@ class steroid_IRP(gym.Env):
                 return self.state
 
     # Step 
-    def step(self, action:list, inst_gen: instance_generator, validate_action:bool = False, warnings:bool = False):
+    def step(self,action:list,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False):
         if validate_action:
             self.action_validity(action, inst_gen)
 
@@ -151,7 +151,7 @@ class steroid_IRP(gym.Env):
                 else:
                     purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs_age(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
                 reward += [purchase_cost, holding_cost, backorders_cost]
-        reward += [Inventory_management.perish_per_age_inv.compute_earnings(inst_gen,real_demand_compliance)]
+            reward += [Inventory_management.perish_per_age_inv.compute_earnings(inst_gen,real_demand_compliance)]
 
         # Time step update and termination check
         self.t += 1
@@ -182,13 +182,13 @@ class steroid_IRP(gym.Env):
 
 
     # Checking for episode's termination
-    def check_termination(self, inst_gen: instance_generator) -> bool:
+    def check_termination(self,inst_gen:instance_generator) -> bool:
         done = self.t >= inst_gen.T
         return done
 
 
     # Method to evaluate actions
-    def action_validity(self, action, inst_gen: instance_generator):
+    def action_validity(self,action,inst_gen:instance_generator):
         # TODO: Manage action by individual componentes, problem when deleting components 
         if self.config['routing']:
             routes = action[0]
@@ -253,15 +253,37 @@ class steroid_IRP(gym.Env):
 
 
     # Generates empty dicts 
-    def generate_empty_inv_action(self, inst_gen: instance_generator) -> tuple[dict,dict]:
+    def generate_empty_inv_action(self,inst_gen:instance_generator) -> tuple[dict,dict]:
         purchase = {(i,k):0 for i in inst_gen.Suppliers for k in inst_gen.Products}
         demand_compliance = {(k,o):0 for k in inst_gen.Products for o in [0]+inst_gen.Ages[k]}
 
         return purchase, demand_compliance
 
 
+    ''' Compute route's real distance (cost)'''
+    def compute_solution_real_cost(self,inst_gen:instance_generator,routes:list[list],purchase:dict):
+        extra_cost = 0
+        for route in routes:
+            missing = {k:0 for k in inst_gen.Products}
+            for sup in route[1:-1]:
+                for k in inst_gen.K_it[sup,self.t]:
+                    if (sup,k) in list(purchase.keys()) and inst_gen.W_q[self.t][sup,k] < purchase[sup,k]:
+                        missing[k] += purchase[sup,k] - inst_gen.W_q[self.t][sup,k]
+                        extra_cost -=  missing[k] * inst_gen.W_p[self.t][sup,k]
+                
+                for k in missing.keys():
+                    if missing[k] != 0:
+                        if sup in inst_gen.M_kt[k,self.t] and inst_gen.W_q[self.t][sup,k] > purchase[sup,k]:
+                            to_buy = min(inst_gen.W_q[self.t][sup,k]-purchase[sup,k], missing[k])
+                            missing[k] -= to_buy
+                            extra_cost += to_buy*inst_gen.W_p[self.t][sup,k]
+            for k,pending in missing.items():
+                extra_cost += inst_gen.back_o_cost*pending
+        return extra_cost
+
+
     # Visualize the inventory
-    def print_inventory(self, inst_gen: instance_generator) -> None:
+    def print_inventory(self,inst_gen:instance_generator) -> None:
         max_O = max([inst_gen.O_k[k] for k in inst_gen.Products])
         listamax = [[self.state[k,o] for o in inst_gen.Ages[k]] for k in inst_gen.Products]
         df = pd.DataFrame(listamax, index=pd.Index([str(k) for k in inst_gen.Products], name='Products'),
@@ -271,7 +293,7 @@ class steroid_IRP(gym.Env):
 
 
     # Print state and main parameters
-    def print_state(self, inst_gen: instance_generator) -> None:
+    def print_state(self,inst_gen:instance_generator) -> None:
         print(f'################################### STEP {self.t} ###################################')
         print('INVENTORY')
         max_age = max(list(inst_gen.O_k.values()))
@@ -306,7 +328,7 @@ class steroid_IRP(gym.Env):
 
 
     # Print an action
-    def print_action(self, action, inst_gen: instance_generator) -> None:
+    def print_action(self,action,inst_gen:instance_generator) -> None:
         if self.config['routing']:
             del action[0]
 
@@ -334,51 +356,6 @@ class steroid_IRP(gym.Env):
                 print(string)
 
             print('\n')
-
-
-    # Plot routes
-    def render(self, routes: list, save:bool = False):
-        G = nx.MultiDiGraph()
-
-        # Nodes
-        node_list = ['D']
-        node_list += self.Stations
-        node_list += self.Costumers
-        G.add_nodes_from(node_list)
-
-        node_color = ['purple']
-        node_color += ['tab:green' for s in self.Stations[1:]]
-        node_color += ['tab:blue' for c in self.Costumers]
-        nodes_to_draw = deepcopy(node_list)
-        nodes_to_draw.remove('S0')   
-
-        # Edges
-        edges = []
-        edge_colors = []
-        orders = {}
-        for i in range(len(routes)):
-            route = routes[i]
-            for node in range(len(route) - 1):
-                edge = (route[node], route[node + 1])
-                edges.append(edge)
-                orders[edge] = i
-
-        G.add_edges_from(edges) 
-        edges = G.edges()
-        for edge in edges:
-            color = self.colors[orders[edge]]
-            edge_colors.append(color)
-
-        pos = {c: (self.C[c]['x'], self.C[c]['y']) for c in self.Costumers}
-        pos.update({s: (self.S[s]['x'], self.S[s]['y']) for s in self.Stations})
-        pos['D'] = (self.D['x'], self.D['y'])
-
-        nx.draw_networkx(G, pos = pos, with_labels = True, nodelist = nodes_to_draw, 
-                         node_color = node_color, edge_color = edge_colors, alpha = 0.8, 
-                         font_size = 7, node_size = 200)
-        if save:
-            plt.savefig(self.path + 'sexting.png', dpi = 600)
-        plt.show()
 
 
     # Printing a representation of the environment (repr(env))

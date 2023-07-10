@@ -185,7 +185,7 @@ class instance_generator():
 
 
     # Generates a (dummy) instance of CundiBoy
-    def generate_CundiBoy_instance(self, d_rd_seed:int=0, s_rd_seed:int=1, I0:float=0,**kwargs):
+    def generate_CundiBoy_instance(self,d_rd_seed:int=0,s_rd_seed:int=1,I0:float=0,**kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -196,6 +196,7 @@ class instance_generator():
         self.gen_sets()
         self.Suppliers = M[:self.M]
         self.Products = K[:self.K]
+        self.V = [0] + self.Suppliers
 
 
         # Historical and sample paths arrays
@@ -208,32 +209,31 @@ class instance_generator():
         self.i00 = self.gen_initial_inventory(I0)
 
         # Offer
-        self.M_kt = {(k,t):M_k[k] for t in self.TW for k in self.Products}; self.K_it = {(i,t):K_i[i] for t in self.TW for i in self.Suppliers}
-        self.hist_q, self.W_q, self.s_paths_q = CundiBoy.offer.gen_quantities(self, ex_q, **kwargs['q_params'])
+        self.M_kt = {(k,t):[i for i in M_k[k] if i in self.Suppliers] for t in self.TW for k in self.Products}; self.K_it = {(i,t):[k for k in K_i[i] if k in K] for t in self.TW for i in self.Suppliers}
+        self.hist_q, self.W_q, self.s_paths_q = CundiBoy.offer.gen_quantities(self,ex_q,**kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q
 
-        self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self, **kwargs['p_params'])
+        self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self,**kwargs['p_params'])
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
         if self.other_params["demand_type"] == "aggregated":
             self.hist_d, self.W_d, self.s_paths_d = CundiBoy.demand.gen_demand(self,ex_d,hist_demand,**kwargs['d_params'])
         else:
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self, **kwargs['d_params'])
+            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self,**kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
 
         # Selling prices
-        # self.salv_price = selling_prices.gen_salvage_price(self)
-        # self.opt_price = selling_prices.gen_optimal_price(self)
+        self.salv_price = selling_prices.gen_salvage_price(self)
+        self.opt_price = selling_prices.gen_optimal_price(self)
 
-
-        # self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
         # Inventory
-        self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
+        self.hist_h, self.W_h = costs.gen_h_cost(self,**kwargs['h_params'])
 
         # Routing
-        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        self.coor, self.c = locations.euclidean_dist_costs(self.V,self.d_rd_seed)
 
 
     # Generates an CVRPTW instance of the literature
@@ -254,8 +254,8 @@ class instance_generator():
 
     # Auxiliary method: Generate iterables of sets
     def gen_sets(self):
-        self.Suppliers: range = range(1,self.M + 1);  self.V = range(self.M + 1)
-        self.Products: range = range(self.K)
+        self.Suppliers:list = list(range(1,self.M + 1));  self.V = [0]+self.Suppliers
+        self.Products:list = list(range(self.K))
         self.Vehicles: range = range(self.F)
         self.Horizon: range = range(self.T)
 
@@ -340,13 +340,12 @@ class costs():
                 if t < inst_gen.T - 1:
                     hist_h[t+1][k] = hist_h[t][k] + [W_h[t][k]]
 
-        return W_h, hist_h
-    
+        return W_h, hist_h  
 
 
 class selling_prices():
 
-    def get_selling_prices(inst_gen:instance_generator, discount) -> dict:
+    def get_selling_prices(inst_gen:instance_generator,discount) -> dict:
         
         #discount = kwargs["discount"]
         sell_prices = dict()
@@ -354,7 +353,7 @@ class selling_prices():
         if  discount[0] == "no": sell_prices = selling_prices.gen_sell_price_null_discount(inst_gen)
         elif discount[0] == "lin": sell_prices = selling_prices.gen_sell_price_linear_discount(inst_gen)
         elif discount[0] == "mild": sell_prices = selling_prices.gen_sell_price_mild_discount(inst_gen, discount[1])
-        elif discount[0] == "strong":sell_prices = selling_prices.gen_sell_price_strong_discount(inst_gen, discount[1])
+        elif discount[0] == "strong": sell_prices = selling_prices.gen_sell_price_strong_discount(inst_gen, discount[1])
 
         return sell_prices
     
@@ -387,7 +386,8 @@ class selling_prices():
             for o in range(inst_gen.O_k[k] + 1):
                 if conv_discount == "conc":
                     if o == inst_gen.O_k[k]: sell_prices[k,o] = inst_gen.salv_price[k]
-                    else: sell_prices[k,o] = inst_gen.opt_price[k] - ((inst_gen.opt_price[k]-inst_gen.salv_price[k])*0.25)*(ff(o+1)-1)/(ff(inst_gen.O_k[k])-1)
+                    else: 
+                        sell_prices[k,o] = inst_gen.opt_price[k] - ((inst_gen.opt_price[k]-inst_gen.salv_price[k])*0.25)*(ff(o+1)-1)/(ff(inst_gen.O_k[k])-1)
                 elif conv_discount == "conv":
                     if o == 0: sell_prices[k,o] = inst_gen.opt_price[k]
                     else: sell_prices[k,o] = inst_gen.salv_price[k] + ((inst_gen.opt_price[k]-inst_gen.salv_price[k])*0.25)*(ff(inst_gen.O_k[k]-o+1)-1)/(ff(inst_gen.O_k[k])-1)
@@ -795,7 +795,6 @@ class CundiBoy():
 
         M = list()
         M_names = list()
-        K_pur = list()
 
         M_k = dict()
         K_i = dict()
@@ -807,30 +806,30 @@ class CundiBoy():
             i = data_suppliers['provider_id'][obs]
             k = data_suppliers['store_product_id'][obs]
 
-            if i not in M:
-                M.append(i)
-                M_names.append(data_suppliers["provider_name"])
-                K_i[i] = list()
-            
-            if k not in K_pur:
-                K_pur.append(k)
-                M_k[k] = list()
+            if k in K:
+                if i not in M:
+                    M.append(i)
+                    M_names.append(data_suppliers["provider_name"])
+                    K_i[i] = list()
+                
+                if k not in M_k.keys():
+                    M_k[k] = list()
 
-            M_k[k].append(i)
-            K_i[i].append(k)
+                M_k[k].append(i)
+                K_i[i].append(k)
 
-            if (i,k) not in ordered.keys():
-                ordered[i,k] = 0
-                delivered[i,k] = 0
-            
-            ordered[i,k] += data_suppliers['quantity_order'][obs]
-            delivered[i,k] += data_suppliers['quantity_received'][obs]
+                if (i,k) not in ordered.keys():
+                    ordered[i,k] = 0
+                    delivered[i,k] = 0
+                
+                ordered[i,k] += data_suppliers['quantity_order'][obs]
+                delivered[i,k] += data_suppliers['quantity_received'][obs]
 
         for i in M:
             K_i[i] = set(K_i[i])
             K_i[i] = list(K_i[i])
 
-        for k in K_pur:
+        for k in K:
             M_k[k] = set(M_k[k])
             M_k[k] = list(M_k[k])
 
@@ -898,7 +897,9 @@ class CundiBoy():
             for t in inst_gen.Horizon:
                 W_d[t] = dict()
                 for k in inst_gen.Products:
-                    W_d[t][k] = round(rd_function(ex_d[k], kwargs['r_f_params']),2)
+                    mean_parameter = np.log(ex_d[k]) - 0.5 * np.log(1 + kwargs['r_f_params'] / ex_d[k]**2)
+                    sigma = np.sqrt(np.log(1 + kwargs['r_f_params'] / ex_d[k]**2))
+                    W_d[t][k] = lognormal(mean_parameter,sigma)
 
                     if t < inst_gen.T - 1:
                         hist_d[t+1][k] = hist_d[t][k] +[W_d[t][k]]
