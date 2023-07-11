@@ -5,7 +5,7 @@
 ### SC classes
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
-import hygese as hgs
+#import hygese as hgs
 
 ### Basic Librarires
 import numpy as np; from copy import deepcopy; import matplotlib.pyplot as plt
@@ -147,6 +147,10 @@ class policy_generator():
             ''' Backorders control restriction '''        
             m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S) + gu.quicksum(boo[k,t,s] for t in T for k in K for s in S))
             
+            ''' Perished products restriction '''
+            for t in T:
+                m.addConstr(gu.quicksum(ii[k,t,inst_gen.O_k[k],s] for k in K for s in S) <= 0.1*sum(inst_gen.s_paths_d[env.t][t,s][k] for k in K for s in S))
+
             compra = gu.quicksum(inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S) + \
                 inst_gen.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S) + 6e9*gu.quicksum(boo[k,t,s] for k in K for t in T for s in S)/len(S)
             

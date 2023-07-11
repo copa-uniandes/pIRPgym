@@ -9,6 +9,7 @@ from SD_IB_IRP_PPenv import steroid_IRP
 ### Basic Librarires
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from matplotlib import cm
 import numpy as np
 import networkx as nx
 from copy import deepcopy
@@ -328,7 +329,76 @@ class RoutingV():
 
 
 class InventoryV():
-    pass
+
+    def inventories(day:float, prod:float, inst_gen:instance_generator, real_actions:dict, actions:dict, la_decisions:dict, states:dict):
+
+        fig, ax = plt.subplots(figsize=(12,6))
+
+        colm = cm.get_cmap("Blues")
+        col_purch = "darkorange"; col_demand = "rebeccapurple"; col_sp = "darkgreen"
+        horizon = range(day+1)
+        
+        for t in horizon:
+            if t < day: width = 0.8; delta = 0
+            else: width = 0.4; delta = 0.2
+            for o in range(inst_gen.O_k[prod],0,-1):
+                ax.bar(x=t-delta,width=width,height=states[t][prod,o],bottom=sum(states[t][prod,oo] for oo in range(o+1,inst_gen.O_k[prod]+1)),color=colm(1-o/(inst_gen.O_k[prod]+1)))
+            ax.bar(x=t-delta,width=width,height=sum(real_actions[t][1][i,prod] for i in inst_gen.Suppliers),bottom=sum(states[t][prod,o] for o in range(1,inst_gen.O_k[prod]+1)),color=col_purch)
+        
+        ax.bar(x=day+0.2,width=0.4,height=sum(actions[t][1][i,prod] for i in inst_gen.Suppliers),bottom=sum(states[t][prod,o] for o in range(1,inst_gen.O_k[prod]+1)),color=col_purch,alpha=0.5)
+        for o in range(1,inst_gen.O_k[prod]+1):
+            ax.bar(x=day+0.2,width=0.4,height=states[day][prod,o],bottom=sum(states[day][prod,oo] for oo in range(o+1,inst_gen.O_k[prod]+1)),color=colm(1-o/(inst_gen.O_k[prod]+1)),alpha=0.5)
+        
+        la_horizon = range(day+1,day+inst_gen.sp_window_sizes[day])
+        for t in la_horizon:
+            tt = t-day
+            width = 0.8; delta = 0
+
+            inv = {o:[la_decisions[day][0][tt-1][s][prod,o-1] for s in inst_gen.Samples] for o in range(1,inst_gen.O_k[prod]+1)}
+            for o in range(inst_gen.O_k[prod],0,-1):
+                ax.bar(x=t+delta,width=width,height=sum(inv[o][s] for s in inst_gen.Samples)/inst_gen.S,bottom=sum(sum(inv[oo][s] for s in inst_gen.Samples)/inst_gen.S for oo in range(o+1,inst_gen.O_k[prod]+1)),color=colm(1-o/(inst_gen.O_k[prod]+1)),alpha=0.5)
+
+            z = [sum(la_decisions[day][1][tt][s][i,prod] for i in inst_gen.M_kt[prod,t]) for s in inst_gen.Samples]
+            ax.bar(x=t+delta,width=width,height=sum(z[s] for s in inst_gen.Samples)/inst_gen.S,bottom=sum(sum(inv[oo][s] for s in inst_gen.Samples)/inst_gen.S for oo in range(1,inst_gen.O_k[prod]+1)),color=col_purch,alpha=0.5)
+
+            total = [z[s]+sum(inv[o][s] for o in range(1,inst_gen.O_k[prod]+1)) for s in inst_gen.Samples]
+            #ax.text(x=t+delta,y=sum(sum(inv[oo][s] for s in inst_gen.Samples)/inst_gen.S for oo in range(1,inst_gen.O_k[prod]+1)),s=f"{round(min(total),2),round(sum(total)/inst_gen.S),round(max(total),2)}")
+            #ax.axvline(x=t+0.2,ymin=min(total),ymax=max(total),color="black",marker="_",mew=1.5,ms=14)
+        
+        # Bars for legend
+        ax.bar(x=-1,width=0.1,height=1,color=col_purch,label="Purchase")
+        
+        for s in inst_gen.Samples:
+            ax.plot([day]+list(la_horizon),[inst_gen.s_paths_d[day][t-day,s][prod] for t in [day]+list(la_horizon)],linestyle="-",color=col_sp)
+            ax.plot([day-1,day],[inst_gen.W_d[day-1][prod],inst_gen.s_paths_d[day][0,s][prod]],linestyle="-",color=col_sp)
+        ax.plot(horizon[:-1],[inst_gen.W_d[t][prod] for t in horizon[:-1]],marker="*",linestyle="-",markersize=16,color=col_demand,label="Historical\nDemand")
+        ax.plot([-1],[-1],color=col_sp,linestyle="-",marker="",label="Sample\npaths")
+
+        handles, labels = plt.gca().get_legend_handles_labels()
+        order = [1,2,0]
+        ax.legend(handles=[handles[i] for i in order],labels=[labels[i] for i in order],loc="upper left",fontsize=14)
+
+        cmaplist = [colm(1-o/(inst_gen.O_k[prod]+1)) for o in range(inst_gen.O_k[prod],0,-1)]
+        cmap = mcolors.LinearSegmentedColormap.from_list("Custom",cmaplist,inst_gen.O_k[prod])
+        bounds = [o for o in range(1,inst_gen.O_k[prod]+2)]
+        norm = mcolors.BoundaryNorm(bounds,inst_gen.O_k[prod])
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        cmm = plt.colorbar(mappable=sm,ax=ax)
+        cmm.set_label(label="Product's Age",labelpad=-60,fontsize=18)
+        cmm.ax.tick_params(labelsize=18)
+        cmm.set_ticklabels(range(inst_gen.O_k[prod]+1,0,-1))
+
+        ax.legend(loc="upper left",fontsize=14)
+        ax.set_ylim(bottom=0)
+        ax.set_xlim(-0.5,inst_gen.T-0.5)
+        ax.set_xlabel("Day",fontsize=20)
+        ax.set_ylabel("Inventory Level (kg)",fontsize=20)
+        ax.set_yticklabels([int(i) for i in ax.get_yticks()],fontsize=18)
+        ticks = [i for i in range(inst_gen.T)]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels(ticks,fontsize=18)
+
+        return ax
 
 
 class PerishabilityV():

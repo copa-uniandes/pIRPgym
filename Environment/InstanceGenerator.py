@@ -7,6 +7,7 @@ import numpy as np; import pandas as pd; import matplotlib.pyplot as plt
 from copy import copy, deepcopy
 import time
 from numpy.random import seed, random, randint, lognormal
+import os
 
 
 class instance_generator():
@@ -777,8 +778,8 @@ class locations():
 
 class CundiBoy():
     def upload_instance():
-        data_suppliers = pd.read_excel('/Users/juanbeta/My Drive/Research/Supply Chain Analytics/SD-IB-IRP-PP/Environment/Data/Data_Fruver_0507.xlsx', sheet_name='provider_orders')
-        data_demand = pd.read_excel("/Users/juanbeta/My Drive/Research/Supply Chain Analytics/SD-IB-IRP-PP/Environment/Data/Data_Fruver_0507.xlsx",sheet_name="daily_sales_historic")
+        data_suppliers = pd.read_excel(os.getcwd()+'/Data/Data_Fruver_0507.xlsx', sheet_name='provider_orders')
+        data_demand = pd.read_excel(os.getcwd()+"/Data/Data_Fruver_0507.xlsx",sheet_name="daily_sales_historic")
         data_demand = data_demand[["date","store_product_id","sales"]]
 
         K = list(pd.unique(data_demand["store_product_id"]))

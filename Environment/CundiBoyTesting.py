@@ -1,10 +1,12 @@
-#%% 
+#%% Imports
 ''' Generate CundiBoy instance and environment '''  
 from InstanceGenerator import instance_generator
 from SD_IB_IRP_PPenv import steroid_IRP
 from Policies import policy_generator
-from Visualizations import RoutingV
+from Visualizations import RoutingV, InventoryV
 from time import process_time; from numpy.random import randint; import sys
+
+#%% Parameters
 
 ########################################## Instance generator ##########################################
 # SD-IB-IRP-PP model's parameters
@@ -65,7 +67,7 @@ perishability = 'ages'
 env = steroid_IRP(routing, inventory, perishability)
 
 
-#%%######################################### Simulations ##########################################
+#%% Simulations 
 ''' Simulations '''
 num_episodes = 1
 policy1 = dict(); policy2 = dict()
@@ -106,31 +108,30 @@ while ep < num_episodes:
             [purchase,demand_compliance], la_dec = policy_generator.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
 
             ''' Routing '''
-            nn_routes,nn_distances,nn_loads,nn_time = policy_generator.Routing.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t);print('✅ NN routing')                       # Nearest Neighbor
-            nn_extra_cost = env.compute_solution_real_cost(inst_gen,nn_routes,purchase)
+            #nn_routes,nn_distances,nn_loads,nn_time = policy_generator.Routing.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t);print('✅ NN routing')                       # Nearest Neighbor
+            #nn_extra_cost = env.compute_solution_real_cost(inst_gen,nn_routes,purchase)
             RCLc_routes,_,RCLc_distances,RCLc_loads,RCLc_time = policy_generator.Routing.RCL_constructive.RCL_routing(purchase,inst_gen,env.t);print('✅ RCL routing')         # RCL based constructive
             RCLc_extra_cost = env.compute_solution_real_cost(inst_gen,RCLc_routes,purchase)
-            [GA_routes,GA_distances,GA_loads,GA_time],GA_top = policy_generator.Routing.GA.GA_routing(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
-            GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)
-            HyGeSe_routes,HyGeSe_distance,HyGeSe_time = policy_generator.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=time_limit);print('✅ HGS routing')  # Hybrid Genetic Search (CVRP)
-            HyGeSe_extra_cost = env.compute_solution_real_cost(inst_gen,HyGeSe_routes,purchase)
-            MIP_routes, MIP_distances,MIP_loads, MIP_time = policy_generator.Routing.MIP.MIP_routing(purchase,inst_gen,env.t);print('✅ MIP routing')                          # Complete MIP
-            MIP_extra_cost = env.compute_solution_real_cost(inst_gen,MIP_routes,purchase)   
+            #[GA_routes,GA_distances,GA_loads,GA_time],GA_top = policy_generator.Routing.GA.GA_routing(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
+            #GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)
+            #HyGeSe_routes,HyGeSe_distance,HyGeSe_time = policy_generator.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=time_limit);print('✅ HGS routing')  # Hybrid Genetic Search (CVRP)
+            #HyGeSe_extra_cost = env.compute_solution_real_cost(inst_gen,HyGeSe_routes,purchase)
+            #MIP_routes, MIP_distances,MIP_loads, MIP_time = policy_generator.Routing.MIP.MIP_routing(purchase,inst_gen,env.t);print('✅ MIP routing')                          # Complete MIP
+            #MIP_extra_cost = env.compute_solution_real_cost(inst_gen,MIP_routes,purchase)   
             # CG_routes,CG_distances,CG_loads,CG_time = policy_generator.Routing.CG_routing(purchase,inst_gen,env.t);print('✅ Column Generation routing')                                          # Column Generation Algorithm
             # CG_extra_cost = env.compute_solution_real_cost(inst_gen,CG_routes,purchase)                         
 
             data = {
-                'NN':[nn_routes,nn_distances,nn_loads,nn_time,nn_extra_cost],
+                #'NN':[nn_routes,nn_distances,nn_loads,nn_time,nn_extra_cost],
                 'RCL':[RCLc_routes,RCLc_distances, RCLc_loads,RCLc_time,RCLc_extra_cost],
-                'GA':[GA_routes,GA_distances,GA_loads,GA_time,GA_extra_cost,GA_top],
-                'HyGeSe':[HyGeSe_routes,HyGeSe_distance,HyGeSe_time,HyGeSe_extra_cost],
-                'CG':[MIP_routes,MIP_distances,MIP_loads,MIP_time,MIP_extra_cost],
+                #'GA':[GA_routes,GA_distances,GA_loads,GA_time,GA_extra_cost,GA_top],
+                #'CG':[MIP_routes,MIP_distances,MIP_loads,MIP_time,MIP_extra_cost],
                 # 'ColGen':[CG_routes,CG_distances,CG_loads,CG_time,CG_extra_cost]
                 }
-            CG_routes = MIP_routes
-            RoutingV.compare_routing_strategies(inst_gen, data)
+            #CG_routes = MIP_routes
+            #RoutingV.compare_routing_strategies(inst_gen, data)
             
-            action = [HyGeSe_routes, purchase, demand_compliance]
+            action = [RCLc_routes, purchase, demand_compliance]
 
         else:
             action, la_dec = policy_generator.Inventory.Stochastic_RH_Age_Demand(state,env,inst_gen)
@@ -149,7 +150,7 @@ while ep < num_episodes:
         la_decisions[env.t-1] = la_dec
     ################### policy_evaluation ###################
 
-    policy1[ep] = [states,real_actions,backorders,la_decisions,perished,actions]+[inst_gen]
+    policy1[ep] = [states,real_actions,backorders,la_decisions,perished,actions,inst_gen]
     # policy2[ep] = Policy_evaluation(inst_gen) + [inst_gen]
 
     print(f"Done episode {ep}")
@@ -157,27 +158,16 @@ while ep < num_episodes:
 
 print('Finished')
 
-# %%
+states,real_actions,backorders,la_decisions,perished,actions,inst_gen = policy1[0]
 
-#%% 
-''' Routing Visualizations '''
-for ep in routing_performance.keys():
-    routing_performance[ep]['CG'][0] = [route for route in routing_performance[ep]['CG'][0] if route != [0,0]]
 
-RoutingV.render_routes(inst_gen,HyGeSe_routes)
-RoutingV.plot_solutions(inst_gen,routing_performance)
+#%% Plots
 
-#%%
-ep = 1
-# RoutingV.render_routes_diff_strategies(inst_gen,[routing_performance[ep]['GA'][0], routing_performance[ep]['CG'][0]])
+day = 3
+k = inst_gen.Products[2]
 
-env.t = 1
-RoutingV.route_total_availability(MIP_routes[1], inst_gen, env)
+ax_inv = InventoryV.inventories(day,k,inst_gen,real_actions,actions,la_decisions,states)
 
 
 
 
-
-
-
-# %%
