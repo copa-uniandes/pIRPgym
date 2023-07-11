@@ -151,11 +151,11 @@ class RoutingV():
         for ep,data in list(routing_performance.items()):
             for strategy in x.keys():
                 if strategy != 'HyGeSe':
-                    x[strategy].append(routing_performance[ep][strategy][4])
-                    y[strategy].append(routing_performance[ep][strategy][4])
+                    x[strategy].append(sum(data[strategy][1]))
+                    y[strategy].append(data[strategy][4])
                 else:
-                    x[strategy].append(routing_performance[ep][strategy][3])
-                    y[strategy].append(routing_performance[ep][strategy][3])
+                    x[strategy].append(data[strategy][1])
+                    y[strategy].append(data[strategy][3])
 
         # Set up figure and axes
         fig, ax = plt.subplots()
@@ -172,14 +172,70 @@ class RoutingV():
         # Add legend
         ax.legend()
 
-        # Set aspect ratio to equal
-        ax.set_aspect('equal')
+        # Gridlines
+        ax.grid(True, linestyle='--')
+
+        # Show plot
+        plt.show()
+
+
+    # Scatter plot of solutions (transport cost vs. Purchasing delta)
+    def plot_solutions_standarized(inst_gen:instance_generator,routing_performance:dict):
+        x = dict()
+        y = dict()
+        for strategy in routing_performance[1].keys():
+            x[strategy] = list()
+            y[strategy] = list()
+        
+        # for ep,data in list(routing_performance.items()):
+        #     for strategy in x.keys():
+        #         if strategy != 'HyGeSe':
+        #             x[strategy].append(sum(data[strategy][1]))
+        #             y[strategy].append(data[strategy][4])
+        #         else:
+        #             x[strategy].append(data[strategy][1])
+        #             y[strategy].append(data[strategy][3])
+
+        for ep,data in list(routing_performance.items()):
+            max_routing = 0
+            max_purchase = 0
+            for strategy in x.keys():
+                if strategy != 'HyGeSe':
+                    routing_c = sum(data[strategy][1]); purchase_c = data[strategy][4]
+                    x[strategy].append(routing_c); y[strategy].append(purchase_c)
+                    if routing_c > max_routing: max_routing = routing_c
+                    if purchase_c > max_purchase: max_purchase = purchase_c
+                else:
+                    routing_c = data[strategy][1]; purchase_c = data[strategy][3]
+                    x[strategy].append(routing_c); y[strategy].append(purchase_c)
+                    if routing_c > max_routing: max_routing = routing_c
+                    if purchase_c > max_purchase: max_purchase = purchase_c
+            
+            for strategy in x.keys():
+                x[strategy][-1] /= max_routing
+                y[strategy][-1] /= max_purchase
+
+        # Set up figure and axes
+        fig, ax = plt.subplots()
+
+        # Plot scatter plots for each series
+        for series_name in x.keys():
+            ax.scatter(x[series_name], y[series_name], label=series_name)
+
+        # Add labels and title
+        ax.set_xlabel('Transport cost')
+        ax.set_ylabel('Purchase delta')
+        ax.set_title('Routing strategies')
+
+        # Add legend
+        ax.legend()
 
         # Gridlines
         ax.grid(True, linestyle='--')
 
         # Show plot
         plt.show()
+
 
 
     # Displays the historic availability of a given route for a given product
@@ -224,8 +280,8 @@ class RoutingV():
             series.append(vals)
             labels.append(str(i))
         
-        avg = Routing_Visualizations.return_mean([serie[j] for serie in series for j in range(len(serie))])
-        bracket = Routing_Visualizations.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
+        avg = RoutingV.return_mean([serie[j] for serie in series for j in range(len(serie))])
+        bracket = RoutingV.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
         
         plt.hist(series, density = True, histtype = 'bar', label = labels)
 
@@ -257,8 +313,8 @@ class RoutingV():
                 series.append([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product] if j != 0])
 
             labels.append(str(i))
-            avgs.append(Routing_Visualizations.return_mean([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]]))
-            bracks.append(Routing_Visualizations.return_brackets([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]],avgs[-1]))
+            avgs.append(RoutingV.return_mean([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]]))
+            bracks.append(RoutingV.return_brackets([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]],avgs[-1]))
             colors.append(list(cols.values())[i])
 
         # bracket = Routing_Visualizations.return_brackets([serie[j] for serie in series for j in range(len(series))], avg)

@@ -192,7 +192,7 @@ class instance_generator():
         self.s_rd_seed = s_rd_seed
         
         ''' Provitional '''
-        M, M_names, K, M_k, K_i, ex_q, ex_d, service_level, hist_demand = CundiBoy.upload_instance()
+        M, M_names, K, M_k, K_i, ex_q, ex_d, ex_p, service_level, hist_demand = CundiBoy.upload_instance()
 
         self.gen_sets()
         self.Suppliers = M[:self.M]
@@ -213,8 +213,8 @@ class instance_generator():
         self.M_kt = {(k,t):[i for i in M_k[k] if i in self.Suppliers] for t in self.TW for k in self.Products}; self.K_it = {(i,t):[k for k in K_i[i] if k in K] for t in self.TW for i in self.Suppliers}
         self.hist_q, self.W_q, self.s_paths_q = CundiBoy.offer.gen_quantities(self,ex_q,**kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q
-
-        self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self,**kwargs['p_params'])
+        
+        self.hist_p, self.W_p, self.s_paths_p = CundiBoy.offer.gen_prices(self,ex_p,**kwargs['p_params'])
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
@@ -423,7 +423,6 @@ class selling_prices():
                 sell_prices[k,o] = inst_gen.salv_price[k] + (inst_gen.opt_price[k]-inst_gen.salv_price[k])*(inst_gen.O_k[k]-o)/inst_gen.O_k[k]
         
         return sell_prices
-
 
 
 class demand():
@@ -803,6 +802,8 @@ class CundiBoy():
         ordered = dict()
         delivered = dict()
 
+        prices = dict()
+
         for obs in data_suppliers.index:
             i = data_suppliers['provider_id'][obs]
             k = data_suppliers['store_product_id'][obs]
@@ -822,9 +823,13 @@ class CundiBoy():
                 if (i,k) not in ordered.keys():
                     ordered[i,k] = 0
                     delivered[i,k] = 0
+                    prices[i,k] = list()
                 
                 ordered[i,k] += data_suppliers['quantity_order'][obs]
                 delivered[i,k] += data_suppliers['quantity_received'][obs]
+
+                prices[i,k].append(data_suppliers['cost'][obs])
+            
 
         for i in M:
             K_i[i] = set(K_i[i])
@@ -834,27 +839,28 @@ class CundiBoy():
             M_k[k] = set(M_k[k])
             M_k[k] = list(M_k[k])
 
+
         service_level = dict()
         for (i,k) in ordered.keys():
             service_level[i,k] = delivered[i,k]/ordered[i,k]
 
-        ex_d = {}
+        ex_q = dict()
+        ex_d = dict()
+        ex_p = dict()
         for k in K:
             ex_d[k] = sum(hist_demand[k])/321
 
-
-        ex_q = dict()
-        for k in K:
             target_demand = ex_d[k]*1.5
             total_vals = sum([service_level[i,k] for i in M_k[k]])
 
             for i in M:
                 if k in K_i[i]:
                     ex_q[i,k] = target_demand*service_level[i,k]/total_vals
+                    ex_p[i,k] = sum(prices[i,k])/len(prices[i,k])
                 else:
                     ex_q[i,k] = 0
 
-        return M, M_names, K, M_k, K_i, ex_q, ex_d, service_level, hist_demand
+        return M, M_names, K, M_k, K_i, ex_q, ex_d, ex_p, service_level, hist_demand
     
 
     class demand():
@@ -926,7 +932,6 @@ class CundiBoy():
 
         
     class offer():
-        pass
         ### Available quantities of products on suppliers
         def gen_quantities(inst_gen:instance_generator,ex_q,**kwargs) -> tuple:
             seed(inst_gen.d_rd_seed + 4)
@@ -993,7 +998,51 @@ class CundiBoy():
             return s_paths_q
 
 
+        ### Prices of products on suppliers
+        def gen_prices(inst_gen:instance_generator,ex_p,**kwargs) -> tuple:
+            seed(inst_gen.d_rd_seed + 5)
+            if kwargs['dist'] == 'd_uniform':   rd_function = randint
+            hist_p = CundiBoy.offer.gen_hist_p(inst_gen,rd_function,ex_p,**kwargs)
+            W_p, hist_p = CundiBoy.offer.gen_W_p(inst_gen,rd_function, hist_p,ex_p,**kwargs)
 
+            if inst_gen.other_params['look_ahead'] != False and ('p' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
+                seed(inst_gen.s_rd_seed + 3)
+                s_paths_p = CundiBoy.offer.gen_empiric_p_sp(inst_gen, hist_p, W_p)
+                return hist_p, W_p, s_paths_p 
+
+            else:
+                return hist_p, W_p, None
+        
+        
+        # Historic prices
+        def gen_hist_p(inst_gen,rd_function,ex_p,**kwargs) -> dict[dict]:
+            hist_p = {t:dict() for t in inst_gen.Horizon}
+            if inst_gen.other_params['historical'] != False and ('p' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+                hist_p[0] = {(i,k):[round(rd_function(ex_p[i,k]*(1-kwargs['r_f_params']),ex_p[i,k]*(1+kwargs['r_f_params'])),2) if i in inst_gen.M_kt[k,t] else 1000 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
+            else:
+                hist_p[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
+
+            return hist_p
+
+
+        # Realized (real) prices
+        def gen_W_p(inst_gen:instance_generator,rd_function,hist_p,ex_p,**kwargs) -> tuple:
+            '''
+            W_p: (dict) quantity of k \in K offered by supplier i \in M on t \in T
+            '''
+            W_p = dict()
+            for t in inst_gen.Horizon:
+                W_p[t] = dict()   
+                for i in inst_gen.Suppliers:
+                    for k in inst_gen.Products:
+                        if i in inst_gen.M_kt[k,t]:
+                            W_p[t][(i,k)] = round(rd_function(ex_p[i,k]*(1-kwargs['r_f_params']),ex_p[i,k]*(1+kwargs['r_f_params'])),2)
+                        else:   W_p[t][(i,k)] = 10000
+
+                        if t < inst_gen.T - 1:
+                            hist_p[t+1][i,k] = hist_p[t][i,k] + [W_p[t][i,k]]
+
+            return W_p, hist_p
 
 
 ''' Auxiliary method to assign custom configurations the instance '''

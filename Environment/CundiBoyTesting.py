@@ -49,7 +49,7 @@ det_rd_seed = 2
 
 # Random Instance
 q_params = {'dist': 'c_uniform', 'r_f_params': 15}          # Offer
-p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+p_params = {'dist': 'd_uniform', 'r_f_params': 0.3}
 
 d_params = {'dist': 'log-normal', 'r_f_params': 10}        # Demand
 
@@ -128,8 +128,9 @@ while ep < num_episodes:
                 #'CG':[MIP_routes,MIP_distances,MIP_loads,MIP_time,MIP_extra_cost],
                 # 'ColGen':[CG_routes,CG_distances,CG_loads,CG_time,CG_extra_cost]
                 }
-            #CG_routes = MIP_routes
-            #RoutingV.compare_routing_strategies(inst_gen, data)
+            CG_routes = MIP_routes
+            RoutingV.compare_routing_strategies(inst_gen, data)
+            print('\n')
             
             action = [RCLc_routes, purchase, demand_compliance]
 
@@ -158,7 +159,25 @@ while ep < num_episodes:
 
 print('Finished')
 
-states,real_actions,backorders,la_decisions,perished,actions,inst_gen = policy1[0]
+# %%
+
+#%% 
+''' Routing Visualizations '''
+for ep in routing_performance.keys():
+    routing_performance[ep]['CG'][0] = [route for route in routing_performance[ep]['CG'][0] if route != [0,0]]
+    routing_performance[ep]['CG'][0] = [route for route in routing_performance[ep]['CG'][0] if route != [0,0]]
+    
+
+RoutingV.render_routes(inst_gen,HyGeSe_routes)
+RoutingV.plot_solutions(inst_gen,routing_performance)
+RoutingV.plot_solutions_standarized(inst_gen,routing_performance)
+
+#%%
+ep = 1
+# RoutingV.render_routes_diff_strategies(inst_gen,[routing_performance[ep]['GA'][0], routing_performance[ep]['CG'][0]])
+
+env.t = 1
+RoutingV.route_total_availability(MIP_routes[1], inst_gen, env)
 
 
 #%% Plots
