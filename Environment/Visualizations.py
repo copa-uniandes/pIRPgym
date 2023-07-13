@@ -10,6 +10,7 @@ from SD_IB_IRP_PPenv import steroid_IRP
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib import cm
+import matplotlib.patches as mpatches
 import numpy as np
 import networkx as nx
 from copy import deepcopy
@@ -24,7 +25,13 @@ class RoutingV():
                 num_routes = len([i for i in performance[0] if i != [0,0]])
                 avg_ut = round(sum(performance[2])/(num_routes*inst_gen.Q), 2)
                 avg_eff = round(sum(performance[1])/(num_routes*inst_gen.d_max), 2)
-                print(f'{strategy} \t{len([i for i in performance[0] if i != [0,0]])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[3],2)} \t{round(performance[4],2)}')
+                rtime = performance[3]
+                if rtime <1000:
+                    print(f'{strategy} \t{len([i for i in performance[0] if i != [0,0]])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(rtime,2)} \t{round(performance[4],2)}')
+                elif rtime <9999:
+                    print(f'{strategy} \t{len([i for i in performance[0] if i != [0,0]])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(rtime,1)} \t{round(performance[4],2)}')
+                else:
+                    print(f'{strategy} \t{len([i for i in performance[0] if i != [0,0]])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(rtime)} \t{round(performance[4],2)}')
             elif strategy == 'HyGeSe':
                 print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t- \t- \t{round(performance[2],2)} \t{round(performance[3],2)}')
             else:
@@ -95,7 +102,7 @@ class RoutingV():
         plt.show()
 
 
-    # Plot routes of various routing strategies to compare
+    # Plot routes of various routing strategies (comparison)
     def render_routes_diff_strategies(inst_gen:instance_generator,solutions:list,save:bool=False):
         G = nx.MultiDiGraph()
 
@@ -144,6 +151,10 @@ class RoutingV():
     def plot_solutions(inst_gen:instance_generator,routing_performance:dict):
         x = dict()
         y = dict()
+
+        markers = ['.','p','x','*','^','P','s']
+        cols = ['tab:red','tab:orange','tab:blue','tab:green','tab:purple']
+
         for strategy in routing_performance[1].keys():
             x[strategy] = list()
             y[strategy] = list()
@@ -161,16 +172,22 @@ class RoutingV():
         fig, ax = plt.subplots()
 
         # Plot scatter plots for each series
-        for series_name in x.keys():
-            ax.scatter(x[series_name], y[series_name], label=series_name)
+        for ii,series_name in enumerate(list(x.keys())):
+            for idx in range(len(list(routing_performance.keys()))):
+                ax.scatter(x[series_name][idx],y[series_name][idx],color=cols[ii],marker=markers[idx])
 
         # Add labels and title
         ax.set_xlabel('Transport cost')
         ax.set_ylabel('Purchase delta')
         ax.set_title('Routing strategies')
 
-        # Add legend
-        ax.legend()
+        # Create legend handles for colors only
+        legend_handles = []
+        for ii, series_name in enumerate(list(x.keys())):
+            legend_handles.append(mpatches.Patch(color=cols[ii], label=series_name))
+
+        # Add legend with custom handles
+        ax.legend(handles=legend_handles)
 
         # Gridlines
         ax.grid(True, linestyle='--')
@@ -179,22 +196,13 @@ class RoutingV():
         plt.show()
 
 
-    # Scatter plot of solutions (transport cost vs. Purchasing delta)
+    # Scatter plot of solutions (NORMALIZED transport cost vs. Purchasing delta)
     def plot_solutions_standarized(inst_gen:instance_generator,routing_performance:dict):
         x = dict()
         y = dict()
         for strategy in routing_performance[1].keys():
             x[strategy] = list()
             y[strategy] = list()
-        
-        # for ep,data in list(routing_performance.items()):
-        #     for strategy in x.keys():
-        #         if strategy != 'HyGeSe':
-        #             x[strategy].append(sum(data[strategy][1]))
-        #             y[strategy].append(data[strategy][4])
-        #         else:
-        #             x[strategy].append(data[strategy][1])
-        #             y[strategy].append(data[strategy][3])
 
         for ep,data in list(routing_performance.items()):
             max_routing = 0
@@ -219,16 +227,25 @@ class RoutingV():
         fig, ax = plt.subplots()
 
         # Plot scatter plots for each series
-        for series_name in x.keys():
-            ax.scatter(x[series_name], y[series_name], label=series_name)
+        markers = ['.','p','x','*','^','P','s']
+        cols = ['tab:red','tab:orange','tab:blue','tab:green','tab:purple']
+        # Plot scatter plots for each series
+        for ii,series_name in enumerate(list(x.keys())):
+            for idx in range(len(list(routing_performance.keys()))):
+                ax.scatter(x[series_name][idx],y[series_name][idx],color=cols[ii],marker=markers[idx])
 
         # Add labels and title
         ax.set_xlabel('Transport cost')
         ax.set_ylabel('Purchase delta')
         ax.set_title('Routing strategies')
 
-        # Add legend
-        ax.legend()
+        # Create legend handles for colors only
+        legend_handles = []
+        for ii, series_name in enumerate(list(x.keys())):
+            legend_handles.append(mpatches.Patch(color=cols[ii], label=series_name))
+
+        # Add legend with custom handles
+        ax.legend(handles=legend_handles)
 
         # Gridlines
         ax.grid(True, linestyle='--')
@@ -237,6 +254,85 @@ class RoutingV():
         plt.show()
 
 
+    # Plot solutions in vertical lines
+    def plot_vertical_lines(inst_gen:instance_generator,routing_performance:dict,st:str,name:str,col:str):
+        routing_costs = list()
+        purchasing_delta = list()
+
+        t_vals = list()
+        p_vals = list()
+
+        for ep,data in list(routing_performance.items()):
+            ttt = list()
+            ppp = list()
+
+            max_routing = 0
+            max_purchase = 0
+            for strategy in data.keys():
+                if strategy != 'HyGeSe':
+                    routing_c = sum(data[strategy][1]); purchase_c = data[strategy][4]
+                    ttt.append(routing_c); ppp.append(purchase_c)
+                    if routing_c > max_routing: max_routing = routing_c
+                    if purchase_c > max_purchase: max_purchase = purchase_c
+                else:
+                    routing_c = data[strategy][1]; purchase_c = data[strategy][3]
+                    ttt.append(routing_c); ppp.append(purchase_c)
+                    if routing_c > max_routing: max_routing = routing_c
+                    if purchase_c > max_purchase: max_purchase = purchase_c
+                
+                if st==strategy:
+                    t_vals.append(routing_c)
+                    p_vals.append(purchase_c) 
+            
+            for i in range(len(ttt)):
+                routing_costs.append(ttt[i]/max_routing)
+                purchasing_delta.append(ppp[i]/max_purchase)
+
+            t_vals[-1]/=max_routing
+            p_vals[-1]/=max_purchase
+
+        list1=routing_costs;list2=purchasing_delta; a=t_vals;b=p_vals
+
+        # Calculate minimum and maximum values
+        min_val1, max_val1 = min(list1), max(list1)
+        min_val2, max_val2 = min(list2), max(list2)
+
+        # Create a new figure and axis
+        fig, ax = plt.subplots()
+
+        # Plot the values of list a
+        ax.scatter([0.5]*len(a), a, color=col, label='List a',marker='D')
+
+        # Plot the values of list b
+        ax.scatter([1.5]*len(b), b, color=col, label='List b',marker='D')
+        
+        # Plot vertical lines for list1
+        ax.vlines(0.5, min_val1, max_val1, color='black', linewidth=1)
+        ax.hlines([min_val1, max_val1], 0.45, 0.55, colors='black', linewidth=2)
+
+        # Plot vertical lines for list2
+        ax.vlines(1.5, min_val2, max_val2, color='black', linewidth=1)
+        ax.hlines([min_val2, max_val2], 1.45, 1.55, colors='black', linewidth=2)
+
+        
+
+        # Set the x-axis limits and labels
+        ax.set_xlim(0, 2)
+        ax.set_xticks([0.5, 1.5])
+        ax.set_xticklabels(['Transport cost', 'Purchase delta'], fontsize=12)
+
+        # Set the y-axis limits
+        min_val = min(min_val1, min_val2)
+        max_val = max(max_val1, max_val2)
+        ax.set_ylim(min_val - 0.1*(max_val - min_val), max_val + 0.1*(max_val - min_val))
+
+        # Add labels and title
+        ax.set_ylabel('Values', fontsize=12)
+        ax.set_title(f'Performance of {name}', fontsize=14)
+
+
+        # Show the plot
+        plt.show()
 
     # Displays the historic availability of a given route for a given product
     def route_availability_per_product(route:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
@@ -266,16 +362,16 @@ class RoutingV():
     
 
     # Displays the historic total availability of the suppiers of a given route
-    def route_total_availability(route:list, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
+    def route_total_availability(route:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool = False):
         series = list()
         labels = list()
         for i in route[1:-1]:
             vals = list()
-            for k in inst_gen.Products:
+            for k in inst_gen.K_it[i,0]:
                 if include_ceros:
-                    vals.extend(inst_gen.hist_q[env.t][i,k])    
+                    vals.extend(inst_gen.hist_q[0][i,k])    
                 else:
-                    vals.extend([ii for ii in inst_gen.hist_q[env.t][i,k] if ii != 0])
+                    vals.extend([ii for ii in inst_gen.hist_q[0][i,k] if ii != 0])
 
             series.append(vals)
             labels.append(str(i))
@@ -334,13 +430,14 @@ class RoutingV():
     
 
     # Displays the historic total avaiability of different routes
-    def routes_total_availability(routes:list, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
+    def routes_total_availability(routes:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool=False,title:str=''):
         series = list()
         labels = list()
         avgs = list()
         bracks = list()
         cols = mcolors.TABLEAU_COLORS
         # colors = [cols[key] for i, key in enumerate(list(cols.keys())) if i < len(routes)]
+        cols = ['tab:purple','tab:red','tab:green','tab:brown']
         colors = list()
 
         for i, route in enumerate(routes):
@@ -354,21 +451,21 @@ class RoutingV():
 
             series.append(vals) 
             labels.append(str(i))
-            avgs.append(Routing_Visualizations.return_mean(vals))
-            bracks.append(Routing_Visualizations.return_brackets(vals, avgs[-1]))
-            colors.append(list(cols.values())[i])
+            avgs.append(RoutingV.return_mean(vals))
+            bracks.append(RoutingV.return_brackets(vals, avgs[-1]))
+            colors.append(cols[i])
 
 
 
-        plt.hist(series, density = True, histtype = 'bar', label = labels)
+        plt.hist(series,density=True,histtype='bar',color=colors,label=labels)
 
         for i, route in enumerate(routes):
-            plt.axvline(x = avgs[i], ymin = 0, ymax = 0.975, color = colors[i])
-            plt.axvline(x = bracks[i][0], ymin = 0, ymax = 0.9, color = colors[i], linestyle = ':', linewidth = 1.5)
-            plt.axvline(x = bracks[i][1], ymin = 0, ymax = 0.9, color = colors[i], linestyle = ':', linewidth = 1.5)
+            plt.axvline(x=avgs[i],ymin=0,ymax=0.975,color=colors[i])
+            plt.axvline(x=bracks[i][0],ymin=0,ymax=0.9,color=colors[i],linestyle=':',linewidth=1)
+            plt.axvline(x=bracks[i][1],ymin=0,ymax=0.9,color=colors[i],linestyle=':',linewidth=1)
 
         plt.legend(title = 'Routes', prop={'size':10})
-        plt.title(f'Total Availability')
+        plt.title(f'Total Availability - {title}')
         plt.xlabel('Available units per period')
         plt.ylabel('Frequency')
         plt.show()
@@ -376,7 +473,10 @@ class RoutingV():
 
     # Auxiliary function to return mean 
     def return_mean(values:list):
-        return (sum(values)/len(values))
+        if len(values)==0:
+            return 0
+        else:
+            return (sum(values)/len(values))
 
 
     # Auxiliary function to return limits of std interval

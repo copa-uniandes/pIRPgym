@@ -210,8 +210,9 @@ class instance_generator():
         self.i00 = self.gen_initial_inventory(I0)
 
         # Offer
-        self.M_kt = {(k,t):[i for i in M_k[k] if i in self.Suppliers] for t in self.TW for k in self.Products}; self.K_it = {(i,t):[k for k in K_i[i] if k in K] for t in self.TW for i in self.Suppliers}
+        self.M_kt = {(k,t):[i for i in M_k[k] if i in self.Suppliers] for t in self.TW for k in self.Products}; self.K_it = {(i,t):[k for k in K_i[i] if k in self.Products] for t in self.TW for i in self.Suppliers}
         self.hist_q, self.W_q, self.s_paths_q = CundiBoy.offer.gen_quantities(self,ex_q,**kwargs['q_params'])
+        self.ex_q = ex_q
         if self.s_paths_q == None: del self.s_paths_q
         
         self.hist_p, self.W_p, self.s_paths_p = CundiBoy.offer.gen_prices(self,ex_p,**kwargs['p_params'])
@@ -582,7 +583,7 @@ class offer():
     
 
     ### Available quantities of products on suppliers
-    def gen_quantities(inst_gen: instance_generator, **kwargs) -> tuple:
+    def gen_quantities(inst_gen:instance_generator,**kwargs) -> tuple:
         seed(inst_gen.d_rd_seed + 4)
         if kwargs['dist'] == 'c_uniform':   rd_function = randint
         hist_q = offer.gen_hist_q(inst_gen, rd_function, **kwargs)
@@ -599,7 +600,7 @@ class offer():
 
 
     # Historic availabilities
-    def gen_hist_q(inst_gen: instance_generator, rd_function, **kwargs) -> dict[dict]:
+    def gen_hist_q(inst_gen:instance_generator,rd_function,**kwargs) -> dict[dict]:
         hist_q = {t:dict() for t in inst_gen.Horizon}
         factor = {i:1+random()*2 for i in inst_gen.Suppliers}
         if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -611,7 +612,7 @@ class offer():
 
     
     # Realized (real) availabilities
-    def gen_W_q(inst_gen: instance_generator, rd_function, hist_q, **kwargs) -> tuple:
+    def gen_W_q(inst_gen: instance_generator,rd_function,hist_q,**kwargs) -> tuple:
         '''
         W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
         '''
@@ -631,7 +632,7 @@ class offer():
 
 
     # Availabilitie's sample paths
-    def gen_empiric_q_sp(inst_gen: instance_generator, hist_q, W_q) -> dict[dict]:
+    def gen_empiric_q_sp(inst_gen:instance_generator,hist_q,W_q) -> dict[dict]:
         s_paths_q = dict()
         for t in inst_gen.Horizon: 
             s_paths_q[t] = dict()
@@ -936,7 +937,7 @@ class CundiBoy():
         def gen_quantities(inst_gen:instance_generator,ex_q,**kwargs) -> tuple:
             seed(inst_gen.d_rd_seed + 4)
             if kwargs['dist'] == 'c_uniform':   rd_function = randint
-            hist_q = CundiBoy.offer.gen_hist_q(inst_gen, ex_q, rd_function, **kwargs)
+            hist_q = CundiBoy.offer.gen_hist_q(inst_gen,ex_q,rd_function,**kwargs)
 
             if inst_gen.other_params['look_ahead'] != False and ('q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
                 seed(inst_gen.s_rd_seed + 1)
@@ -952,9 +953,8 @@ class CundiBoy():
         # Historic availabilities
         def gen_hist_q(inst_gen:instance_generator,ex_q,rd_function,**kwargs) -> dict[dict]:
             hist_q = {t:dict() for t in inst_gen.Horizon}
-            factor = {i:1+random()*2 for i in inst_gen.Suppliers}
             if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
-                hist_q[0] = {(i,k):[round(rd_function(ex_q[i,k]-kwargs['r_f_params'], ex_q[i,k]+rd_function(kwargs['r_f_params'])),2)*factor[i] if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
+                hist_q[0] = {(i,k):[max(round(rd_function(ex_q[i,k]-kwargs['r_f_params'],ex_q[i,k]+kwargs['r_f_params']),2),0) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
             else:
                 hist_q[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
 
@@ -972,7 +972,7 @@ class CundiBoy():
                 for i in inst_gen.Suppliers:
                     for k in inst_gen.Products:
                         if i in inst_gen.M_kt[k,t]:
-                            W_q[t][(i,k)] = round(rd_function(ex_q[i,k]-kwargs['r_f_params'],ex_q[i,k]+kwargs['r_f_params']),2)
+                            W_q[t][(i,k)] = max(round(rd_function(ex_q[i,k]-kwargs['r_f_params'],ex_q[i,k]+kwargs['r_f_params']),2),0)
                         else:   W_q[t][(i,k)] = 0
 
                         if t < inst_gen.T - 1:

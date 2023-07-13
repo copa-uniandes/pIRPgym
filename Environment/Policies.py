@@ -15,6 +15,7 @@ import sys, os
 
 ### Optimizer
 import gurobipy as gu
+import hygese as hgs
 
 
 
@@ -812,6 +813,7 @@ class policy_generator():
 
                 model.update()
                 model.setParam('OutputFlag',0)
+                model.setParam('MIPGap',0.1)
                 model.optimize()
 
                 routes, distances, loads = policy_generator.Routing.MIP.get_MIP_decisions(inst_gen, model, V, A, distances, requirements)
@@ -846,7 +848,7 @@ class policy_generator():
                         model.addConstr(gu.quicksum(x[i,j,f] for j in V if (i,j) in A) - gu.quicksum(x[j,i,f] for j in V if (j,i) in A) == 0)
 
                     # 6. Max distance per vehicle
-                    model.addConstr(gu.quicksum(distances[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
+                    # model.addConstr(gu.quicksum(distances[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
 
                     # 7. Max capacity per vehicle
                     model.addConstr(gu.quicksum(requirements[i] * gu.quicksum(x[i,j,f] for j in V if (i,j) in A) for i in V) <= inst_gen.Q)
