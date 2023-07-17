@@ -117,28 +117,28 @@ while ep < num_episodes:
             [purchase,demand_compliance], la_dec = policy_generator.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
 
             ''' Routing '''
-            nn_routes,nn_distances,nn_loads,nn_time = policy_generator.Routing.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t);print('✅ NN routing')                       # Nearest Neighbor
-            nn_extra_cost = env.compute_solution_real_cost(inst_gen,nn_routes,purchase)
-            RCLc_routes,_,RCLc_distances,RCLc_loads,RCLc_time = policy_generator.Routing.RCL_constructive.RCL_routing(purchase,inst_gen,env.t);print('✅ RCL routing')         # RCL based constructive
-            RCLc_extra_cost = env.compute_solution_real_cost(inst_gen,RCLc_routes,purchase)
-            [GA_routes,GA_distances,GA_loads,GA_time],GA_top = policy_generator.Routing.GA.GA_routing(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
-            GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)
-            HyGeSe_routes,HyGeSe_distance,HyGeSe_time = policy_generator.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=time_limit);print('✅ HGS routing')  # Hybrid Genetic Search (CVRP)
-            HyGeSe_extra_cost = env.compute_solution_real_cost(inst_gen,HyGeSe_routes,purchase)
-            MIP_routes, MIP_distances,MIP_loads, MIP_time = policy_generator.Routing.MIP.MIP_routing(purchase,inst_gen,env.t);print('✅ MIP routing')                          # Complete MIP
-            MIP_extra_cost = env.compute_solution_real_cost(inst_gen,MIP_routes,purchase)   
-            # CG_routes,CG_distances,CG_loads,CG_time = policy_generator.Routing.CG_routing(purchase,inst_gen,env.t);print('✅ Column Generation routing')                                          # Column Generation Algorithm
-            # CG_extra_cost = env.compute_solution_real_cost(inst_gen,CG_routes,purchase)                         
+            # nn_routes,nn_distances,nn_loads,nn_time = policy_generator.Routing.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t);print('✅ NN routing')                       # Nearest Neighbor
+            # nn_extra_cost = env.compute_solution_real_cost(inst_gen,nn_routes,purchase)
+            # RCLc_routes,_,RCLc_distances,RCLc_loads,RCLc_time = policy_generator.Routing.RCL_constructive.RCL_routing(purchase,inst_gen,env.t);print('✅ RCL routing')         # RCL based constructive
+            # RCLc_extra_cost = env.compute_solution_real_cost(inst_gen,RCLc_routes,purchase)
+            # [GA_routes,GA_distances,GA_loads,GA_time],GA_top = policy_generator.Routing.GA.GA_routing(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
+            # GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)
+            # HyGeSe_routes,HyGeSe_distance,HyGeSe_time = policy_generator.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=time_limit);print('✅ HGS routing')  # Hybrid Genetic Search (CVRP)
+            # HyGeSe_extra_cost = env.compute_solution_real_cost(inst_gen,HyGeSe_routes,purchase)
+            # MIP_routes, MIP_distances,MIP_loads, MIP_time = policy_generator.Routing.MIP.MIP_routing(purchase,inst_gen,env.t);print('✅ MIP routing')                          # Complete MIP
+            # MIP_extra_cost = env.compute_solution_real_cost(inst_gen,MIP_routes,purchase)   
+            CG_routes,CG_distances,CG_loads,CG_time = policy_generator.Routing.Column_Generation.CG_routing(purchase,inst_gen,env.t);print('✅ Column Generation routing')                                          # Column Generation Algorithm
+            CG_extra_cost = env.compute_solution_real_cost(inst_gen,CG_routes,purchase)                         
 
             data = {
-                'NN':[nn_routes,nn_distances,nn_loads,nn_time,nn_extra_cost],
-                'RCL':[RCLc_routes,RCLc_distances, RCLc_loads,RCLc_time,RCLc_extra_cost],
-                'GA':[GA_routes,GA_distances,GA_loads,GA_time,GA_extra_cost,GA_top],
-                'HyGeSe':[HyGeSe_routes,HyGeSe_distance,HyGeSe_time,HyGeSe_extra_cost],
-                'CG':[MIP_routes,MIP_distances,MIP_loads,MIP_time,MIP_extra_cost],
-                # 'ColGen':[CG_routes,CG_distances,CG_loads,CG_time,CG_extra_cost]
+                # 'NN':[nn_routes,nn_distances,nn_loads,nn_time,nn_extra_cost],
+                # 'RCL':[RCLc_routes,RCLc_distances, RCLc_loads,RCLc_time,RCLc_extra_cost],
+                # 'GA':[GA_routes,GA_distances,GA_loads,GA_time,GA_extra_cost,GA_top],
+                # 'HyGeSe':[HyGeSe_routes,HyGeSe_distance,HyGeSe_time,HyGeSe_extra_cost],
+                # 'CG':[MIP_routes,MIP_distances,MIP_loads,MIP_time,MIP_extra_cost],
+                'ColGen':[CG_routes,CG_distances,CG_loads,CG_time,CG_extra_cost]
                 }
-            CG_routes = MIP_routes
+            # CG_routes = MIP_routes
             RoutingV.compare_routing_strategies(inst_gen, data)
             print('\n')
             

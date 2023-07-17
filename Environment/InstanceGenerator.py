@@ -305,6 +305,9 @@ class instance_generator():
         return sample
     
 
+
+
+
 class costs():
 
     ### Holding cost

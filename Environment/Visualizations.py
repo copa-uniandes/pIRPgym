@@ -86,6 +86,7 @@ class RoutingV():
                        'black', 'red', 'green', 'blue', 'purple', 'orange', 'pink', 'grey', 
                        'yellow', 'tab:red', 'tab:green', 'tab:blue', 'tab:purple', 'tab:orange', 
                         'tab:pink', 'tab:grey']
+        colors = ['red','orange','blue','green','tab:purple']
         for edge in edges:
             color = colors[orders[edge]]
             edge_colors.append(color)
