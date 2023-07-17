@@ -5,7 +5,7 @@ from Policies import policy_generator
 from Visualizations import RoutingV
 
 
-########################################## Instance generator ##########################################
+########################################## Instance generator ###########################################
 # SD-IB-IRP-PP model's parameters
 T = 7
 M = 15
