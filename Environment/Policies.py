@@ -437,7 +437,6 @@ class policy_generator():
 
 
     class Routing():
-
         ''' Nearest Neighbor (NN) heuristic '''
         class Nearest_Neighbor():
             # Generate routes

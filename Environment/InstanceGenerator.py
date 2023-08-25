@@ -595,7 +595,7 @@ class offer():
             seed(inst_gen.s_rd_seed + 1)
             W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
             s_paths_q = offer.gen_empiric_q_sp(inst_gen, hist_q, W_q)
-            return hist_q, W_q, s_paths_q 
+            return hist_q, W_q, s_paths_q
 
         else:
             W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
