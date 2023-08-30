@@ -11,6 +11,13 @@ import os
 
 
 class instance_generator():
+    ''' Main Instance Generator instance. Generate one of the following instances:
+    -  generate_random_instance
+    -  generate_basic_random_instance
+    -  generate_CundiBoy_instance
+    -  upload_CVRP_instance
+    '''
+
 
     # Initalization method for an instange_generator object
     def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'],
@@ -557,7 +564,6 @@ class demand():
         return s_paths_d
         
 
-
 class offer():
     
     ### Availabilty of products on suppliers
@@ -1048,9 +1054,10 @@ class CundiBoy():
             return W_p, hist_p
 
 
+
+
+
 ''' Auxiliary method to assign custom configurations the instance '''
-
-
 def assign_env_config(self, kwargs):
     for key, value in kwargs.items():
         setattr(self, key, value)

@@ -16,43 +16,7 @@ from InstanceGenerator import instance_generator
 from BuildingBlocks import Routing_management, Inventory_management 
 
 ################################ Description ################################
-'''
-State (S_t): The state according to Powell (three components): 
-    - Physical State (R_t):
-        state:  Current available inventory (!*): (dict)  Inventory of product k \in K of age o \in O_k
-                When backlogsb are activated, will appear under age 'B'
-    - Other deterministic info (Z_t):
-        p: Prices: (dict) Price of product k \in K at supplier i \in M
-        q: Available quantities: (dict) Available quantity of product k \in K at supplier i \in M
-        h: Holding cost: (dict) Holding cost of product k \in K
-        historical_data: (dict) historical log of information (optional)
-    - Belief State (B_t):
-        sample_paths: Simulated sample paths (optional)
 
-Action (X_t): The action can be seen as a three level-decision. These are the three layers:
-    1. Routes to visit the selected suppliers
-    2. Quantities to purchase on each supplier
-    3. Demand compliance plan, dispatch decision
-    4. (Optional) Backlogs compliance
-    
-    Accordingly, the action will be a list composed as follows:
-    X = [routes, purchase, demand_compliance, backorders]
-        - routes: (list) list of lists, each with the nodes visited on the route (including departure and arriving to the depot)
-        - purchase: (dict) Units to purchase of product k \in K at supplier i \in M
-        - demand_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the demand 
-        - backlogs_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the backlogs
-
-
-Exogenous information (W): The stochastic factors considered on the environment:
-    Demand (dict) (*): Key k 
-    Prices (dict) (*): Keys (i,k)
-    Available quantities (dict) (*): Keys (i,k)
-    Holding cost (dict) (*): Key k
-
-(!*) Available inventory at the decision time. Never age 0 inventory.       
-(*) Varying the stochastic factors might be of interest. Therefore, the deterministic factors
-    will be under Z_t and stochastic factors will be generated and presented in the W_t
-'''
 
 ################################## Steroid IRP class ##################################
 
@@ -60,17 +24,55 @@ class steroid_IRP(gym.Env):
     
     # Initialization method
     def __init__(self,routing=True,inventory=True,perishability=True):
-        
-        assert inventory >= bool(perishability), 'Perishability only available with Inventory Problem'
-        self.config = {'routing': routing, 'inventory': inventory, 'perishability': perishability}
+        '''
+        State (S_t): The state according to Powell (three components): 
+            - Physical State (R_t):
+                state:  Current available inventory (!*): (dict)  Inventory of product k \in K of age o \in O_k
+                        When backlogsb are activated, will appear under age 'B'
+            - Other deterministic info (Z_t):
+                p: Prices: (dict) Price of product k \in K at supplier i \in M
+                q: Available quantities: (dict) Available quantity of product k \in K at supplier i \in M
+                h: Holding cost: (dict) Holding cost of product k \in K
+                historical_data: (dict) historical log of information (optional)
+            - Belief State (B_t):
+                sample_paths: Simulated sample paths (optional)
+
+        Action (X_t): The action can be seen as a three level-decision. These are the three layers:
+            1. Routes to visit the selected suppliers
+            2. Quantities to purchase on each supplier
+            3. Demand compliance plan, dispatch decision
+            4. (Optional) Backlogs compliance
+            
+            Accordingly, the action will be a list composed as follows:
+            X = [routes, purchase, demand_compliance, backorders]
+                - routes: (list) list of lists, each with the nodes visited on the route (including departure and arriving to the depot)
+                - purchase: (dict) Units to purchase of product k \in K at supplier i \in M
+                - demand_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the demand 
+                - backlogs_compliance: (dict) Units of product k in K of age o \in O_k used to satisfy the backlogs
+
+
+        Exogenous information (W): The stochastic factors considered on the environment:
+            Demand (dict) (*): Key k 
+            Prices (dict) (*): Keys (i,k)
+            Available quantities (dict) (*): Keys (i,k)
+            Holding cost (dict) (*): Key k
+
+        (!*) Available inventory at the decision time. Never age 0 inventory.       
+        (*) Varying the stochastic factors might be of interest. Therefore, the deterministic factors
+            will be under Z_t and stochastic factors will be generated and presented in the W_t
+        '''
+
+        assert inventory >= bool(perishability),'Perishability only available with Inventory Problem'
+        self.config = {'routing':routing,'inventory':inventory,'perishability':perishability}
         
 
     # Reseting the environment
-    def reset(self,inst_gen:instance_generator,strong_rate:bool=True,return_state:bool = False):
+    def reset(self,inst_gen:instance_generator,return_state:bool=False,strong_rate:bool=True):
         '''
         Reseting the environment. Generate or upload the instance.
         
         PARAMETERS:
+        inst_gen: instange_generator object
         return_state: Indicates whether the state is returned
         '''  
         # EDITABLE The return statement can be set to return any of the parameters, historics, 
@@ -83,9 +85,9 @@ class steroid_IRP(gym.Env):
             if self.config['perishability'] == 'ages':
                 self.state = Inventory_management.perish_per_age_inv.reset(inst_gen)
                 
+        if return_state:
+            return self.state
 
-            if return_state:
-                return self.state
 
     # Step 
     def step(self,action:list,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False):
@@ -252,7 +254,12 @@ class steroid_IRP(gym.Env):
                         f'Demand of product {k} was not fulfilled'
 
 
-    # Generates empty dicts 
+    # Printing a representation of the environment (repr(env))
+    def __repr__(self):
+        return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance.'
+    
+
+    ''' Generates empty dicts '''
     def generate_empty_inv_action(self,inst_gen:instance_generator) -> tuple[dict,dict]:
         purchase = {(i,k):0 for i in inst_gen.Suppliers for k in inst_gen.Products}
         demand_compliance = {(k,o):0 for k in inst_gen.Products for o in [0]+inst_gen.Ages[k]}
@@ -283,7 +290,7 @@ class steroid_IRP(gym.Env):
         return extra_cost
 
 
-    # Visualize the inventory
+    ''' Visualize the inventory'''
     def print_inventory(self,inst_gen:instance_generator) -> None:
         max_O = max([inst_gen.O_k[k] for k in inst_gen.Products])
         listamax = [[self.state[k,o] for o in inst_gen.Ages[k]] for k in inst_gen.Products]
@@ -293,7 +300,7 @@ class steroid_IRP(gym.Env):
         print(df)
 
 
-    # Print state and main parameters
+    ''' Print state and main parameters'''
     def print_state(self,inst_gen:instance_generator) -> None:
         print(f'################################### STEP {self.t} ###################################')
         print('INVENTORY')
@@ -328,7 +335,7 @@ class steroid_IRP(gym.Env):
         print('\n')
 
 
-    # Print an action
+    ''' Print an action'''
     def print_action(self,action,inst_gen:instance_generator) -> None:
         if self.config['routing']:
             del action[0]
@@ -357,8 +364,3 @@ class steroid_IRP(gym.Env):
                 print(string)
 
             print('\n')
-
-
-    # Printing a representation of the environment (repr(env))
-    def __repr__(self):
-        return f'Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance.'

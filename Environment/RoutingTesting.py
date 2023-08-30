@@ -80,23 +80,24 @@ purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
 # Routing Policies
 route_planner = policy_generator.Routing
 
-# nn_routes, nn_distances, nn_loads, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t)                      # Nearest Neighbor
-# RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase,inst_gen,env.t)         # RCL based constructive
-# GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen,env.t,rd_seed=0,time_limit=30)         # Genetic Algorithm
+nn_routes, nn_distances, nn_loads, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t)                      # Nearest Neighbor
+RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase,inst_gen,env.t)         # RCL based constructive
+GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen,env.t,rd_seed=0,time_limit=30)         # Genetic Algorithm
 # HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t)                        # Hybrid Genetic Search (CVRP)
-MIP_routes, MIP_distances, MIP_loads, MIP_time = route_planner.MIP.MIP_routing(purchase,inst_gen)                                                        # Complete MIP
+# MIP_routes, MIP_distances, MIP_loads, MIP_time = route_planner.MIP.MIP_routing(purchase,inst_gen)                                                        # Complete MIP
 
 CG_routes, CG_distances, CG_loads, CG_time = route_planner.Column_Generation.CG_routing(purchase,inst_gen,env.t)      # Column Generation algorithm
+
 
 #%%######################################### Visualizations ##########################################
 # Routing strategies comparison
 data = {
-        # 'NN':[nn_routes,nn_distances, nn_loads, nn_time,0],
-        # 'RCL':[RCLc_routes, RCLc_distances, RCLc_loads, RCLc_time,0],
-        # 'GA':[GA_routes, GA_distances, GA_loads, GA_time,0],
+        'NN':[nn_routes,nn_distances, nn_loads, nn_time,0],
+        'RCL':[RCLc_routes, RCLc_distances, RCLc_loads, RCLc_time,0],
+        'GA':[GA_routes, GA_distances, GA_loads, GA_time,0],
         # 'HyGeSe':[HyGeSe_routes, HyGeSe_distance, HyGeSe_time,0],
         # 'MIP':[MIP_routes, MIP_distances, MIP_loads, MIP_time,0]
-        'ColGen':[CG_routes, CG_distances, CG_loads, CG_time,0]
+        # 'ColGen':[CG_routes, CG_distances, CG_loads, CG_time,0]
         }
 
 
@@ -129,47 +130,3 @@ RoutingV.routes_total_availability(routes, inst_gen, env)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#%% Routing d-CVRP instance  
-set = 'Li'
-instance = 'Li_21.vrp'
-# set = 'Golden'
-# instance = 'Golden_1.vrp'
-
-purchase = inst_gen.CVRP_instance(set, instance)
-
-
-#%% 
-### Step
-# Policies
-nn_routes, nn_distance = policy_generator.Routing.nearest_neighbor(purchase, inst_gen)      #  Nearest neighbor
-#HyGeSe_routes, HyGeSe_distance = policy_generator.Routing.HyGeSe(purchase, inst_gen)       # Hybrid Genetic Search
-MIP_routes, MIP_distance = policy_generator.Routing.MIP_routing(purchase, inst_gen)
-
-
-
-# Call step function, transition
-action = [nn_routes, purchase]
-state, reward, done, real_action, _ = env.step(action, inst_gen, False)
-
-#%%

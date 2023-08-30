@@ -10,7 +10,7 @@ from SD_IB_IRP_PPenv import steroid_IRP
 ### Basic Librarires
 import numpy as np; from copy import deepcopy; import matplotlib.pyplot as plt
 from numpy.random import seed, randint, choice
-from time import process_time
+from time import time, process_time
 import sys, os
 
 ### Optimizer
@@ -587,7 +587,7 @@ class policy_generator():
 
                 # Genetic process
                 generation = 0
-                while process_time()-start < time_limit:
+                while time()-start < time_limit:
                     ### Elitism
                     Elite = policy_generator.Routing.GA.elite_class(FOs, Population_iter, Elite_size)
 
@@ -796,7 +796,6 @@ class policy_generator():
                 return new_routes
                         
                     
-
         ''' Mixed Integer Program '''
         class MIP():
             # Generate routes
