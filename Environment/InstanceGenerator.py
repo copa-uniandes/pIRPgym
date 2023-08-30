@@ -168,7 +168,7 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
-        self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
+        self.O_k = {k:randint(3,self.T+1) for k in self.Products}
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
 
         self.i00 = self.gen_initial_inventory(I0)
