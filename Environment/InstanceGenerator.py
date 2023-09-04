@@ -184,6 +184,12 @@ class instance_generator():
         # Demand
         self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
+
+        # Selling prices
+        self.salv_price = selling_prices.gen_salvage_price(self)
+        self.opt_price = selling_prices.gen_optimal_price(self)
+
+        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])

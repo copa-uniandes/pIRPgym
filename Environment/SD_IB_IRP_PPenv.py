@@ -90,7 +90,10 @@ class steroid_IRP(gym.Env):
 
 
     # Step 
-    def step(self,action:list,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False):
+    def step(self,action:dict,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False):
+        '''
+        
+        '''
         if validate_action:
             self.action_validity(action, inst_gen)
 
@@ -101,34 +104,33 @@ class steroid_IRP(gym.Env):
             '''
             real_action = []
             if self.config['routing']:
-                real_routing = action[0]
-                real_purchase = {(i,k): min(action[1][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
+                real_routing = action['routing']
+                real_purchase = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
 
             if self.config['inventory']:
                 if not self.config['routing']:
-                    real_purchase = {(i,k): min(action[0][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
+                    real_purchase = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
+
                 if self.config['perishability'] == 'ages' and not self.config['routing']:
                     if inst_gen.other_params["demand_type"] == "aggregated":
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[1],real_purchase,self.strong_rate)
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
                     else:
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action[1],real_purchase,self.strong_rate)
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
+
                 elif  self.config['perishability'] == 'ages':
                     if inst_gen.other_params["demand_type"] == "aggregated":
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action[2],real_purchase,self.strong_rate)
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
                     else:
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action[2],real_purchase,self.strong_rate)
+                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
                 
                 #real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
             
         else:
             if self.config['routing']:
-                real_routing, real_purchase  = action[0:2]
+                real_routing, real_purchase = action['routing'], action['purchase']
             
             if self.config['inventory']:
-                if not self.config['routing']:
-                        real_purchase, real_demand_compliance  = action[0:2]
-                else:
-                    real_demand_compliance = action[2]
+                    real_purchase, real_demand_compliance  = action['purchase'], action['demand_compliance']
 
         if inst_gen.other_params['backorders'] == 'backlogs':
             real_back_o_compliance = action[-1]
@@ -142,18 +144,18 @@ class steroid_IRP(gym.Env):
                     s_tprime, back_orders, perished = Inventory_management.perish_per_age_inv.update_inventory_age(inst_gen, self, real_purchase, real_demand_compliance, warnings)
 
         # Reward
-        reward = []
+        reward = dict()
         if self.config['routing']:
             transport_cost = Routing_management.evaluate_routes(inst_gen, real_routing)
-            reward.append(transport_cost)
+            reward['transport cost'] = transport_cost
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':
                 if inst_gen.other_params["demand_type"] == "aggregated":
                     purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
                 else:
                     purchase_cost, holding_cost, backorders_cost = Inventory_management.perish_per_age_inv.compute_costs_age(inst_gen, self, real_purchase, real_demand_compliance, s_tprime, perished)
-                reward += [purchase_cost, holding_cost, backorders_cost]
-            reward += [Inventory_management.perish_per_age_inv.compute_earnings(inst_gen,real_demand_compliance)]
+                reward['purchase cost'], reward['holding cost'], reward['backorders cost'] = purchase_cost, holding_cost, backorders_cost
+            reward['earnings'] = Inventory_management.perish_per_age_inv.compute_earnings(inst_gen,real_demand_compliance)
 
         # Time step update and termination check
         self.t += 1
@@ -164,13 +166,13 @@ class steroid_IRP(gym.Env):
             _ = {}
 
         # Action assembly
-        real_action = []
+        real_action = dict()
         if self.config['routing']:
-            real_action += [real_routing, real_purchase]
-            if self.config['inventory']:
-                real_action.append(real_demand_compliance)
-        elif self.config['inventory']:
-            real_action += [real_purchase, real_demand_compliance]
+            real_action['routing'] = real_routing
+            real_action['purchase'] = real_purchase
+        if self.config['inventory']:
+            real_action['purchase'] = real_purchase
+            real_action['demand_compliance'] = real_demand_compliance
 
         # State update
         if not done:

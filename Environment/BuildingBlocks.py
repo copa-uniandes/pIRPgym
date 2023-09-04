@@ -34,7 +34,6 @@ class Inventory_management():
             
             return state
     
-    
         def get_real_dem_compl_FIFO(inst_gen, env, real_purchase):
             real_demand_compliance={}
             for k in inst_gen.Products:
@@ -164,7 +163,6 @@ class Inventory_management():
             earnings = sum(inst_gen.sell_prices[k,o]*demand_compliance[k,o] for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1))
         
             return earnings
-
 
         def compute_costs_age(inst_gen, env, purchase, demand_compliance, s_tprime, perished):            
             purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)

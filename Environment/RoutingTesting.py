@@ -13,7 +13,7 @@ K = 10
 F = 15
 
 Q = 2000
-d_max = 2000 
+d_max = 2000
 
 backorders = False              # Feature's parameters
 stochastic_params = ['d','q']
