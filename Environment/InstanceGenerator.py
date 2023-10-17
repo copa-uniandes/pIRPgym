@@ -728,6 +728,7 @@ class offer():
     
 
 
+
 class locations():
 
     def generate_grid(V: range): 
