@@ -3,7 +3,7 @@
 ################################## Modules ##################################
 """
 ### SC classes
-from .InstanceGeneration.InstanceGenerator import instance_generator
+from .InstanceGenerator import instance_generator
 from .pIRPenv import steroid_IRP
 
 ### Basic Librarires

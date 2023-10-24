@@ -9,12 +9,12 @@ import time
 from numpy.random import seed, random, randint, lognormal
 import os
 
-from .demand import demand
-from .costs import costs
-from .selling_prices import selling_prices
-from .offer import offer
-from .locations import locations
-from .CundiBoy import CundiBoy
+from .InstanceGeneration.demand import demand
+from .InstanceGeneration.costs import costs
+from .InstanceGeneration.selling_prices import selling_prices
+from .InstanceGeneration.offer import offer
+from .InstanceGeneration.locations import locations
+from .InstanceGeneration.CundiBoy import CundiBoy
 
 
 class instance_generator():
