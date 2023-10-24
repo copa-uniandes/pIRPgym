@@ -7,6 +7,8 @@ from Visualizations import RoutingV
 
 from time import process_time
 
+import Data.CundiBoyData 
+
 
 #%%##########################################  Instance Generator  ##########################################
 # Instance Generator

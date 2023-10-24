@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-data_suppliers = pd.read_excel('Data_Fruver_0507.xlsx', sheet_name='provider_orders')
+data_suppliers = pd.read_excel('./Data_Fruver_0507.xlsx', sheet_name='provider_orders')
 data_demand = pd.read_excel("./Data_Fruver_0507.xlsx",sheet_name="daily_sales_historic")
 data_demand = data_demand[["date","store_product_id","sales"]]
 
