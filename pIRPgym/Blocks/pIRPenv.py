@@ -8,7 +8,7 @@ import pandas as pd
 
 
 ### Instance generator
-from .InstanceGenerator import instance_generator
+from .InstanceGeneration.InstanceGenerator import instance_generator
 
 ### Building blocks
 from .BuildingBlocks import Routing_management, Inventory_management 

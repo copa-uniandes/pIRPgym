@@ -3,7 +3,7 @@
 """
 ################################## Modules ##################################
 ### SC classes
-from .InstanceGenerator import instance_generator
+from .InstanceGeneration.InstanceGenerator import instance_generator
 from .pIRPenv import steroid_IRP
 #import hygese as hgs
 
