@@ -1,13 +1,15 @@
 #%%##########################################       Modules       ###########################################
 # MODULES
-from InstanceGenerator import instance_generator
-from SD_IB_IRP_PPenv import steroid_IRP
-from Policies import policy_generator
-from Visualizations import RoutingV
+import sys
+sys.path.append('../../.')
+
+from pIRPgym.Blocks.InstanceGenerator import instance_generator
+from pIRPgym.Blocks.pIRPenv import steroid_IRP
+from pIRPgym.Blocks.Policies import policy_generator
+from pIRPgym.Blocks.Visualizations import RoutingV
 
 from time import process_time
 
-import Data.CundiBoyData 
 
 
 #%%##########################################  Instance Generator  ##########################################

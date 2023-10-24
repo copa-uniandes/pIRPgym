@@ -11,20 +11,11 @@ import gym
 ### Instance generator
 from InstanceGenerator import instance_generator
 
-
 ### Building blocks
 from BuildingBlocks import Routing_management, Inventory_management 
 
 ################################ Description ################################
-
-
-################################## Steroid IRP class ##################################
-
-class steroid_IRP(gym.Env): 
-    
-    # Initialization method
-    def __init__(self,routing=True,inventory=True,perishability=True):
-        '''
+'''
         State (S_t): The state according to Powell (three components): 
             - Physical State (R_t):
                 state:  Current available inventory (!*): (dict)  Inventory of product k \in K of age o \in O_k
@@ -62,6 +53,11 @@ class steroid_IRP(gym.Env):
             will be under Z_t and stochastic factors will be generated and presented in the W_t
         '''
 
+################################## Steroid IRP class ##################################
+class steroid_IRP(): 
+    
+    # Initialization method
+    def __init__(self,routing:bool=True,inventory:bool=True,perishability:bool=True):
         assert inventory >= bool(perishability),'Perishability only available with Inventory Problem'
         self.config = {'routing':routing,'inventory':inventory,'perishability':perishability}
         
