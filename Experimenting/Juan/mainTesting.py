@@ -1,15 +1,10 @@
 #%%##########################################       Modules       ###########################################
 # MODULES
 import sys
-sys.path.append('../../.')
-
-from pIRPgym.Blocks.InstanceGenerator import instance_generator
-from pIRPgym.Blocks.pIRPenv import steroid_IRP
-from pIRPgym.Blocks.Policies import policy_generator
-from pIRPgym.Blocks.Visualizations import RoutingV
-
 from time import process_time
 
+sys.path.append('../../.')
+import pIRPgym 
 
 
 #%%##########################################  Instance Generator  ##########################################
@@ -47,7 +42,7 @@ env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q,
              'back_o_cost':back_o_cost}    
 
 # Creating instance generator object
-inst_gen = instance_generator(look_ahead, stochastic_params, 
+inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params, 
                               historical_data, backorders, env_config = env_config)
 
 #%%#########################################    Random Instance    ##########################################
@@ -55,7 +50,7 @@ inst_gen = instance_generator(look_ahead, stochastic_params,
 q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
 p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
 
-d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}        # Demand
+d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
 
 h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
@@ -100,7 +95,7 @@ purchase = inst_gen.upload_CVRP_instance(set, instance)
 routing = True
 inventory = True    
 perishability = 'ages'
-env = steroid_IRP(routing, inventory, perishability)
+env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
 state = env.reset(inst_gen, return_state = True)
@@ -136,10 +131,10 @@ while not done:
 
     if inst_gen.other_params["demand_type"] == "aggregated":
         ''' Purchase'''
-        [purchase,demand_compliance], la_dec = policy_generator.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+        [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
 
         ''' Routing '''
-        [GA_routes,GA_distances,GA_loads,GA_time],GA_top = policy_generator.Routing.GA.GA_routing(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
+        [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Routing.GA.GA_routing(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
         GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)                     
 
         ''' Compound action'''        

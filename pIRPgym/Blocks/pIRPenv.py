@@ -5,14 +5,13 @@
 ### Basic Librarires
 from copy import copy, deepcopy
 import pandas as pd
-import gym
 
 
 ### Instance generator
-from InstanceGenerator import instance_generator
+from .InstanceGenerator import instance_generator
 
 ### Building blocks
-from BuildingBlocks import Routing_management, Inventory_management 
+from .BuildingBlocks import Routing_management, Inventory_management 
 
 ################################ Description ################################
 '''

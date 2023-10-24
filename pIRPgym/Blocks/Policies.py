@@ -3,8 +3,8 @@
 """
 ################################## Modules ##################################
 ### SC classes
-from InstanceGenerator import instance_generator
-from SD_IB_IRP_PPenv import steroid_IRP
+from .InstanceGenerator import instance_generator
+from .pIRPenv import steroid_IRP
 #import hygese as hgs
 
 ### Basic Librarires
@@ -19,430 +19,424 @@ import hygese as hgs
 
 
 
-class policy_generator():
-
-    def __init__(self) -> None:
-        pass
-
-
-    class Purchasing():
-        
-        # Purchases all available quantities assuming deterministic available quantities of each supplier
-        def det_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[float]:
-            purchase = dict()
-            for i in inst_gen.Suppliers:
-                for k in inst_gen.Products:
-                    purchase[(i,k)] = inst_gen.W_q[env.t][i,k]
-
-            return purchase
-        
-
-        # Purchases expected value of available quantities of each supplier
-        def avg_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[float]:
-            purchase = dict()
-            for i in inst_gen.Suppliers:
-                for k in inst_gen.Products:
-                    purchase[(i,k)] = sum(inst_gen.s_paths_q[env.t][0,s][i,k] for s in inst_gen.Samples)/inst_gen.S
-            
-            return purchase
-
-
-    class Inventory():
-        
-        def det_FIFO(state:dict[float], purchase:dict[float], inst_gen:instance_generator, env: steroid_IRP) -> dict[float]:
-            demand_compliance = {}
+class Purchasing():
+    
+    # Purchases all available quantities assuming deterministic available quantities of each supplier
+    def det_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[float]:
+        purchase = dict()
+        for i in inst_gen.Suppliers:
             for k in inst_gen.Products:
-                left_to_comply = inst_gen.W_d[env.t][k]
-                for o in range(inst_gen.O_k[k],0,-1):
-                    demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
-                    left_to_comply -= demand_compliance[k,o]
-                
-                demand_compliance[k,0] = min(sum(purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
-            
-            return demand_compliance
+                purchase[(i,k)] = inst_gen.W_q[env.t][i,k]
+
+        return purchase
+    
+
+    # Purchases expected value of available quantities of each supplier
+    def avg_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[float]:
+        purchase = dict()
+        for i in inst_gen.Suppliers:
+            for k in inst_gen.Products:
+                purchase[(i,k)] = sum(inst_gen.s_paths_q[env.t][0,s][i,k] for s in inst_gen.Samples)/inst_gen.S
         
-
-        def Stochastic_Rolling_Horizon(state, env, inst_gen):
-            # State
-            I_0 = state.copy()
-
-            # Look ahead window
-            Num_periods = inst_gen.sp_window_sizes[env.t]
-            T = range(Num_periods)
-
-            theta = 0.15
-            if Num_periods == inst_gen.LA_horizon:
-                theta *= 1.25
-            elif Num_periods < inst_gen.LA_horizon and env.t < (inst_gen.T - 1):
-                theta *= (1+0.25*(inst_gen.LA_horizon-Num_periods+1))
-            else:
-                theta = 1
-
-            # Iterables
-            M = inst_gen.Suppliers; K = inst_gen.Products; S = inst_gen.Samples
-
-            # Initialization routing cost
-            C_MIP = {(i,t):inst_gen.c[0,i]+inst_gen.c[i,0] for t in T for i in inst_gen.Suppliers} 
-
-            m = gu.Model('Inventory')
-
-            # Variables    
-            # How much to buy from supplier i of product k at time t 
-            z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t + t]}
-            tuples = [(i,k,t,s) for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t + t]]
-
-            # 1 if supplier i is selected at time t, 0 otherwise
-            w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
-
-            # Final inventory of product k of old o at time t 
-            ii = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="i_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
-
-            # Units sold of product k at time t of old age o
-            y = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="y_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
-
-            # Units in backorders of product k at time t
-            bo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,s))) for t in T for k in K for s in S}
-
-            boo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="boo_"+str((k,t,s))) for t in T for k in K for s in S}
-
-            for s in S:
-                ''' Inventory constraints '''
-                for k in K:
-                    for t in T:
-                        m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in inst_gen.M_kt[(k,env.t + t)]) - y[k,t,0,s], str(f'Inventario edad 0 {k}{t}{s}'))
-                        
-                for k in K:
-                    for o in inst_gen.Ages[k]:
-                        m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s], str(f'Inventario periodo 0 k = {k}, o = {o}, s = {s}'))
-                        
-                for k in K:
-                    for t in T:
-                        for o in inst_gen.Ages[k]:
-                            if t > 0:
-                                m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s], str(f'Inventario {k}{t}{o}{s}'))
-
-                for k in K: 
-                    for t in T:
-                        m.addConstr(gu.quicksum(y[k,t,o,s] for o in range(inst_gen.O_k[k] + 1)) + bo[k,t,s] == inst_gen.s_paths_d[env.t][t,s][k], f'backorders {k}{t}{s}')   
+        return purchase
 
 
-                ''' Purchase constraints '''
-                for t in T:
-                    for k in K:
-                        for i in inst_gen.M_kt[k,env.t + t]: 
-                            m.addConstr(z[i,k,t,s] <= inst_gen.s_paths_q[env.t][t,s][i,k]*w[i,t,s], f'Purchase {i}{k}{t}{s}')
-                            
-                for t in T:
-                    for i in M:
-                        m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i}{t}{s}')
+class Inventory():
+    
+    def det_FIFO(state:dict[float], purchase:dict[float], inst_gen:instance_generator, env: steroid_IRP) -> dict[float]:
+        demand_compliance = {}
+        for k in inst_gen.Products:
+            left_to_comply = inst_gen.W_d[env.t][k]
+            for o in range(inst_gen.O_k[k],0,-1):
+                demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
+                left_to_comply -= demand_compliance[k,o]
             
-                '''' NON-ANTICIPATIVITY CONSTRAINTS '''
-                for k in K:
+            demand_compliance[k,0] = min(sum(purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
+        
+        return demand_compliance
+    
 
-                    for i in inst_gen.M_kt[k,env.t]:
-                        m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
+    def Stochastic_Rolling_Horizon(state, env, inst_gen):
+        # State
+        I_0 = state.copy()
+
+        # Look ahead window
+        Num_periods = inst_gen.sp_window_sizes[env.t]
+        T = range(Num_periods)
+
+        theta = 0.15
+        if Num_periods == inst_gen.LA_horizon:
+            theta *= 1.25
+        elif Num_periods < inst_gen.LA_horizon and env.t < (inst_gen.T - 1):
+            theta *= (1+0.25*(inst_gen.LA_horizon-Num_periods+1))
+        else:
+            theta = 1
+
+        # Iterables
+        M = inst_gen.Suppliers; K = inst_gen.Products; S = inst_gen.Samples
+
+        # Initialization routing cost
+        C_MIP = {(i,t):inst_gen.c[0,i]+inst_gen.c[i,0] for t in T for i in inst_gen.Suppliers} 
+
+        m = gu.Model('Inventory')
+
+        # Variables    
+        # How much to buy from supplier i of product k at time t 
+        z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t + t]}
+        tuples = [(i,k,t,s) for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t + t]]
+
+        # 1 if supplier i is selected at time t, 0 otherwise
+        w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
+
+        # Final inventory of product k of old o at time t 
+        ii = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="i_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
+
+        # Units sold of product k at time t of old age o
+        y = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="y_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
+
+        # Units in backorders of product k at time t
+        bo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,s))) for t in T for k in K for s in S}
+
+        boo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="boo_"+str((k,t,s))) for t in T for k in K for s in S}
+
+        for s in S:
+            ''' Inventory constraints '''
+            for k in K:
+                for t in T:
+                    m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in inst_gen.M_kt[(k,env.t + t)]) - y[k,t,0,s], str(f'Inventario edad 0 {k}{t}{s}'))
                     
-                for i in M:
-                    m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
-
-            ''' Backorders control restriction '''        
-            m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S) + gu.quicksum(boo[k,t,s] for t in T for k in K for s in S))
-            
-            ''' Perished products restriction '''
-            for t in T:
-                m.addConstr(gu.quicksum(ii[k,t,inst_gen.O_k[k],s] for k in K for s in S) <= 0.1*sum(inst_gen.s_paths_d[env.t][t,s][k] for k in K for s in S))
-
-            compra = gu.quicksum(inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S) + \
-                inst_gen.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S) + 6e9*gu.quicksum(boo[k,t,s] for k in K for t in T for s in S)/len(S)
-            
-            ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
-
-            ingresos = gu.quicksum(inst_gen.sell_prices[k,o]*y[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S)
-
-            m.setObjective(ingresos - compra - ruta, gu.GRB.MAXIMIZE)
-            
-            m.update()
-            m.setParam('OutputFlag',0)
-            m.optimize()
-            if m.Status == 3:
-                m.computeIIS()
-                for const in m.getConstrs():
-                    if const.IISConstr:
-                        print(const.ConstrName)
-
-            # Purchase
-            purchase = {(i,k): 0 for i in M for k in K}
             for k in K:
-                for i in inst_gen.M_kt[k,env.t]:
-                    purchase[i,k] = z[i,k,0,0].x
-            
-            demand_compliance = {}
-            for k in K:
-                
-                # If fresh product is available
-                if sum(purchase[i,k] for i in inst_gen.M_kt[k,env.t]) > 0:
-                    demand_compliance[k,0] = 0
-                    for s in S:
-                        if y[k,0,0,s].x > 0:
-                            demand_compliance[k,0] += 1
-                    demand_compliance[k,0] /= len(S)
-                
-                else:
-                    demand_compliance[k,0] = 1
-
-                for o in range(1,inst_gen.O_k[k]+1):
-                    demand_compliance[k,o] = 0
-                    for s in S:
-                        # If still some left to comply
-                        if round(bo[k,0,s].x + sum(y[k,0,oo,s].x for oo in range(inst_gen.O_k[k],o,-1)),3) < round(inst_gen.s_paths_d[env.t][0,s][k],3):
-                            #... and used to comply
-                            if y[k,0,o,s].x > 0:
-                                demand_compliance[k,o] += 1
-                        else:
-                            demand_compliance[k,o] += 1
-                    demand_compliance[k,o] /= len(S)
-
-            
-            # Back-orders
-            double_check = {(k,t): bo[k,0,0].x for k in K}
-
-            action = [purchase, demand_compliance]
-            
-            I0 = {}
-            for t in T: 
-                I0[t] = {}
-                for s in S:  
-                    I0[t][s] = {}
-                    for k in K:
-                        for o in range(inst_gen.O_k[k]+1):
-                            I0[t][s][k,o] = ii[k,t,o,s].x
-            zz = {}
-            for t in T:
-                zz[t] = {}
-                for s in S:
-                    zz[t][s] = {}
-                    for k in K:
-                        for i in inst_gen.M_kt[k,env.t + t]:
-                            zz[t][s][i,k] = z[i,k,t,s].x 
-            bb = {}
-            for t in T:
-                bb[t] = {}
-                for s in S:
-                    bb[t][s] = {}
-                    for k in K:
-                        bb[t][s][k] = bo[k,t,s].x
-            
-            yy = {}
-            for t in T:
-                yy[t] = {}
-                for s in S:
-                    yy[t][s] = {}
-                    for k in K:
-                        for o in range(inst_gen.O_k[k]+1):
-                            yy[t][s][k,o] = y[k,t,o,s].x
-
-            la_decisions = [I0, zz, bb, yy]
-
-            return action, la_decisions
-
-
-        def Stochastic_RH_Age_Demand(state, env, inst_gen):
-
-            solucionTTP = {0:[  np.zeros(inst_gen.M+1, dtype=bool), 
-                                    np.zeros(inst_gen.M+1, dtype=int), 
-                                    np.zeros((inst_gen.M+1, inst_gen.K), dtype=bool), 
-                                    np.zeros((inst_gen.M+1, inst_gen.K), dtype=int), 
-                                    np.full(inst_gen.M+1, -1, dtype = int), 
-                                    np.zeros(inst_gen.M+1, dtype=int), 
-                                    np.zeros(inst_gen.K, dtype=int), 0, 0]}
-
-            # State
-            I_0 = state.copy()
-
-            # Look ahead window
-            Num_periods = inst_gen.sp_window_sizes[env.t]
-            T = range(Num_periods)
-
-            theta = 0.15
-            if Num_periods == inst_gen.LA_horizon:
-                theta *= 1.25
-            elif Num_periods < inst_gen.LA_horizon and env.t < (inst_gen.T - 1):
-                theta *= (1+0.25*(inst_gen.LA_horizon-Num_periods+1))
-            else:
-                theta = 1
-
-            # Iterables
-            M = inst_gen.Suppliers; K = inst_gen.Products; S = inst_gen.Samples
-
-            # Initialization routing cost
-            C_MIP = {(i,t):inst_gen.c[0,i]+inst_gen.c[i,0] for t in T for i in inst_gen.Suppliers} 
-
-            m = gu.Model('Inventory')
-
-            # Variables    
-            # How much to buy from supplier i of product k at time t 
-            z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t + t]}
-
-            # 1 if supplier i is selected at time t, 0 otherwise
-            w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
-
-            # Final inventory of product k of old o at time t 
-            ii = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="i_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
-
-            # Units sold of product k at time t of old age o
-            y = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="y_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
-
-            # Units in backorders of product k at time t
-            bo = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,o,s))) for t in T for k in K for o in range(inst_gen.O_k[k] + 1) for s in S}
-
-            boo = m.addVar(vtype=gu.GRB.CONTINUOUS, name="boo")
-
-            for s in S:
-                ''' Inventory constraints '''
-                for k in K:
-                    for t in T:
-                        m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in inst_gen.M_kt[(k,env.t + t)]) - y[k,t,0,s], str(f'Inventario edad 0 {k}{t}{s}'))
-                        
-                for k in K:
-                    for o in inst_gen.Ages[k]:
-                        m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s], str(f'Inventario periodo 0 k = {k}, o = {o}, s = {s}'))
-                        
-                for k in K:
-                    for t in T:
-                        for o in inst_gen.Ages[k]:
-                            if t > 0:
-                                m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s], str(f'Inventario {k}{t}{o}{s}'))
-
-                for k in K: 
-                    for t in T:
-                        for o in range(inst_gen.O_k[k] + 1):
-                            m.addConstr(y[k,t,o,s]  + bo[k,t,o,s] == inst_gen.s_paths_d[env.t][t,s][k,o], f'backorders {k}{t}{o}{s}')   
-
-
-                ''' Purchase constraints '''
-                for t in T:
-                    for k in K:
-                        for i in inst_gen.M_kt[k,env.t + t]: 
-                            m.addConstr(z[i,k,t,s] <= inst_gen.s_paths_q[env.t][t,s][i,k]*w[i,t,s], f'Purchase {i}{k}{t}{s}')
-                            
-                #for t in T:
-                #    for i in M:
-                #        m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i}{t}{s}')
-            
-                '''' NON-ANTICIPATIVITY CONSTRAINTS '''
-                for k in K:
-
-                    for i in inst_gen.M_kt[k,env.t]:
-                        m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
+                for o in inst_gen.Ages[k]:
+                    m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s], str(f'Inventario periodo 0 k = {k}, o = {o}, s = {s}'))
                     
+            for k in K:
+                for t in T:
+                    for o in inst_gen.Ages[k]:
+                        if t > 0:
+                            m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s], str(f'Inventario {k}{t}{o}{s}'))
+
+            for k in K: 
+                for t in T:
+                    m.addConstr(gu.quicksum(y[k,t,o,s] for o in range(inst_gen.O_k[k] + 1)) + bo[k,t,s] == inst_gen.s_paths_d[env.t][t,s][k], f'backorders {k}{t}{s}')   
+
+
+            ''' Purchase constraints '''
+            for t in T:
+                for k in K:
+                    for i in inst_gen.M_kt[k,env.t + t]: 
+                        m.addConstr(z[i,k,t,s] <= inst_gen.s_paths_q[env.t][t,s][i,k]*w[i,t,s], f'Purchase {i}{k}{t}{s}')
+                        
+            for t in T:
                 for i in M:
-                    m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
-
-            ''' Backorders control restriction '''        
-            m.addConstr(gu.quicksum(bo[k,t,o,s] for o in range(inst_gen.O_k[k]+1) for t in T for k in K for s in S) <= theta*sum(inst_gen.s_paths_d[env.t][t,s][k,o] for o in range(inst_gen.O_k[k]+1) for t in T for k in K for s in S) + boo)
-            
-            compra = gu.quicksum(inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S) + \
-                inst_gen.back_o_cost*gu.quicksum(bo[k,t,o,s] for o in range(inst_gen.O_k[k]+1) for k in K for t in T for s in S)/len(S) + 6e9*boo/len(S)
-            
-            ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
-
-            ingresos = gu.quicksum(inst_gen.sell_prices[k,o]*y[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S)
-
-            m.setObjective(ingresos - compra - ruta, gu.GRB.MAXIMIZE)
-            
-            m.update()
-            m.setParam('OutputFlag',0)
-            m.optimize()
-            if m.Status == 3:
-                m.computeIIS()
-                for const in m.getConstrs():
-                    if const.IISConstr:
-                        print(const.ConstrName)
-
-            # Purchase
-            purchase = {(i,k): 0 for i in M for k in K}
-
+                    m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i}{t}{s}')
+        
+            '''' NON-ANTICIPATIVITY CONSTRAINTS '''
             for k in K:
+
                 for i in inst_gen.M_kt[k,env.t]:
-                    purchase[i,k] = z[i,k,0,0].x
-            
-            demand_compliance = {}
-            for k in K:
+                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
                 
-                # If fresh product is available
-                if sum(purchase[i,k] for i in inst_gen.M_kt[k,env.t]) > 0:
-                    demand_compliance[k,0] = 0
-                    for s in S:
-                        if y[k,0,0,s].x > 0:
-                            demand_compliance[k,0] += 1
-                    demand_compliance[k,0] /= len(S)
-                
-                else:
-                    demand_compliance[k,0] = 1
+            for i in M:
+                m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
 
-                for o in range(1,inst_gen.O_k[k]+1):
-                    demand_compliance[k,o] = 0
-                    for s in S:
-                        # If wasn't able to comply
-                        if bo[k,0,o,s].x > 0:
-                            #... and indeed didn't have available product
-                            if ii[k,0,o,s].x == 0:
-                                demand_compliance[k,o] += 1
-                        else:
+        ''' Backorders control restriction '''        
+        m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S) + gu.quicksum(boo[k,t,s] for t in T for k in K for s in S))
+        
+        ''' Perished products restriction '''
+        for t in T:
+            m.addConstr(gu.quicksum(ii[k,t,inst_gen.O_k[k],s] for k in K for s in S) <= 0.1*sum(inst_gen.s_paths_d[env.t][t,s][k] for k in K for s in S))
+
+        compra = gu.quicksum(inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S) + \
+            inst_gen.back_o_cost*gu.quicksum(bo[k,t,s] for k in K for t in T for s in S)/len(S) + 6e9*gu.quicksum(boo[k,t,s] for k in K for t in T for s in S)/len(S)
+        
+        ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
+
+        ingresos = gu.quicksum(inst_gen.sell_prices[k,o]*y[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S)
+
+        m.setObjective(ingresos - compra - ruta, gu.GRB.MAXIMIZE)
+        
+        m.update()
+        m.setParam('OutputFlag',0)
+        m.optimize()
+        if m.Status == 3:
+            m.computeIIS()
+            for const in m.getConstrs():
+                if const.IISConstr:
+                    print(const.ConstrName)
+
+        # Purchase
+        purchase = {(i,k): 0 for i in M for k in K}
+        for k in K:
+            for i in inst_gen.M_kt[k,env.t]:
+                purchase[i,k] = z[i,k,0,0].x
+        
+        demand_compliance = {}
+        for k in K:
+            
+            # If fresh product is available
+            if sum(purchase[i,k] for i in inst_gen.M_kt[k,env.t]) > 0:
+                demand_compliance[k,0] = 0
+                for s in S:
+                    if y[k,0,0,s].x > 0:
+                        demand_compliance[k,0] += 1
+                demand_compliance[k,0] /= len(S)
+            
+            else:
+                demand_compliance[k,0] = 1
+
+            for o in range(1,inst_gen.O_k[k]+1):
+                demand_compliance[k,o] = 0
+                for s in S:
+                    # If still some left to comply
+                    if round(bo[k,0,s].x + sum(y[k,0,oo,s].x for oo in range(inst_gen.O_k[k],o,-1)),3) < round(inst_gen.s_paths_d[env.t][0,s][k],3):
+                        #... and used to comply
+                        if y[k,0,o,s].x > 0:
                             demand_compliance[k,o] += 1
-                    demand_compliance[k,o] /= len(S)
+                    else:
+                        demand_compliance[k,o] += 1
+                demand_compliance[k,o] /= len(S)
 
-            
-            rutas = []
+        
+        # Back-orders
+        double_check = {(k,t): bo[k,0,0].x for k in K}
 
-            action = [rutas, purchase, demand_compliance]
-            
-            I0 = {}
-            for t in T: 
-                I0[t] = {}
-                for s in S:  
-                    I0[t][s] = {}
-                    for k in K:
-                        for o in range(inst_gen.O_k[k]+1):
-                            I0[t][s][k,o] = ii[k,t,o,s].x
-            zz = {}
+        action = [purchase, demand_compliance]
+        
+        I0 = {}
+        for t in T: 
+            I0[t] = {}
+            for s in S:  
+                I0[t][s] = {}
+                for k in K:
+                    for o in range(inst_gen.O_k[k]+1):
+                        I0[t][s][k,o] = ii[k,t,o,s].x
+        zz = {}
+        for t in T:
+            zz[t] = {}
+            for s in S:
+                zz[t][s] = {}
+                for k in K:
+                    for i in inst_gen.M_kt[k,env.t + t]:
+                        zz[t][s][i,k] = z[i,k,t,s].x 
+        bb = {}
+        for t in T:
+            bb[t] = {}
+            for s in S:
+                bb[t][s] = {}
+                for k in K:
+                    bb[t][s][k] = bo[k,t,s].x
+        
+        yy = {}
+        for t in T:
+            yy[t] = {}
+            for s in S:
+                yy[t][s] = {}
+                for k in K:
+                    for o in range(inst_gen.O_k[k]+1):
+                        yy[t][s][k,o] = y[k,t,o,s].x
+
+        la_decisions = [I0, zz, bb, yy]
+
+        return action, la_decisions
+
+
+    def Stochastic_RH_Age_Demand(state, env, inst_gen):
+
+        solucionTTP = {0:[  np.zeros(inst_gen.M+1, dtype=bool), 
+                                np.zeros(inst_gen.M+1, dtype=int), 
+                                np.zeros((inst_gen.M+1, inst_gen.K), dtype=bool), 
+                                np.zeros((inst_gen.M+1, inst_gen.K), dtype=int), 
+                                np.full(inst_gen.M+1, -1, dtype = int), 
+                                np.zeros(inst_gen.M+1, dtype=int), 
+                                np.zeros(inst_gen.K, dtype=int), 0, 0]}
+
+        # State
+        I_0 = state.copy()
+
+        # Look ahead window
+        Num_periods = inst_gen.sp_window_sizes[env.t]
+        T = range(Num_periods)
+
+        theta = 0.15
+        if Num_periods == inst_gen.LA_horizon:
+            theta *= 1.25
+        elif Num_periods < inst_gen.LA_horizon and env.t < (inst_gen.T - 1):
+            theta *= (1+0.25*(inst_gen.LA_horizon-Num_periods+1))
+        else:
+            theta = 1
+
+        # Iterables
+        M = inst_gen.Suppliers; K = inst_gen.Products; S = inst_gen.Samples
+
+        # Initialization routing cost
+        C_MIP = {(i,t):inst_gen.c[0,i]+inst_gen.c[i,0] for t in T for i in inst_gen.Suppliers} 
+
+        m = gu.Model('Inventory')
+
+        # Variables    
+        # How much to buy from supplier i of product k at time t 
+        z = {(i,k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="z_"+str((i,k,t,s))) for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t + t]}
+
+        # 1 if supplier i is selected at time t, 0 otherwise
+        w = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name="w_"+str((i,t,s))) for t in T for i in M for s in S}
+
+        # Final inventory of product k of old o at time t 
+        ii = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="i_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
+
+        # Units sold of product k at time t of old age o
+        y = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="y_"+str((k,t,o,s))) for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S}
+
+        # Units in backorders of product k at time t
+        bo = {(k,t,o,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,o,s))) for t in T for k in K for o in range(inst_gen.O_k[k] + 1) for s in S}
+
+        boo = m.addVar(vtype=gu.GRB.CONTINUOUS, name="boo")
+
+        for s in S:
+            ''' Inventory constraints '''
+            for k in K:
+                for t in T:
+                    m.addConstr(ii[k,t,0,s] == gu.quicksum(z[i,k,t,s] for i in inst_gen.M_kt[(k,env.t + t)]) - y[k,t,0,s], str(f'Inventario edad 0 {k}{t}{s}'))
+                    
+            for k in K:
+                for o in inst_gen.Ages[k]:
+                    m.addConstr(ii[k,0,o,s] == I_0[k,o] - y[k,0,o,s], str(f'Inventario periodo 0 k = {k}, o = {o}, s = {s}'))
+                    
+            for k in K:
+                for t in T:
+                    for o in inst_gen.Ages[k]:
+                        if t > 0:
+                            m.addConstr(ii[k,t,o,s] == ii[k,t-1,o-1,s] - y[k,t,o,s], str(f'Inventario {k}{t}{o}{s}'))
+
+            for k in K: 
+                for t in T:
+                    for o in range(inst_gen.O_k[k] + 1):
+                        m.addConstr(y[k,t,o,s]  + bo[k,t,o,s] == inst_gen.s_paths_d[env.t][t,s][k,o], f'backorders {k}{t}{o}{s}')   
+
+
+            ''' Purchase constraints '''
             for t in T:
-                zz[t] = {}
-                for s in S:
-                    zz[t][s] = {}
-                    for k in K:
-                        for i in inst_gen.M_kt[k,env.t + t]:
-                            zz[t][s][i,k] = z[i,k,t,s].x 
-            bb = {}
-            for t in T:
-                bb[t] = {}
-                for s in S:
-                    bb[t][s] = {}
-                    for k in K:
-                        for o in range(inst_gen.O_k[k]+1):
-                            bb[t][s][k,o] = bo[k,t,o,s].x
+                for k in K:
+                    for i in inst_gen.M_kt[k,env.t + t]: 
+                        m.addConstr(z[i,k,t,s] <= inst_gen.s_paths_q[env.t][t,s][i,k]*w[i,t,s], f'Purchase {i}{k}{t}{s}')
+                        
+            #for t in T:
+            #    for i in M:
+            #        m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i}{t}{s}')
+        
+            '''' NON-ANTICIPATIVITY CONSTRAINTS '''
+            for k in K:
+
+                for i in inst_gen.M_kt[k,env.t]:
+                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
+                
+            for i in M:
+                m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
+
+        ''' Backorders control restriction '''        
+        m.addConstr(gu.quicksum(bo[k,t,o,s] for o in range(inst_gen.O_k[k]+1) for t in T for k in K for s in S) <= theta*sum(inst_gen.s_paths_d[env.t][t,s][k,o] for o in range(inst_gen.O_k[k]+1) for t in T for k in K for s in S) + boo)
+        
+        compra = gu.quicksum(inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S) + \
+            inst_gen.back_o_cost*gu.quicksum(bo[k,t,o,s] for o in range(inst_gen.O_k[k]+1) for k in K for t in T for s in S)/len(S) + 6e9*boo/len(S)
+        
+        ruta = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)
+
+        ingresos = gu.quicksum(inst_gen.sell_prices[k,o]*y[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S)
+
+        m.setObjective(ingresos - compra - ruta, gu.GRB.MAXIMIZE)
+        
+        m.update()
+        m.setParam('OutputFlag',0)
+        m.optimize()
+        if m.Status == 3:
+            m.computeIIS()
+            for const in m.getConstrs():
+                if const.IISConstr:
+                    print(const.ConstrName)
+
+        # Purchase
+        purchase = {(i,k): 0 for i in M for k in K}
+
+        for k in K:
+            for i in inst_gen.M_kt[k,env.t]:
+                purchase[i,k] = z[i,k,0,0].x
+        
+        demand_compliance = {}
+        for k in K:
             
-            yy = {}
-            for t in T:
-                yy[t] = {}
+            # If fresh product is available
+            if sum(purchase[i,k] for i in inst_gen.M_kt[k,env.t]) > 0:
+                demand_compliance[k,0] = 0
                 for s in S:
-                    yy[t][s] = {}
-                    for k in K:
-                        for o in range(inst_gen.O_k[k]+1):
-                            yy[t][s][k,o] = y[k,t,o,s].x
+                    if y[k,0,0,s].x > 0:
+                        demand_compliance[k,0] += 1
+                demand_compliance[k,0] /= len(S)
+            
+            else:
+                demand_compliance[k,0] = 1
 
-            la_decisions = [I0, zz, bb, yy]
+            for o in range(1,inst_gen.O_k[k]+1):
+                demand_compliance[k,o] = 0
+                for s in S:
+                    # If wasn't able to comply
+                    if bo[k,0,o,s].x > 0:
+                        #... and indeed didn't have available product
+                        if ii[k,0,o,s].x == 0:
+                            demand_compliance[k,o] += 1
+                    else:
+                        demand_compliance[k,o] += 1
+                demand_compliance[k,o] /= len(S)
 
-            return action, la_decisions
+        
+        rutas = []
+
+        action = [rutas, purchase, demand_compliance]
+        
+        I0 = {}
+        for t in T: 
+            I0[t] = {}
+            for s in S:  
+                I0[t][s] = {}
+                for k in K:
+                    for o in range(inst_gen.O_k[k]+1):
+                        I0[t][s][k,o] = ii[k,t,o,s].x
+        zz = {}
+        for t in T:
+            zz[t] = {}
+            for s in S:
+                zz[t][s] = {}
+                for k in K:
+                    for i in inst_gen.M_kt[k,env.t + t]:
+                        zz[t][s][i,k] = z[i,k,t,s].x 
+        bb = {}
+        for t in T:
+            bb[t] = {}
+            for s in S:
+                bb[t][s] = {}
+                for k in K:
+                    for o in range(inst_gen.O_k[k]+1):
+                        bb[t][s][k,o] = bo[k,t,o,s].x
+        
+        yy = {}
+        for t in T:
+            yy[t] = {}
+            for s in S:
+                yy[t][s] = {}
+                for k in K:
+                    for o in range(inst_gen.O_k[k]+1):
+                        yy[t][s][k,o] = y[k,t,o,s].x
+
+        la_decisions = [I0, zz, bb, yy]
+
+        return action, la_decisions
 
 
-    class Routing():
+class Routing():
         ''' Nearest Neighbor (NN) heuristic '''
         class Nearest_Neighbor():
             # Generate routes
             def NN_routing(purchase:dict[float],inst_gen:instance_generator,t:int) -> dict:
                 start = process_time()
-                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase,inst_gen,t)
+                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
                 routes:list = list()
                 loads:list = list()
@@ -455,7 +449,7 @@ class policy_generator():
                     route: list = [node]
                     distance: float = 0
                     while load < inst_gen.Q:
-                        target = policy_generator.Routing.Nearest_Neighbor.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
+                        target = Routing.Nearest_Neighbor.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
                         if target == False:
                             break
                         else:
@@ -490,7 +484,7 @@ class policy_generator():
             # Generate routes
             def RCL_routing(purchase:dict[float],inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> dict:
                 start = process_time()
-                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase, inst_gen,t)
+                pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
                 routes:list = list()
                 FO:int = 0
@@ -499,7 +493,7 @@ class policy_generator():
                 dep_d_details:list = list() # TODO: Record departure times
 
                 while len(pending_sup) > 0:
-                    route, distance, load, pending_sup = policy_generator.Routing.RCL_constructive.generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen)
+                    route, distance, load, pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen)
 
                     routes.append(route)
                     FO += distance
@@ -540,7 +534,7 @@ class policy_generator():
                 distance:float = 0
 
                 while load < inst_gen.Q:
-                    target = policy_generator.Routing.RCL_constructive.generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen)
+                    target = Routing.RCL_constructive.generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen)
                     if target == False:
                         break
                     else:
@@ -562,7 +556,7 @@ class policy_generator():
             def GA_routing(purchase:dict,inst_gen:instance_generator,t:int,top:int or bool=False,rd_seed:int=0,time_limit:float=30):
                 start = process_time()
                 seed(rd_seed)
-                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase,inst_gen,t)
+                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
                 # Parameters
                 verbose = False
@@ -575,7 +569,7 @@ class policy_generator():
                 mutation_rate:float = 0.5
 
                 Population, FOs, Distances, Loads, incumbent, best_individual, alpha_performance =\
-                                policy_generator.Routing.GA.generate_population(inst_gen, start, requirements, verbose, 
+                                Routing.GA.generate_population(inst_gen, start, requirements, verbose, 
                                                                                 Population_iter, training_time)
                 
                 # Print progress
@@ -589,15 +583,15 @@ class policy_generator():
                 generation = 0
                 while time()-start < time_limit:
                     ### Elitism
-                    Elite = policy_generator.Routing.GA.elite_class(FOs, Population_iter, Elite_size)
+                    Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
 
                     ### Selection: From a population, which parents are able to reproduce
                     # Intermediate population: Sample of the initial population 
-                    inter_population = policy_generator.Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
+                    inter_population = Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
                     inter_population = Elite + list(inter_population)
 
                     ### Tournament: Select two individuals and leave the best to reproduce
-                    Parents = policy_generator.Routing.GA.tournament(inter_population, FOs, Population_iter)
+                    Parents = Routing.GA.tournament(inter_population, FOs, Population_iter)
 
                     ### Evolution
                     New_Population:list = list();   New_FOs:list = list(); 
@@ -674,7 +668,7 @@ class policy_generator():
                 # Calibrating alphas
                 training_ind:int = 0
                 while process_time() - start <= training_time:
-                    alpha_performance = policy_generator.Routing.GA.calibrate_alpha(RCL_alpha_list, alpha_performance, requirements, inst_gen)
+                    alpha_performance = Routing.GA.calibrate_alpha(RCL_alpha_list, alpha_performance, requirements, inst_gen)
                     training_ind += 1
                 
                 # Generating initial population
@@ -685,7 +679,7 @@ class policy_generator():
                     RCL_alpha = choice(RCL_alpha_list, p = [alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alpha_list])    
                 
                     # Generating individual
-                    individual, FO, distances, loads, _ = policy_generator.Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
+                    individual, FO, distances, loads, _ = Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
 
                     # Updating incumbent
                     if FO < incumbent:
@@ -706,7 +700,7 @@ class policy_generator():
                 requirements2 = deepcopy(requirements)
                 tr_distance:float = 0
                 RCL_alpha:float = choice(RCL_alpha_list)
-                routes, FO, distances, loads, _ = policy_generator.Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
+                routes, FO, distances, loads, _ = Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
                 tr_distance += FO
                 alpha_performance[RCL_alpha] += 1/tr_distance
 
@@ -758,14 +752,14 @@ class policy_generator():
                 ap = hgs.AlgorithmParameters(timeLimit=time_limit,)  # seconds
                 hgs_solver = hgs.Solver(parameters=ap,verbose=False)
 
-                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase,inst_gen,t)
+                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
-                data = policy_generator.Routing.HyGeSe.generate_HyGeSe_data(inst_gen, requirements)
+                data = Routing.HyGeSe.generate_HyGeSe_data(inst_gen, requirements)
 
                 # Save the original stdout
                 result = hgs_solver.solve_cvrp(data)
 
-                routes = policy_generator.Routing.HyGeSe.translate_routes(inst_gen, requirements,result.routes)
+                routes = Routing.HyGeSe.translate_routes(inst_gen, requirements,result.routes)
 
                 return routes, result.cost, process_time() - start
 
@@ -801,20 +795,20 @@ class policy_generator():
             # Generate routes
             def MIP_routing(purchase:dict[float],inst_gen:instance_generator,t:int):
                 start = process_time()
-                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase,inst_gen,t)
+                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
         
-                N, V, A, distances, requirements = policy_generator.Routing.network_aux_methods.generate_complete_graph(inst_gen, pending_sup, requirements)
+                N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen, pending_sup, requirements)
                 A.append((0,inst_gen.M+1))
                 distances[0,inst_gen.M+1] = 0
 
-                model = policy_generator.Routing.MIP.generate_complete_MIP(inst_gen, N, V, A, distances, requirements)
+                model = Routing.MIP.generate_complete_MIP(inst_gen, N, V, A, distances, requirements)
 
                 model.update()
                 model.setParam('OutputFlag',0)
                 model.setParam('MIPGap',0.1)
                 model.optimize()
 
-                routes, distances, loads = policy_generator.Routing.MIP.get_MIP_decisions(inst_gen, model, V, A, distances, requirements)
+                routes, distances, loads = Routing.MIP.get_MIP_decisions(inst_gen, model, V, A, distances, requirements)
                 cost = model.getObjective().getValue()
 
                 return routes, distances, loads, process_time() - start
@@ -900,11 +894,11 @@ class policy_generator():
         class Column_Generation():
             # Generate routes
             def CG_routing(purchase:dict[float], inst_gen:instance_generator,t:int):
-                pending_sup, requirements = policy_generator.Routing.consolidate_purchase(purchase,inst_gen,t)
+                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
-                N, V, A, distances, requirements = policy_generator.Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
+                N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
 
-                master = policy_generator.Routing.Column_Generation.MasterProblem()
+                master = Routing.Column_Generation.MasterProblem()
                 modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
 
                 card_omega = len(theta)
@@ -937,7 +931,7 @@ class policy_generator():
                     
                     a_star = dict()
                     a_star.update({i:0 for i in N})
-                    shortest_path, a_star = policy_generator.Routing.Column_Generation.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements)
+                    shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements)
                     minReducedCost = shortest_path[0]
                     c_k = shortest_path[1]
 
