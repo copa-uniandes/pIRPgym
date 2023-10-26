@@ -1,5 +1,5 @@
 from numpy.random import seed, random, randint, lognormal
-# from .InstanceGenerator import instance_generator
+from .forecasting import empiric_distribution_sampling
 
 
 class demand():
@@ -105,10 +105,10 @@ class demand():
                 if inst_gen.s_params == False or ('d' not in inst_gen.s_params and '*' not in inst_gen.s_params):
                     s_paths_d[t][0,sample] = W_d[t]
                 else:
-                    s_paths_d[t][0,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
+                    s_paths_d[t][0,sample] = {k: empiric_distribution_sampling([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
 
                 for day in range(1,inst_gen.sp_window_sizes[t]):
-                    s_paths_d[t][day,sample] = {k: inst_gen.sim([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
+                    s_paths_d[t][day,sample] = {k: empiric_distribution_sampling([hist_d[t][k][obs] for obs in range(len(hist_d[t][k])) if hist_d[t][k][obs] > 0]) for k in inst_gen.Products}
 
         return s_paths_d
     
@@ -121,10 +121,10 @@ class demand():
                 if inst_gen.s_params == False or ('d' not in inst_gen.s_params and '*' not in inst_gen.s_params):
                     s_paths_d[t][0,sample] = W_d[t]
                 else:
-                    s_paths_d[t][0,sample] = {(k,o): inst_gen.sim([hist_d[t][k,o][obs] for obs in range(len(hist_d[t][k,o])) if hist_d[t][k,o][obs] > 0]) for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
+                    s_paths_d[t][0,sample] = {(k,o): empiric_distribution_sampling([hist_d[t][k,o][obs] for obs in range(len(hist_d[t][k,o])) if hist_d[t][k,o][obs] > 0]) for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
 
                 for day in range(1,inst_gen.sp_window_sizes[t]):
-                    s_paths_d[t][day,sample] = {(k,o): inst_gen.sim([hist_d[t][k,o][obs] for obs in range(len(hist_d[t][k,o])) if hist_d[t][k,o][obs] > 0]) for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
+                    s_paths_d[t][day,sample] = {(k,o): empiric_distribution_sampling([hist_d[t][k,o][obs] for obs in range(len(hist_d[t][k,o])) if hist_d[t][k,o][obs] > 0]) for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1)}
 
         return s_paths_d
         

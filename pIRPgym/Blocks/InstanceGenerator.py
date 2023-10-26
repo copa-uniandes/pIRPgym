@@ -6,7 +6,7 @@
 import numpy as np; import pandas as pd; import matplotlib.pyplot as plt
 from copy import copy, deepcopy
 import time
-from numpy.random import seed, random, randint, lognormal
+from numpy.random import randint
 import os
 
 from .InstanceGeneration.demand import demand
@@ -24,6 +24,7 @@ class instance_generator():
     -  generate_CundiBoy_instance
     -  upload_CVRP_instance
     '''
+    options = ['random','basic_random','CundiBoy','CVRP']
 
 
     # Initalization method for an instange_generator object
@@ -118,7 +119,7 @@ class instance_generator():
 
 
     # Generates a complete, completely random instance with a given random seed
-    def generate_random_instance(self, d_rd_seed:int, s_rd_seed:int, I0:float, **kwargs):
+    def generate_random_instance(self,d_rd_seed:int,s_rd_seed:int,I0:float, **kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -164,7 +165,7 @@ class instance_generator():
 
     
     # Generates a basic, completely random instance with a given random seed
-    def generate_basic_random_instance(self, d_rd_seed:int=0, s_rd_seed:int=1, I0:float=0,**kwargs):
+    def generate_basic_random_instance(self,d_rd_seed:int=0,s_rd_seed:int=1,I0:float=0,**kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -297,37 +298,8 @@ class instance_generator():
 
         return i00
 
-    # Auxuliary sample value generator function
-    def sim(self, hist):
-        ''' 
-        Sample value generator function.
-        Returns a generated random number using acceptance-rejection method.
-        Parameters:
-        - hist: (list) historical dataset that is used as an empirical distribution for
-                the random number generation
-        '''
-        seed(randint(0,int(1e6)))
-        Te = len(hist)
-        sorted_data = sorted(hist)
-        
-        prob, value = [], []
-        for t in range(Te):
-            prob.append((t+1)/Te)
-            value.append(sorted_data[t])
-        
-        # Generates uniform random value for acceptance-rejection testing
-        U = random()
-        # Tests if the uniform random falls under the empirical distribution
-        test = [i>U for i in prob]  
-        # Takes the first accepted value
-        sample = value[test.index(True)]
-        
-        return sample
-    
 
-
-
-''' Auxiliary method to assign custom configurations the instance '''
+    ''' Auxiliary method to assign custom configurations the instance '''
 def assign_env_config(self, kwargs):
     for key, value in kwargs.items():
         setattr(self, key, value)

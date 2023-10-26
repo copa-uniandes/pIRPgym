@@ -18,7 +18,6 @@ import gurobipy as gu
 import hygese as hgs
 
 
-
 class Purchasing():
     
     # Purchases all available quantities assuming deterministic available quantities of each supplier
@@ -431,42 +430,45 @@ class Inventory():
 
 
 class Routing():
+        
+        options = ['NN, RCL, HGA, CG']
+
         ''' Nearest Neighbor (NN) heuristic '''
-        class Nearest_Neighbor():
-            # Generate routes
-            def NN_routing(purchase:dict[float],inst_gen:instance_generator,t:int) -> dict:
-                start = process_time()
-                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+        # Generate routes
+        def NearestNeighbor(purchase:dict[float],inst_gen:instance_generator,t:int) -> dict:
+            start = process_time()
+            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
-                routes:list = list()
-                loads:list = list()
-                t_distance:int = 0
-                distances:list = list()
+            routes:list = list()
+            loads:list = list()
+            t_distance:int = 0
+            distances:list = list()
 
-                while len(pending_sup) > 0:
-                    node: int = 0
-                    load: int = 0
-                    route: list = [node]
-                    distance: float = 0
-                    while load < inst_gen.Q:
-                        target = Routing.Nearest_Neighbor.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
-                        if target == False:
-                            break
-                        else:
-                            load += requirements[target]
-                            distance += inst_gen.c[node, target]
-                            node = target
-                            route.append(node)
-                            pending_sup.remove(node)
+            while len(pending_sup) > 0:
+                node: int = 0
+                load: int = 0
+                route: list = [node]
+                distance: float = 0
+                while load < inst_gen.Q:
+                    target = Routing.Nearest_Neighbor.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
+                    if target == False:
+                        break
+                    else:
+                        load += requirements[target]
+                        distance += inst_gen.c[node, target]
+                        node = target
+                        route.append(node)
+                        pending_sup.remove(node)
 
-                    routes.append(route + [0])
-                    distance += inst_gen.c[node,0]
-                    loads.append(load)
-                    t_distance += distance
-                    distances.append(distance)
-                
-                return routes, distances, loads, process_time() - start
+                routes.append(route + [0])
+                distance += inst_gen.c[node,0]
+                loads.append(load)
+                t_distance += distance
+                distances.append(distance)
             
+            return routes, distances, loads, process_time() - start
+        
+        class Nearest_Neighbor():      
             # Find nearest feasible (by capacity) node
             def find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen):
                 target, dist = False, 1e6
@@ -480,29 +482,27 @@ class Routing():
             
         
         ''' RCL based constructive '''
+        def RCL_Heuristic(purchase:dict[float],inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> dict:
+            start = process_time()
+            pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
+
+            routes:list = list()
+            FO:int = 0
+            distances:list = list()
+            loads:list = list()
+            dep_d_details:list = list() # TODO: Record departure times
+
+            while len(pending_sup) > 0:
+                route, distance, load, pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen)
+
+                routes.append(route)
+                FO += distance
+                distances.append(distance)
+                loads.append(load)
+                
+            return routes, FO, distances, loads, process_time() - start
+        
         class RCL_constructive():
-            # Generate routes
-            def RCL_routing(purchase:dict[float],inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> dict:
-                start = process_time()
-                pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
-
-                routes:list = list()
-                FO:int = 0
-                distances:list = list()
-                loads:list = list()
-                dep_d_details:list = list() # TODO: Record departure times
-
-                while len(pending_sup) > 0:
-                    route, distance, load, pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen)
-
-                    routes.append(route)
-                    FO += distance
-                    distances.append(distance)
-                    loads.append(load)
-                    
-                return routes, FO, distances, loads, process_time() - start
-
-
             # Generate candidate from RCL
             def generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen):
                 feasible_candidates:list = list()
@@ -551,104 +551,102 @@ class Routing():
 
 
         ''' Genetic Algorithm '''
+        def HybridGenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,top:int or bool=False,rd_seed:int=0,time_limit:float=30):
+            start = process_time()
+            seed(rd_seed)
+            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+
+            # Parameters
+            verbose = False
+            Population_size:int = 5_000
+            Population_iter:range = range(Population_size)
+            training_time:float = 0.15*time_limit
+            Elite_size:int = int(Population_size*0.25)
+
+            crossover_rate:float = 0.5
+            mutation_rate:float = 0.5
+
+            Population, FOs, Distances, Loads, incumbent, best_individual, alpha_performance =\
+                            Routing.GA.generate_population(inst_gen, start, requirements, verbose, 
+                                                                            Population_iter, training_time)
+            
+            # Print progress
+            if verbose: 
+                print('\n')
+                print(f'----- Genetic Algorithm -----')
+                print('\nt \tFO \t#V \tgen')
+                print(f'{round(best_individual[3],2)} \t{round(incumbent,2)} \t{len(best_individual[0])} \t-1')
+
+            # Genetic process
+            generation = 0
+            while time()-start < time_limit:
+                ### Elitism
+                Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
+
+                ### Selection: From a population, which parents are able to reproduce
+                # Intermediate population: Sample of the initial population 
+                inter_population = Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
+                inter_population = Elite + list(inter_population)
+
+                ### Tournament: Select two individuals and leave the best to reproduce
+                Parents = Routing.GA.tournament(inter_population, FOs, Population_iter)
+
+                ### Evolution
+                New_Population:list = list();   New_FOs:list = list(); 
+                New_Distances:list = list();   New_Loads:list = list()
+
+                for i in Population_iter:
+                    individual_i = Parents[i][randint(0,2)]
+                    mutated = False
+
+                    ###################
+                    # TODO: Operators
+                    ###################
+
+                    # No operator is performed
+                    if not mutated: 
+                        new_individual = Population[individual_i]; new_FO = FOs[individual_i] 
+                        new_distances = Distances[individual_i]; new_loads = Loads[individual_i]
+
+                    # Store new individual
+                    New_Population.append(new_individual); New_FOs.append(new_FO); 
+                    New_Distances.append(new_distances); New_Loads.append(new_loads)
+
+                    # Updating incumbent
+                    if sum(new_distances) < incumbent:
+                        incumbent = sum(new_distances)
+                        best_individual:list = [new_individual, new_distances, new_loads, process_time() - start]
+                        print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
+
+                # Update population
+                Population = New_Population
+                FOs = New_FOs
+                Distances = New_Distances
+                Loads = New_Loads
+                generation += 1
+            
+            if verbose:
+                print('\n')
+
+            if not top:
+                return best_individual, None
+            else:
+                combined = list(zip(Distances, Population))                 # Combine 'Distances' and 'Population' into tuples
+                sorted_combined = sorted(combined, key=lambda x: x[0])      # Sort the combined list based on the 'Distances' values
+                # Extract the five elements with the lowest unique distances
+                result = []
+                unique_distances = set()
+                for entry in sorted_combined:
+                    distance, element = entry
+                    if distance not in unique_distances:
+                        result.append(element)
+                        unique_distances.add(distance)
+                        if len(result) == 5:
+                            break
+
+                return best_individual, result
+
         class GA():
-            # Generate routes
-            def GA_routing(purchase:dict,inst_gen:instance_generator,t:int,top:int or bool=False,rd_seed:int=0,time_limit:float=30):
-                start = process_time()
-                seed(rd_seed)
-                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
-
-                # Parameters
-                verbose = False
-                Population_size:int = 5_000
-                Population_iter:range = range(Population_size)
-                training_time:float = 0.15*time_limit
-                Elite_size:int = int(Population_size*0.25)
-
-                crossover_rate:float = 0.5
-                mutation_rate:float = 0.5
-
-                Population, FOs, Distances, Loads, incumbent, best_individual, alpha_performance =\
-                                Routing.GA.generate_population(inst_gen, start, requirements, verbose, 
-                                                                                Population_iter, training_time)
-                
-                # Print progress
-                if verbose: 
-                    print('\n')
-                    print(f'----- Genetic Algorithm -----')
-                    print('\nt \tFO \t#V \tgen')
-                    print(f'{round(best_individual[3],2)} \t{round(incumbent,2)} \t{len(best_individual[0])} \t-1')
-
-                # Genetic process
-                generation = 0
-                while time()-start < time_limit:
-                    ### Elitism
-                    Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
-
-                    ### Selection: From a population, which parents are able to reproduce
-                    # Intermediate population: Sample of the initial population 
-                    inter_population = Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
-                    inter_population = Elite + list(inter_population)
-
-                    ### Tournament: Select two individuals and leave the best to reproduce
-                    Parents = Routing.GA.tournament(inter_population, FOs, Population_iter)
-
-                    ### Evolution
-                    New_Population:list = list();   New_FOs:list = list(); 
-                    New_Distances:list = list();   New_Loads:list = list()
-
-                    for i in Population_iter:
-                        individual_i = Parents[i][randint(0,2)]
-                        mutated = False
-
-                        ###################
-                        # TODO: Operators
-                        ###################
-
-                        # No operator is performed
-                        if not mutated: 
-                            new_individual = Population[individual_i]; new_FO = FOs[individual_i] 
-                            new_distances = Distances[individual_i]; new_loads = Loads[individual_i]
-
-                        # Store new individual
-                        New_Population.append(new_individual); New_FOs.append(new_FO); 
-                        New_Distances.append(new_distances); New_Loads.append(new_loads)
-
-                        # Updating incumbent
-                        if sum(new_distances) < incumbent:
-                            incumbent = sum(new_distances)
-                            best_individual:list = [new_individual, new_distances, new_loads, process_time() - start]
-                            print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
-
-                    # Update population
-                    Population = New_Population
-                    FOs = New_FOs
-                    Distances = New_Distances
-                    Loads = New_Loads
-                    generation += 1
-                
-                if verbose:
-                    print('\n')
-
-                if not top:
-                    return best_individual, None
-                else:
-                    combined = list(zip(Distances, Population))                 # Combine 'Distances' and 'Population' into tuples
-                    sorted_combined = sorted(combined, key=lambda x: x[0])      # Sort the combined list based on the 'Distances' values
-                    # Extract the five elements with the lowest unique distances
-                    result = []
-                    unique_distances = set()
-                    for entry in sorted_combined:
-                        distance, element = entry
-                        if distance not in unique_distances:
-                            result.append(element)
-                            unique_distances.add(distance)
-                            if len(result) == 5:
-                                break
-
-                    return best_individual, result
-
-
             ''' Generate initial population '''
             def generate_population(inst_gen:instance_generator, start:float, requirements:dict, verbose:bool, Population_iter:range,
                                     training_time: float):
@@ -789,31 +787,29 @@ class Routing():
                     new_routes.append(new_route)
                 return new_routes
                         
-                    
+
         ''' Mixed Integer Program '''
+        def MixedIntegerProgram(purchase:dict[float],inst_gen:instance_generator,t:int):
+            start = process_time()
+            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+    
+            N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen, pending_sup, requirements)
+            A.append((0,inst_gen.M+1))
+            distances[0,inst_gen.M+1] = 0
+
+            model = Routing.MIP.generate_complete_MIP(inst_gen, N, V, A, distances, requirements)
+
+            model.update()
+            model.setParam('OutputFlag',0)
+            model.setParam('MIPGap',0.1)
+            model.optimize()
+
+            routes, distances, loads = Routing.MIP.get_MIP_decisions(inst_gen, model, V, A, distances, requirements)
+            cost = model.getObjective().getValue()
+
+            return routes, distances, loads, process_time() - start    
+        
         class MIP():
-            # Generate routes
-            def MIP_routing(purchase:dict[float],inst_gen:instance_generator,t:int):
-                start = process_time()
-                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
-        
-                N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen, pending_sup, requirements)
-                A.append((0,inst_gen.M+1))
-                distances[0,inst_gen.M+1] = 0
-
-                model = Routing.MIP.generate_complete_MIP(inst_gen, N, V, A, distances, requirements)
-
-                model.update()
-                model.setParam('OutputFlag',0)
-                model.setParam('MIPGap',0.1)
-                model.optimize()
-
-                routes, distances, loads = Routing.MIP.get_MIP_decisions(inst_gen, model, V, A, distances, requirements)
-                cost = model.getObjective().getValue()
-
-                return routes, distances, loads, process_time() - start
-        
-
             # Generate complete MIP model
             def generate_complete_MIP(inst_gen:instance_generator, N:list, V:range, A:list, distances:dict, requirements:dict) -> gu.Model:
                 model = gu.Model('d-CVRP')
@@ -891,85 +887,83 @@ class Routing():
         
 
         ''' Column generation algorithm '''
-        class Column_Generation():
-            # Generate routes
-            def CG_routing(purchase:dict[float], inst_gen:instance_generator,t:int):
-                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+        def ColumnGeneration(purchase:dict[float], inst_gen:instance_generator,t:int):
+            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
-                N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
+            N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
 
-                master = Routing.Column_Generation.MasterProblem()
-                modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
+            master = Routing.Column_Generation.MasterProblem()
+            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
 
-                card_omega = len(theta)
+            card_omega = len(theta)
 
-                print("Entering Column Generation Algorithm",flush = True)
-                while True:
-                    print('Solving Master Problem (MP)...', flush = True)
-                    modelMP.optimize()
-                    print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
-
-                    # for j in range(card_omewga): #Retrieving solution of RMP
-                    #     if(theta[j].x!=0):
-                    #         print(f'theta({j}) = {theta[j].x}', flush = True)
-                    
-                    #Retrieving duals of master problem
-                    # lambdas = list()
-                    # lambdas.append(modelMP.getAttr("Pi", modelMP.getConstrs()[0])[0])
-                    # for i in N:
-                    #     lambdas += [modelMP.getAttr("Pi", modelMP.getConstrs()[i])]
-                    # lambdas = list(modelMP.getAttr("Pi", modelMP.getConstrs()))
-                    lambdas = []
-                    lambdas.append(modelMP.getAttr("Pi", RouteLimitCtr)[0])
-                    lambdas+= modelMP.getAttr("Pi", NodeCtr)
-
-                    # for i in range(len(lambdas)):
-                    #     print('lambda(',i,')=', lambdas[i], sep ='', flush = True)  
-
-                    # Solve subproblem (passing dual variables)
-                    print('Solving subproblem (AP):', card_omega, flush = True)
-                    
-                    a_star = dict()
-                    a_star.update({i:0 for i in N})
-                    shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements)
-                    minReducedCost = shortest_path[0]
-                    c_k = shortest_path[1]
-
-                    # Check termination condition
-                    if  minReducedCost >= -0.0005:
-                        print("Column generation stops! \n", flush = True)
-                        break
-                    else:
-                        print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
-                        print('Adding column...', flush = True)
-                        a_star = list(a_star.values())
-                        a_star.append(1) #We add the 1 of the number of routes restrictions
-
-                        newCol = gu.Column(a_star, modelMP.getConstrs())
-                        theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=c_k,lb=0,column=newCol,name=f"theta_{card_omega}"))
-                        card_omega+=1
-                        # Update master model
-                        modelMP.update()
-
-
-                for v in modelMP.getVars():
-                    if v.x>0.5:
-                        print('%s=%g' % (v.varName, v.x))
-                
-                for v in modelMP.getVars():
-                    v.setAttr("Vtype", gu.GRB.INTEGER)
-
+            print("Entering Column Generation Algorithm",flush = True)
+            while True:
+                print('Solving Master Problem (MP)...', flush = True)
                 modelMP.optimize()
+                print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
 
-                print('(Heuristic) integer master problem:')
-                print('Route time: %g' % modelMP.objVal)
-                for v in modelMP.getVars():
-                    if v.x > 0.5:
-                        print('%s %g' % (v.varName, v.x))
+                # for j in range(card_omewga): #Retrieving solution of RMP
+                #     if(theta[j].x!=0):
+                #         print(f'theta({j}) = {theta[j].x}', flush = True)
                 
-                print('Normal termination. -o-')
-            
+                #Retrieving duals of master problem
+                # lambdas = list()
+                # lambdas.append(modelMP.getAttr("Pi", modelMP.getConstrs()[0])[0])
+                # for i in N:
+                #     lambdas += [modelMP.getAttr("Pi", modelMP.getConstrs()[i])]
+                # lambdas = list(modelMP.getAttr("Pi", modelMP.getConstrs()))
+                lambdas = []
+                lambdas.append(modelMP.getAttr("Pi", RouteLimitCtr)[0])
+                lambdas+= modelMP.getAttr("Pi", NodeCtr)
 
+                # for i in range(len(lambdas)):
+                #     print('lambda(',i,')=', lambdas[i], sep ='', flush = True)  
+
+                # Solve subproblem (passing dual variables)
+                print('Solving subproblem (AP):', card_omega, flush = True)
+                
+                a_star = dict()
+                a_star.update({i:0 for i in N})
+                shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements)
+                minReducedCost = shortest_path[0]
+                c_k = shortest_path[1]
+
+                # Check termination condition
+                if  minReducedCost >= -0.0005:
+                    print("Column generation stops! \n", flush = True)
+                    break
+                else:
+                    print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
+                    print('Adding column...', flush = True)
+                    a_star = list(a_star.values())
+                    a_star.append(1) #We add the 1 of the number of routes restrictions
+
+                    newCol = gu.Column(a_star, modelMP.getConstrs())
+                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=c_k,lb=0,column=newCol,name=f"theta_{card_omega}"))
+                    card_omega+=1
+                    # Update master model
+                    modelMP.update()
+
+
+            for v in modelMP.getVars():
+                if v.x>0.5:
+                    print('%s=%g' % (v.varName, v.x))
+            
+            for v in modelMP.getVars():
+                v.setAttr("Vtype", gu.GRB.INTEGER)
+
+            modelMP.optimize()
+
+            print('(Heuristic) integer master problem:')
+            print('Route time: %g' % modelMP.objVal)
+            for v in modelMP.getVars():
+                if v.x > 0.5:
+                    print('%s %g' % (v.varName, v.x))
+            
+            print('Normal termination. -o-')
+        
+        class Column_Generation():
             # Master problem
             class MasterProblem:
                 
@@ -1021,8 +1015,7 @@ class Routing():
 
                 def generateObjective(self, modelMP:gu.Model):
                     modelMP.modelSense = gu.GRB.MINIMIZE
-                    return modelMP
-                
+                    return modelMP 
 
             # Auxiliary problem
             class SubProblem:

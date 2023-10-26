@@ -1,36 +1,47 @@
 #%%
-from InstanceGenerator import instance_generator
-from SD_IB_IRP_PPenv import steroid_IRP
-from Policies import policy_generator
-from Visualizations import RoutingV
+import sys
+from time import process_time
 
+sys.path.append('../../.')
+import pIRPgym
+import pIRPgym
 
 ########################################## Instance generator ###########################################
-# SD-IB-IRP-PP model's parameters
+# Instance Generator
+# pIRP model's parameters
 T = 7
 M = 15
 K = 10
 F = 15
 
+demand_type = 'aggregated'
+
+# Vehicles
 Q = 2000
 d_max = 2000
 
-backorders = False              # Feature's parameters
+# Stochasticity
 stochastic_params = ['d','q']
-
 look_ahead = ['d','q']
 S = 6
 LA_horizon = 3 
 
+# Historical data
 historical_data = ['*']
 hist_window = 40
 
+# Other parameters
+backorders = 'backorders'
+back_o_cost = 10000  
+
+
 env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q, 
               'S':S, 'LA_horizon':LA_horizon,
-             'd_max':d_max, 'hist_window':hist_window}                    # Other parameters
+             'd_max':d_max, 'hist_window':hist_window,
+             'back_o_cost':back_o_cost}
 
 # Creating instance generator object
-inst_gen = instance_generator(look_ahead, stochastic_params, 
+inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
                               historical_data, backorders, env_config = env_config)
 
 
@@ -68,25 +79,21 @@ inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_par
 routing = True
 inventory = True    
 perishability = 'ages'
-env = steroid_IRP(routing, inventory, perishability)
+env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
 state = env.reset(inst_gen, return_state = True)
 
 
 #%%######################################### Diverse Routing Strategies ##########################################
-purchase = policy_generator.Purchasing.avg_purchase_all(inst_gen, env)
+purchase = pIRPgym.Policies.Purchasing.avg_purchase_all(inst_gen, env)
 
-# Routing Policies
-route_planner = policy_generator.Routing
-
-nn_routes, nn_distances, nn_loads, nn_time = route_planner.Nearest_Neighbor.NN_routing(purchase,inst_gen,env.t)                      # Nearest Neighbor
-RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = route_planner.RCL_constructive.RCL_routing(purchase,inst_gen,env.t)         # RCL based constructive
-GA_routes, GA_distances, GA_loads, GA_time  = route_planner.GA.GA_routing(purchase, inst_gen,env.t,rd_seed=0,time_limit=30)         # Genetic Algorithm
-# HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = route_planner.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t)                        # Hybrid Genetic Search (CVRP)
-# MIP_routes, MIP_distances, MIP_loads, MIP_time = route_planner.MIP.MIP_routing(purchase,inst_gen)                                                        # Complete MIP
-
-CG_routes, CG_distances, CG_loads, CG_time = route_planner.Column_Generation.CG_routing(purchase,inst_gen,env.t)      # Column Generation algorithm
+nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Policies.Routing.NearestNeighbor(purchase,inst_gen,env.t)                      # Nearest Neighbor
+RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = pIRPgym.Policies.Routing.RCL_Heuristic(purchase,inst_gen,env.t)         # RCL based constructive
+GA_routes, GA_distances, GA_loads, GA_time  = pIRPgym.Policies.Routing.HybridGenticAlgorithm(purchase, inst_gen,env.t,rd_seed=0,time_limit=30)         # Genetic Algorithm
+HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Policies.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t)                        # Hybrid Genetic Search (CVRP)
+MIP_routes, MIP_distances, MIP_loads, MIP_time = pIRPgym.Policies.Routing.MixedIntegerProgram(purchase,inst_gen)                                                        # Complete MIP
+CG_routes, CG_distances, CG_loads, CG_time =  pIRPgym.Policies.Routing.ColumnGeneration(purchase,inst_gen,env.t)      # Column Generation algorithm
 
 
 #%%######################################### Visualizations ##########################################
@@ -100,25 +107,24 @@ data = {
         # 'ColGen':[CG_routes, CG_distances, CG_loads, CG_time,0]
         }
 
-
-RoutingV.compare_routing_strategies(inst_gen, data)
+pIRPgym.RoutingV.compare_routing_strategies(inst_gen, data)
 
 #%% Routes analytics
 routes = CG_routes; distances = CG_distances
 
 # Visualizations
 product = 0
-RoutingV.route_availability_per_product(routes[1], product, inst_gen, env, True)
+pIRPgym.RoutingV.route_availability_per_product(routes[1], product, inst_gen, env, True)
 
 #%%
-RoutingV.route_total_availability(routes[1], inst_gen, env)
+pIRPgym.RoutingV.route_total_availability(routes[1], inst_gen, env)
 
 #%%
 product = 0
-RoutingV.routes_availability_per_product(routes, product, inst_gen, env)
+pIRPgym.RoutingV.routes_availability_per_product(routes, product, inst_gen, env)
 
 #%%
-RoutingV.routes_total_availability(routes, inst_gen, env)
+pIRPgym.RoutingV.routes_total_availability(routes, inst_gen, env)
 
 
 

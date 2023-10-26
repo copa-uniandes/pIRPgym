@@ -4,13 +4,13 @@ import sys
 from time import process_time
 
 sys.path.append('../../.')
-import pIRPgym 
+import pIRPgym
 
 
 
 #%%##########################################  Instance Generator  ##########################################
 # Instance Generator
-# SD-IB-IRP-PP model's parameters
+# pIRP model's parameters
 T = 7
 M = 15
 K = 10
@@ -40,10 +40,10 @@ back_o_cost = 10000
 env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q, 
               'S':S, 'LA_horizon':LA_horizon,
              'd_max':d_max, 'hist_window':hist_window,
-             'back_o_cost':back_o_cost}    
+             'back_o_cost':back_o_cost}
 
 # Creating instance generator object
-inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params, 
+inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
                               historical_data, backorders, env_config = env_config)
 
 #%%#########################################    Random Instance    ##########################################
@@ -94,7 +94,7 @@ purchase = inst_gen.upload_CVRP_instance(set, instance)
 # Environment
 # Creating environment object
 routing = True
-inventory = True    
+inventory = True
 perishability = 'ages'
 env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
@@ -103,7 +103,7 @@ state = env.reset(inst_gen, return_state = True)
 
 
 
-#%%####################################### Single Episode Simulation  ########################################
+#%%####################################### Single Episode/Singe Routing Policy Simulation  ########################################
 # Episode simulation
 # Simulations 
 ''' Simulations '''
@@ -112,10 +112,10 @@ num_episodes = 1
 
 print(f'################### Episode simulation ##################')
 # Episode's and performance storage
-rewards=dict();   states=dict();   real_actions=dict();   backorders=dict();   la_decisions=dict()
+rewards=dict();  states=dict();   real_actions=dict();   backorders=dict();   la_decisions=dict()
 perished=dict(); actions=dict(); #times=dict() 
 
-routing_performance=dict()
+routing_performance = dict()
 run_time = process_time()
 
 time_limit = 10
@@ -132,10 +132,12 @@ while not done:
 
     if inst_gen.other_params["demand_type"] == "aggregated":
         ''' Purchase'''
-        [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+        [purchase,demand_compliance], la_dec = pIRPgym.Policies.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
 
         ''' Routing '''
-        [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Routing.GA.GA_routing(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
+        nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Policies.Routing.NearestNeighbor(purchase,inst_gen,env.t)                      # Nearest Neighbor
+
+        [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Policies.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
         GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)                     
 
         ''' Compound action'''        
@@ -153,4 +155,6 @@ while not done:
     la_decisions[env.t-1] = la_dec
 
 print('Finished')
-# %%
+
+
+#%%####################################### Single Episode Simulation  ######################################## 
