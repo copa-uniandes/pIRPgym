@@ -14,6 +14,7 @@ class Routing():
         
         ''' Nearest Neighbor (NN) heuristic '''
         # Generate routes
+        @staticmethod
         def NearestNeighbor(purchase:dict[float],inst_gen:instance_generator,t:int) -> tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
@@ -49,6 +50,7 @@ class Routing():
         
         class Nearest_Neighbor():      
             # Find nearest feasible (by capacity) node
+            @staticmethod
             def find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen):
                 target, dist = False, 1e6
                 for candidate in pending_sup:
@@ -61,6 +63,7 @@ class Routing():
             
         
         ''' RCL based constructive '''
+        @staticmethod
         def RCL_Heuristic(purchase:dict[float],inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> dict:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
@@ -83,6 +86,7 @@ class Routing():
         
         class RCL_constructive():
             # Generate candidate from RCL
+            @staticmethod
             def generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen):
                 feasible_candidates:list = list()
                 max_crit:float = -1e9
@@ -130,6 +134,7 @@ class Routing():
 
 
         ''' Genetic Algorithm '''
+        @staticmethod
         def HybridGenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,top:int or bool=False,rd_seed:int=0,time_limit:float=30):
             start = process_time()
             seed(rd_seed)
@@ -227,6 +232,7 @@ class Routing():
 
         class GA():
             ''' Generate initial population '''
+            @staticmethod
             def generate_population(inst_gen:instance_generator, start:float, requirements:dict, verbose:bool, Population_iter:range,
                                     training_time: float):
                 # Initalizing data storage
@@ -273,6 +279,7 @@ class Routing():
 
 
             ''' Calibrate alphas for RCL '''
+            @staticmethod
             def calibrate_alpha(RCL_alpha_list:list, alpha_performance:dict, requirements:dict, inst_gen:instance_generator) -> dict:
                 requirements2 = deepcopy(requirements)
                 tr_distance:float = 0
@@ -285,11 +292,13 @@ class Routing():
 
 
             ''' Elite class '''
+            @staticmethod
             def elite_class(FOs:list, Population_iter:range, Elite_size:int) -> list:
                 return [x for _, x in sorted(zip(FOs,[i for i in Population_iter]))][:Elite_size] 
             
 
             ''' Intermediate population '''
+            @staticmethod
             def intermediate_population(FOs:list, Population_size:int, Population_iter:range, Elite_size:int):
                 # Fitness function
                 # Fitness function
@@ -304,6 +313,7 @@ class Routing():
 
 
             ''' Tournament '''
+            @staticmethod
             def tournament(inter_population:list, FOs:list, Population_iter:range) -> list:
                 Parents:list = list()
                 for i in Population_iter:
@@ -322,7 +332,8 @@ class Routing():
 
         ''' Hybrid Genetic Search (CVRP) '''
         class HyGeSe(): 
-            # Generate routes  
+            # Generate routes
+            @staticmethod
             def HyGeSe_routing(purchase:dict[float],inst_gen:instance_generator,t:int,time_limit:int=30):    
                 start = process_time()
                 # Solver initialization
@@ -342,6 +353,7 @@ class Routing():
 
 
             # Generate data dict for HyGeSe algorithm
+            @staticmethod
             def generate_HyGeSe_data(inst_gen:instance_generator, requirements:dict) -> dict:
                 data = dict()
 
@@ -355,6 +367,7 @@ class Routing():
                 return data
 
             # Translate routes to environment suppliers
+            @staticmethod
             def translate_routes(inst_gen:instance_generator,requirements:dict,routes:list[list]):
                 dic = {i+1:val for i,val in enumerate(list(requirements.keys()))}
                 new_routes = list()
@@ -368,6 +381,7 @@ class Routing():
                         
 
         ''' Mixed Integer Program '''
+        @staticmethod
         def MixedIntegerProgram(purchase:dict[float],inst_gen:instance_generator,t:int):
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
@@ -390,6 +404,7 @@ class Routing():
         
         class MIP():
             # Generate complete MIP model
+            @staticmethod
             def generate_complete_MIP(inst_gen:instance_generator, N:list, V:range, A:list, distances:dict, requirements:dict) -> gu.Model:
                 model = gu.Model('d-CVRP')
 
@@ -432,6 +447,7 @@ class Routing():
             
 
             # Retrieve and consolidate decisions from MIP
+            @staticmethod
             def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, V:list, A:list, distances:dict, requirements:dict):
                 routes = list()
                 dist = list()
@@ -466,6 +482,7 @@ class Routing():
         
 
         ''' Column generation algorithm '''
+        @staticmethod
         def ColumnGeneration(purchase:dict[float], inst_gen:instance_generator,t:int):
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -545,7 +562,8 @@ class Routing():
         class Column_Generation():
             # Master problem
             class MasterProblem:
-                
+
+                @staticmethod
                 def buidModel(self, inst_gen:instance_generator, N:list, distances:dict, name:str = 'MasterProblem'):
                     modelMP = gu.Model(name)
 
@@ -561,6 +579,7 @@ class Routing():
                     return modelMP, theta, RouteLimitCtr, NodeCtr
             
 
+                @staticmethod
                 def generateVariables(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, distances):
                     theta = list()
                     
@@ -581,6 +600,7 @@ class Routing():
                     return modelMP, theta
 
 
+                @staticmethod
                 def generateConstraints(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, theta:list):
                     NodeCtr = list()                #Node covering constraints
                     for i in N:
@@ -592,13 +612,15 @@ class Routing():
                     return modelMP, RouteLimitCtr, NodeCtr
 
 
+                @staticmethod
                 def generateObjective(self, modelMP:gu.Model):
                     modelMP.modelSense = gu.GRB.MINIMIZE
                     return modelMP 
 
             # Auxiliary problem
             class SubProblem:
-
+                
+                @staticmethod
                 def solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements):
                     
                     modelAP = gu.Model('SubProblem')
@@ -657,6 +679,7 @@ class Routing():
         ''' Auxiliary methods for network management '''
         class network_aux_methods():
             # Generate vertices and arches for a complete graph
+            @staticmethod
             def generate_complete_graph(inst_gen: instance_generator, pending_sup:list, requirements:dict) -> tuple[list,list,list]:
                 N = pending_sup
                 V:list = [0]+ N +[inst_gen.M+1]
@@ -679,6 +702,7 @@ class Routing():
 
 
         ''' Auxiliary method to compute total product to recover from suppliers '''
+        @staticmethod
         def consolidate_purchase(purchase,inst_gen,t) -> tuple[list,dict]:
             # purchse is given for suppliers and products
             if type(list(purchase.keys())[0]) == tuple:

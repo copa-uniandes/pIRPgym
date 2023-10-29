@@ -7,7 +7,8 @@ from ..pIRPenv import steroid_IRP
 
 
 class Inventory():
-    def det_FIFO(state:dict[float], purchase:dict[float], inst_gen:instance_generator, env: steroid_IRP) -> dict[float]:
+    @staticmethod
+    def det_FIFO(state:dict,purchase:dict,inst_gen:instance_generator,env: steroid_IRP) -> dict[float]:
         demand_compliance = {}
         for k in inst_gen.Products:
             left_to_comply = inst_gen.W_d[env.t][k]
@@ -19,8 +20,9 @@ class Inventory():
         
         return demand_compliance
     
-
-    def Stochastic_Rolling_Horizon(state, env, inst_gen):
+    
+    @staticmethod
+    def Stochastic_Rolling_Horizon(state,env,inst_gen):
         # State
         I_0 = state.copy()
 
@@ -204,7 +206,8 @@ class Inventory():
         return action, la_decisions
 
 
-    def Stochastic_RH_Age_Demand(state, env, inst_gen):
+    @staticmethod
+    def Stochastic_RH_Age_Demand(state,env,inst_gen):
 
         solucionTTP = {0:[  np.zeros(inst_gen.M+1, dtype=bool), 
                                 np.zeros(inst_gen.M+1, dtype=int), 
