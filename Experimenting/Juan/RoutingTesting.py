@@ -135,7 +135,7 @@ data = {
         # 'ColGen':[CG_routes, CG_distances, CG_loads, CG_time,0]
         }
 
-pIRPgym.Visualizations.RoutingV.compare_routing_strategies(inst_gen, data)
+pIRPgym.Visualizations.RoutingV.compare_routing_strategies(inst_gen,data)
 
 #%% Routes analytics
 routes = nn_routes; distances = nn_distances
@@ -145,11 +145,11 @@ product = 0
 pIRPgym.Visualizations.RoutingV.route_availability_per_product(routes[1], product, inst_gen, env, True)
 
 #%%
-pIRPgym.RoutingV.route_total_availability(routes[1], inst_gen, env)
+pIRPgym.Visualizations.RoutingV.route_total_availability(routes[1], inst_gen, env)
 
 #%%
 product = 0
-pIRPgym.RoutingV.routes_availability_per_product(routes, product, inst_gen, env)
+pIRPgym.Visualizations.RoutingV.routes_availability_per_product(routes, product, inst_gen, env)
 
 #%%
 pIRPgym.Visualizations.RoutingV.routes_total_availability(routes, inst_gen, env)

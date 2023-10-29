@@ -16,7 +16,7 @@ class Routing():
         ''' Nearest Neighbor (NN) heuristic '''
         # Generate routes
         @staticmethod
-        def NearestNeighbor(purchase:dict[float],inst_gen:instance_generator,t:int) -> tuple:
+        def NearestNeighbor(purchase:dict,inst_gen:instance_generator,t:int) -> tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -65,7 +65,7 @@ class Routing():
         
         ''' RCL based constructive '''
         @staticmethod
-        def RCL_Heuristic(purchase:dict[float],inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> dict:
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> dict:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
@@ -111,6 +111,7 @@ class Routing():
 
 
             # Generate route from RCL
+            @staticmethod
             def generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen):
                 node:int = 0
                 load:int = 0
@@ -335,7 +336,7 @@ class Routing():
         class HyGeSe(): 
             # Generate routes
             @staticmethod
-            def HyGeSe_routing(purchase:dict[float],inst_gen:instance_generator,t:int,time_limit:int=30):    
+            def HyGeSe_routing(purchase:dict,inst_gen:instance_generator,t:int,time_limit:int=30):    
                 start = process_time()
                 # Solver initialization
                 ap = hgs.AlgorithmParameters(timeLimit=time_limit,)  # seconds
@@ -355,7 +356,7 @@ class Routing():
 
             # Generate data dict for HyGeSe algorithm
             @staticmethod
-            def generate_HyGeSe_data(inst_gen:instance_generator, requirements:dict) -> dict:
+            def generate_HyGeSe_data(inst_gen:instance_generator,requirements:dict)->dict:
                 data = dict()
 
                 # data['distance_matrix'] = [[inst_gen.c[i,j] if i!=j else 0 for j in inst_gen.N] for i in inst_gen.N]
@@ -406,7 +407,7 @@ class Routing():
         class MIP():
             # Generate complete MIP model
             @staticmethod
-            def generate_complete_MIP(inst_gen:instance_generator, N:list, V:range, A:list, distances:dict, requirements:dict) -> gu.Model:
+            def generate_complete_MIP(inst_gen:instance_generator,N:list,V:range,A:list,distances:dict,requirements:dict)->gu.Model:
                 model = gu.Model('d-CVRP')
 
                 # 1 if arch (i,j) is traveled by vehicle f, 0 otherwise

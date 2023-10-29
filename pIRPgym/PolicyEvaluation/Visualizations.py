@@ -18,7 +18,8 @@ from copy import deepcopy
 
 class RoutingV():
     # Sumarizes and compares routing solutions
-    def compare_routing_strategies(inst_gen:instance_generator, data:dict[list]):
+    @staticmethod
+    def compare_routing_strategies(inst_gen:instance_generator,data:dict):
         print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tTime \tRealCost')
         for strategy, performance in data.items():
             if strategy in ['MIP','CG'] :
@@ -55,6 +56,7 @@ class RoutingV():
 
 
     # Plot routes
+    @staticmethod
     def render_routes(inst_gen:instance_generator,routes:list,save:bool=False):
         G = nx.MultiDiGraph()
 
@@ -104,6 +106,7 @@ class RoutingV():
 
 
     # Plot routes of various routing strategies (comparison)
+    @staticmethod
     def render_routes_diff_strategies(inst_gen:instance_generator,solutions:list,save:bool=False):
         G = nx.MultiDiGraph()
 
@@ -149,6 +152,7 @@ class RoutingV():
 
 
     # Scatter plot of solutions (transport cost vs. Purchasing delta)
+    @staticmethod
     def plot_solutions(inst_gen:instance_generator,routing_performance:dict):
         x = dict()
         y = dict()
@@ -198,6 +202,7 @@ class RoutingV():
 
 
     # Scatter plot of solutions (NORMALIZED transport cost vs. Purchasing delta)
+    @staticmethod
     def plot_solutions_standarized(inst_gen:instance_generator,routing_performance:dict):
         x = dict()
         y = dict()
@@ -256,6 +261,7 @@ class RoutingV():
 
 
     # Plot solutions in vertical lines
+    @staticmethod
     def plot_vertical_lines(inst_gen:instance_generator,routing_performance:dict,st:str,name:str,col:str):
         routing_costs = list()
         purchasing_delta = list()
@@ -336,6 +342,7 @@ class RoutingV():
         plt.show()
 
     # Displays the historic availability of a given route for a given product
+    @staticmethod
     def route_availability_per_product(route:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
         series = list()
         labels = list()
@@ -363,6 +370,7 @@ class RoutingV():
     
 
     # Displays the historic total availability of the suppiers of a given route
+    @staticmethod
     def route_total_availability(route:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool = False):
         series = list()
         labels = list()
@@ -394,6 +402,7 @@ class RoutingV():
     
 
     # Displays the historic avaiability of different routes for a given product
+    @staticmethod
     def routes_availability_per_product(routes:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
         series = list()
         labels = list()
@@ -431,6 +440,7 @@ class RoutingV():
     
 
     # Displays the historic total avaiability of different routes
+    @staticmethod
     def routes_total_availability(routes:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool=False,title:str=''):
         series = list()
         labels = list()
@@ -473,6 +483,7 @@ class RoutingV():
 
 
     # Auxiliary function to return mean 
+    @staticmethod
     def return_mean(values:list):
         if len(values)==0:
             return 0
@@ -481,12 +492,14 @@ class RoutingV():
 
 
     # Auxiliary function to return limits of std interval
+    @staticmethod
     def return_brackets(values:list, mean:float):
         return mean + np.std(values), mean - np.std(values)
 
 
 class InventoryV():
 
+    @staticmethod
     def inventories(day:float, prod:float, inst_gen:instance_generator, real_actions:dict, actions:dict, la_decisions:dict, states:dict):
 
         fig, ax = plt.subplots(figsize=(12,6))
