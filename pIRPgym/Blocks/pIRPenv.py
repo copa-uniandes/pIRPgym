@@ -5,6 +5,7 @@
 ### Basic Librarires
 from copy import copy, deepcopy
 import pandas as pd
+from typing import Union
 
 
 ### Instance generator
@@ -56,7 +57,7 @@ from .BuildingBlocks import Routing_management, Inventory_management
 class steroid_IRP(): 
     
     # Initialization method
-    def __init__(self,routing:bool=True,inventory:bool=True,perishability:bool=True):
+    def __init__(self,routing:bool=True,inventory:bool=True,perishability:Union[str,bool]=True):
         assert inventory >= bool(perishability),'Perishability only available with Inventory Problem'
         self.config = {'routing':routing,'inventory':inventory,'perishability':perishability}
         

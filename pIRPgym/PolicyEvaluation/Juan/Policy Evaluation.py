@@ -1,7 +1,7 @@
 from ...Blocks.InstanceGenerator import instance_generator
 from ...Blocks.pIRPenv import steroid_IRP
 from ...Blocks import Policies
-
+from time import process_time
 
 def single_episode_evaluation(inst_gen,env,routing_policy):
     ''' Simulations '''

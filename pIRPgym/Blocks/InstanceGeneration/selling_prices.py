@@ -2,8 +2,8 @@ from numpy.random import seed, random, randint, lognormal
 
 class selling_prices():
 
+    @staticmethod
     def get_selling_prices(inst_gen,discount) -> dict:
-        
         #discount = kwargs["discount"]
         sell_prices = dict()
 
@@ -14,6 +14,7 @@ class selling_prices():
 
         return sell_prices
     
+    @staticmethod
     def gen_salvage_price(inst_gen, **kwargs) -> dict:
         salv_price = dict()
         for k in inst_gen.Products:
@@ -26,6 +27,7 @@ class selling_prices():
         
         return salv_price
     
+    @staticmethod
     def gen_optimal_price(inst_gen, **kwargs) -> dict:
         opt_price = {}
         for k in inst_gen.Products:            
@@ -33,6 +35,7 @@ class selling_prices():
         
         return opt_price
 
+    @staticmethod
     def gen_sell_price_strong_discount(inst_gen, conv_discount) -> dict:
 
         def ff(k):
@@ -50,7 +53,9 @@ class selling_prices():
                     else: sell_prices[k,o] = inst_gen.salv_price[k] + ((inst_gen.opt_price[k]-inst_gen.salv_price[k])*0.25)*(ff(inst_gen.O_k[k]-o+1)-1)/(ff(inst_gen.O_k[k])-1)
         
         return sell_prices
-        
+
+
+    @staticmethod   
     def gen_sell_price_mild_discount(inst_gen, conv_discount) -> dict:
 
         def ff(k):
@@ -66,11 +71,15 @@ class selling_prices():
         
         return sell_prices
 
+
+    @staticmethod
     def gen_sell_price_null_discount(inst_gen, **kwargs) -> dict:
 
         sell_prices = {(k,o):inst_gen.opt_price[k] for k in inst_gen.Products for o in range(inst_gen.O_k[k] + 1)}
         return sell_prices
     
+
+    @staticmethod
     def gen_sell_price_linear_discount(inst_gen, **kwargs) -> dict:
         
         sell_prices = dict()

@@ -4,6 +4,7 @@ from .forecasting import empiric_distribution_sampling
 
 class demand():
     ### Demand of products
+    @staticmethod
     def gen_demand(inst_gen, **kwargs) -> tuple:
         seed(inst_gen.d_rd_seed + 2)
         if kwargs['dist'] == 'log-normal':   rd_function = lognormal
@@ -22,6 +23,7 @@ class demand():
             return hist_d, W_d, None
     
     ### Demand of products
+    @staticmethod
     def gen_demand_age(inst_gen, **kwargs) -> tuple:
         seed(inst_gen.d_rd_seed + 2)
         if kwargs['dist'] == 'log-normal':   rd_function = lognormal
@@ -40,6 +42,7 @@ class demand():
             return hist_d, W_d, None
 
     # Historic demand
+    @staticmethod
     def gen_hist_d(inst_gen, rd_function, **kwargs) -> dict[dict]: 
         hist_d = {t:dict() for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('d' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -50,6 +53,7 @@ class demand():
         return hist_d
 
     # Historic demand for age-dependent demand
+    @staticmethod
     def gen_hist_d_age(inst_gen, rd_function, **kwargs) -> dict[dict]: 
         hist_d = {t:{} for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('d' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -63,6 +67,7 @@ class demand():
 
 
     # Realized (real) availabilities
+    @staticmethod
     def gen_W_d(inst_gen, rd_function, hist_d, **kwargs) -> tuple:
         '''
         W_d: (dict) demand of k \in K  on t \in T
@@ -79,6 +84,7 @@ class demand():
         return W_d, hist_d
     
     # Realized (real) availabilities
+    @staticmethod
     def gen_W_d_age(inst_gen, rd_function, hist_d, **kwargs) -> tuple:
         '''
         W_d: (dict) demand of k \in K  on t \in T
@@ -97,6 +103,7 @@ class demand():
         return W_d, hist_d
 
     # Demand's sample paths
+    @staticmethod
     def gen_empiric_d_sp(inst_gen, hist_d, W_d) -> dict[dict]:
         s_paths_d = dict()
         for t in inst_gen.Horizon: 
@@ -113,6 +120,7 @@ class demand():
         return s_paths_d
     
     # Demand's sample paths
+    @staticmethod
     def gen_empiric_d_sp_age(inst_gen, hist_d, W_d) -> dict[dict]:
         s_paths_d = {}
         for t in inst_gen.Horizon: 

@@ -4,6 +4,7 @@ from numpy.random import seed, randint
 
 class locations():
 
+    @staticmethod
     def generate_grid(V: range): 
         # Suppliers locations in grid
         size_grid = 1000
@@ -11,18 +12,24 @@ class locations():
         return coor, V
     
 
+    @staticmethod
     def euclidean_distance(coor: dict, V: range):
         # Transportation cost between nodes i and j, estimated using euclidean distance
         return {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in V for j in V if i!=j}
     
 
+    @staticmethod
     def euclidean_dist_costs(V: range, d_rd_seed):
         seed(d_rd_seed + 6)
         coor, _ = locations.generate_grid(V)
         return coor, locations.euclidean_distance(coor, _)
     
+
     # Uploading 
-    def upload_cvrp_instance(set, instance) -> tuple[int, int, int, dict[float], dict[float]]:
+    @staticmethod
+    def upload_cvrp_instance(set,instance) -> tuple[int,int,int,dict[float],dict[float]]:
+        assert set in ['Li','Golden','Uchoa'], 'The dCVRP instance set is not available for the pIRPenv'
+
         if set in ['Li','Golden']: CVRPtype = 'dCVRP'; sep = ' '
         elif set == 'Uchoa': CVRPtype = 'CVRP'; sep = '\t'
         file = open(f'./CVRP Instances/{CVRPtype}/{set}/{instance}', mode = 'r');     file = file.readlines()

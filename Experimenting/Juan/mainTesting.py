@@ -3,9 +3,9 @@
 import sys
 from time import process_time
 
+
 sys.path.append('../../.')
 import pIRPgym
-
 
 
 #%%##########################################  Instance Generator  ##########################################
@@ -132,12 +132,12 @@ while not done:
 
     if inst_gen.other_params["demand_type"] == "aggregated":
         ''' Purchase'''
-        [purchase,demand_compliance], la_dec = pIRPgym.Policies.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+        [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
 
         ''' Routing '''
-        nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Policies.Routing.NearestNeighbor(purchase,inst_gen,env.t)                      # Nearest Neighbor
+        nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                      # Nearest Neighbor
 
-        [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Policies.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
+        [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
         GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)                     
 
         ''' Compound action'''        
@@ -155,6 +155,7 @@ while not done:
     la_decisions[env.t-1] = la_dec
 
 print('Finished')
+
 
 
 #%%####################################### Single Episode Simulation  ######################################## 

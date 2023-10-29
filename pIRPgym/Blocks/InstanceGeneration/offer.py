@@ -2,8 +2,8 @@ from numpy.random import seed, random, randint, lognormal
 from .forecasting import empiric_distribution_sampling
 
 class offer():
-    
     ### Availabilty of products on suppliers
+    @staticmethod
     def gen_availabilities(inst_gen) -> tuple:
         '''
         M_kt: (dict) subset of suppliers that offer k \in K on t \in T
@@ -27,8 +27,8 @@ class offer():
 
         return M_kt, K_it
     
-
     ### Available quantities of products on suppliers
+    @staticmethod
     def gen_quantities(inst_gen,**kwargs) -> tuple:
         seed(inst_gen.d_rd_seed + 4)
         if kwargs['dist'] == 'c_uniform':   rd_function = randint
@@ -44,8 +44,8 @@ class offer():
             W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
             return hist_q, W_q, None
 
-
     # Historic availabilities
+    @staticmethod
     def gen_hist_q(inst_gen,rd_function,**kwargs) -> dict[dict]:
         hist_q = {t:dict() for t in inst_gen.Horizon}
         factor = {i:1+random()*2 for i in inst_gen.Suppliers}
@@ -58,6 +58,7 @@ class offer():
 
     
     # Realized (real) availabilities
+    @staticmethod
     def gen_W_q(inst_gen,rd_function,hist_q,**kwargs) -> tuple:
         '''
         W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
@@ -78,6 +79,7 @@ class offer():
 
 
     # Availabilitie's sample paths
+    @staticmethod
     def gen_empiric_q_sp(inst_gen,hist_q,W_q) -> dict[dict]:
         s_paths_q = dict()
         for t in inst_gen.Horizon: 
@@ -95,6 +97,7 @@ class offer():
 
 
     ### Prices of products on suppliers
+    @staticmethod
     def gen_prices(inst_gen, **kwargs) -> tuple:
         seed(inst_gen.d_rd_seed + 5)
         if kwargs['dist'] == 'd_uniform':   rd_function = randint
@@ -111,6 +114,7 @@ class offer():
     
     
     # Historic prices
+    @staticmethod
     def gen_hist_p(inst_gen, rd_function, **kwargs) -> dict[dict]:
         hist_p = {t:dict() for t in inst_gen.Horizon}
         if inst_gen.other_params['historical'] != False and ('p' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -122,6 +126,7 @@ class offer():
 
 
     # Realized (real) prices
+    @staticmethod
     def gen_W_p(inst_gen, rd_function, hist_p, **kwargs) -> tuple:
         '''
         W_p: (dict) quantity of k \in K offered by supplier i \in M on t \in T
@@ -142,6 +147,7 @@ class offer():
     
 
     # Prices's sample paths
+    @staticmethod
     def gen_empiric_p_sp(inst_gen, hist_p, W_p) -> dict[dict]:
         s_paths_p = dict()
         for t in inst_gen.Horizon: 

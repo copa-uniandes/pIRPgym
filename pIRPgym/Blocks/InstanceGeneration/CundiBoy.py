@@ -5,6 +5,7 @@ from numpy.random import seed, randint,lognormal
 
 class CundiBoy():
     
+    @staticmethod
     def upload_instance():
         data_suppliers = pd.read_excel(os.getcwd()+'/Data/Data_Fruver_0507.xlsx', sheet_name='provider_orders')
         data_demand = pd.read_excel(os.getcwd()+"/Data/Data_Fruver_0507.xlsx",sheet_name="daily_sales_historic")
@@ -94,6 +95,7 @@ class CundiBoy():
 
     class demand():
         ### Demand of products
+        @staticmethod
         def gen_demand(inst_gen,ex_d,hist_demand,**kwargs) -> tuple:
             seed(inst_gen.d_rd_seed + 2)
             if kwargs['dist'] == 'log-normal':   rd_function = lognormal
@@ -114,6 +116,7 @@ class CundiBoy():
                 return hist_d, W_d, None
 
         # Historic demand
+        @staticmethod
         def gen_hist_d(inst_gen, rd_function, **kwargs) -> dict[dict]: 
             hist_d = {t:dict() for t in inst_gen.Horizon}
             if inst_gen.other_params['historical'] != False and ('d' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -125,6 +128,7 @@ class CundiBoy():
 
 
         # Realized (real) availabilities
+        @staticmethod
         def gen_W_d(inst_gen,ex_d,rd_function,hist_d,**kwargs) -> tuple:
             '''
             W_d: (dict) demand of k \in K  on t \in T
@@ -144,6 +148,7 @@ class CundiBoy():
         
 
         # Demand's sample paths
+        @staticmethod
         def gen_empiric_d_sp(inst_gen, hist_d, W_d) -> dict[dict]:
             s_paths_d = dict()
             for t in inst_gen.Horizon: 
@@ -162,6 +167,7 @@ class CundiBoy():
         
     class offer():
         ### Available quantities of products on suppliers
+        @staticmethod
         def gen_quantities(inst_gen,ex_q,**kwargs) -> tuple:
             seed(inst_gen.d_rd_seed + 4)
             if kwargs['dist'] == 'c_uniform':   rd_function = randint
@@ -179,6 +185,7 @@ class CundiBoy():
 
 
         # Historic availabilities
+        @staticmethod
         def gen_hist_q(inst_gen,ex_q,rd_function,**kwargs) -> dict[dict]:
             hist_q = {t:dict() for t in inst_gen.Horizon}
             if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -190,6 +197,7 @@ class CundiBoy():
 
         
         # Realized (real) availabilities
+        @staticmethod
         def gen_W_q(inst_gen,ex_q,rd_function,hist_q,**kwargs) -> tuple:
             '''
             W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
@@ -210,6 +218,7 @@ class CundiBoy():
 
 
         # Availabilitie's sample paths
+        @staticmethod
         def gen_empiric_q_sp(inst_gen, hist_q, W_q) -> dict[dict]:
             s_paths_q = dict()
             for t in inst_gen.Horizon: 
@@ -227,6 +236,7 @@ class CundiBoy():
 
 
         ### Prices of products on suppliers
+        @staticmethod
         def gen_prices(inst_gen,ex_p,**kwargs) -> tuple:
             seed(inst_gen.d_rd_seed + 5)
             if kwargs['dist'] == 'd_uniform':   rd_function = randint
@@ -243,6 +253,7 @@ class CundiBoy():
         
         
         # Historic prices
+        @staticmethod
         def gen_hist_p(inst_gen,rd_function,ex_p,**kwargs) -> dict[dict]:
             hist_p = {t:dict() for t in inst_gen.Horizon}
             if inst_gen.other_params['historical'] != False and ('p' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
@@ -254,6 +265,7 @@ class CundiBoy():
 
 
         # Realized (real) prices
+        @staticmethod
         def gen_W_p(inst_gen,rd_function,hist_p,ex_p,**kwargs) -> tuple:
             '''
             W_p: (dict) quantity of k \in K offered by supplier i \in M on t \in T

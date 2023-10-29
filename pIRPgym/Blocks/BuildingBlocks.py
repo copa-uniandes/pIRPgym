@@ -10,9 +10,7 @@ from termcolor import colored
 
 class Routing_management():
 
-    def __init__(self):
-        pass
-    
+    @staticmethod
     def evaluate_routes(inst_gen, routes):
         transport_cost = 0
         for route in routes:
@@ -23,7 +21,8 @@ class Routing_management():
 class Inventory_management():
     
     class perish_per_age_inv():
-
+        
+        @staticmethod
         def reset(inst_gen):
             ## State ##
 
@@ -34,6 +33,8 @@ class Inventory_management():
             
             return state
     
+
+        @staticmethod
         def get_real_dem_compl_FIFO(inst_gen, env, real_purchase):
             real_demand_compliance={}
             for k in inst_gen.Products:
@@ -46,6 +47,8 @@ class Inventory_management():
             
             return real_demand_compliance
 
+
+        @staticmethod
         def get_real_dem_compl_rate(inst_gen, env, rates, real_purchase, strong_rate):
             
             if strong_rate: rates = {(a):int(rates[a]) for a in rates}
@@ -61,6 +64,8 @@ class Inventory_management():
             
             return real_demand_compliance
 
+
+        @staticmethod
         def get_real_dem_age_compl_rate(inst_gen, env, rates, real_purchase, strong_rate):
             
             if strong_rate: rates = {(a):int(rates[a]) for a in rates}
@@ -75,6 +80,8 @@ class Inventory_management():
             
             return real_demand_compliance
 
+
+        @staticmethod
         def update_inventory(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
             inventory = deepcopy(env.state)
             back_orders = {}
@@ -111,7 +118,9 @@ class Inventory_management():
                         print(colored(f'Warning! Demand of product {k} was not fulfilled', 'yellow'))
 
             return inventory, back_orders, perished
-        
+
+
+        @staticmethod
         def update_inventory_age(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
             inventory = deepcopy(env.state)
             back_orders = {}
@@ -142,6 +151,8 @@ class Inventory_management():
 
             return inventory, back_orders, perished
 
+
+        @staticmethod
         def compute_costs(inst_gen, env, purchase, demand_compliance, s_tprime, perished):            
             purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)
         
@@ -158,12 +169,16 @@ class Inventory_management():
                 backorders_cost = sum(s_tprime[k,'B'] for k in inst_gen.Products) * inst_gen.back_l_cost
 
             return purchase_cost, holding_cost, backorders_cost
-        
+
+
+        @staticmethod
         def compute_earnings(inst_gen, demand_compliance):
             earnings = sum(inst_gen.sell_prices[k,o]*demand_compliance[k,o] for k in inst_gen.Products for o in range(inst_gen.O_k[k]+1))
         
             return earnings
 
+
+        @staticmethod
         def compute_costs_age(inst_gen, env, purchase, demand_compliance, s_tprime, perished):            
             purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)
         

@@ -8,6 +8,7 @@ from copy import copy, deepcopy
 import time
 from numpy.random import randint
 import os
+from typing import Union
 
 from .InstanceGeneration.demand import demand
 from .InstanceGeneration.costs import costs
@@ -28,11 +29,11 @@ class instance_generator():
 
 
     # Initalization method for an instange_generator object
-    def __init__(self, look_ahead = ['d'], stochastic_params = False, historical_data = ['*'],
-                  backorders = 'backorders', demand_type = "aggregated", **kwargs):
+    def __init__(self,look_ahead=['d'],stochastic_params:Union[list[str],bool]=False,
+                 historical_data:Union[list[str],bool]=['*'],backorders = 'backorders', 
+                 demand_type = "aggregated", **kwargs):
         '''
         Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance
-        
         INITIALIZATION
         Look-ahead approximation: Generation of sample paths (look_ahead = ['d']):
         1. List of parameters to be forecasted on the look-ahead approximation ['d', 'p', ...]
@@ -138,17 +139,17 @@ class instance_generator():
 
         # Offer
         self.M_kt, self.K_it = offer.gen_availabilities(self)
-        self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self, **kwargs['q_params'])
+        self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self,**kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q
 
-        self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self, **kwargs['p_params'])
+        self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self,**kwargs['p_params'])
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
         if self.other_params["demand_type"] == "aggregated":
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
+            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
         else:
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self, **kwargs['d_params'])
+            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self,**kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
 
         # Selling prices
