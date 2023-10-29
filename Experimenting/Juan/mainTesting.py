@@ -67,7 +67,7 @@ inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_par
 ### CundiBoy Instance
 # Random seeds
 det_rd_seed = 2
-stoch_rd_seed = 1e3                                        
+stoch_rd_seed = 1                                        
 
 # Random Instance
 q_params = {'dist': 'c_uniform', 'r_f_params': 10}          # Offer
@@ -130,18 +130,17 @@ while not done:
     # Environment transition
     states[env.t] = state 
 
-    if inst_gen.other_params["demand_type"] == "aggregated":
-        ''' Purchase'''
-        [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+    ''' Purchase'''
+    [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
 
-        ''' Routing '''
-        nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                      # Nearest Neighbor
+    ''' Routing '''
+    nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                      # Nearest Neighbor
 
-        [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
-        GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)                     
+    [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
+    GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)                     
 
-        ''' Compound action'''        
-        action = {'routing':GA_routes, 'purchase':purchase, 'demand_compliance':demand_compliance}
+    ''' Compound action'''        
+    action = {'routing':GA_routes, 'purchase':purchase, 'demand_compliance':demand_compliance}
 
     state, reward, done, real_action, _,  = env.step(action,inst_gen)
     if done:   states[env.t] = state

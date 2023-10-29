@@ -5,6 +5,7 @@ from time import time,process_time
 from copy import deepcopy
 
 import gurobi as gu
+import hygese as hgs
 
 from ..InstanceGenerator import instance_generator
 
@@ -213,7 +214,7 @@ class Routing():
                 print('\n')
 
             if not top:
-                return best_individual, None
+                return best_individual,None,None,None
             else:
                 combined = list(zip(Distances, Population))                 # Combine 'Distances' and 'Population' into tuples
                 sorted_combined = sorted(combined, key=lambda x: x[0])      # Sort the combined list based on the 'Distances' values
@@ -228,7 +229,7 @@ class Routing():
                         if len(result) == 5:
                             break
 
-                return best_individual, result
+                return best_individual,result,None,None
 
         class GA():
             ''' Generate initial population '''
@@ -262,7 +263,7 @@ class Routing():
                     RCL_alpha = choice(RCL_alpha_list, p = [alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alpha_list])    
                 
                     # Generating individual
-                    individual, FO, distances, loads, _ = Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
+                    individual, FO, distances, loads, _ = Routing.RCL_Heuristic(requirements2, inst_gen, RCL_alpha)
 
                     # Updating incumbent
                     if FO < incumbent:
@@ -284,7 +285,7 @@ class Routing():
                 requirements2 = deepcopy(requirements)
                 tr_distance:float = 0
                 RCL_alpha:float = choice(RCL_alpha_list)
-                routes, FO, distances, loads, _ = Routing.RCL_constructive.RCL_routing(requirements2, inst_gen, RCL_alpha)
+                routes, FO, distances, loads, _ = Routing.RCL_Heuristic(requirements2, inst_gen, RCL_alpha)
                 tr_distance += FO
                 alpha_performance[RCL_alpha] += 1/tr_distance
 
@@ -382,7 +383,7 @@ class Routing():
 
         ''' Mixed Integer Program '''
         @staticmethod
-        def MixedIntegerProgram(purchase:dict[float],inst_gen:instance_generator,t:int):
+        def MixedIntegerProgram(purchase:dict,inst_gen:instance_generator,t:int):
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
     
@@ -483,7 +484,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict[float], inst_gen:instance_generator,t:int):
+        def ColumnGeneration(purchase:dict[float],inst_gen:instance_generator,t:int):
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
@@ -558,13 +559,17 @@ class Routing():
                     print('%s %g' % (v.varName, v.x))
             
             print('Normal termination. -o-')
+
+            return tuple()
         
         class Column_Generation():
             # Master problem
             class MasterProblem:
 
-                @staticmethod
-                def buidModel(self, inst_gen:instance_generator, N:list, distances:dict, name:str = 'MasterProblem'):
+                def __init__(self):
+                    pass
+
+                def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,name:str = 'MasterProblem'):
                     modelMP = gu.Model(name)
 
                     modelMP.Params.Presolve = 0
@@ -579,7 +584,6 @@ class Routing():
                     return modelMP, theta, RouteLimitCtr, NodeCtr
             
 
-                @staticmethod
                 def generateVariables(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, distances):
                     theta = list()
                     
@@ -600,7 +604,6 @@ class Routing():
                     return modelMP, theta
 
 
-                @staticmethod
                 def generateConstraints(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, theta:list):
                     NodeCtr = list()                #Node covering constraints
                     for i in N:
@@ -612,7 +615,6 @@ class Routing():
                     return modelMP, RouteLimitCtr, NodeCtr
 
 
-                @staticmethod
                 def generateObjective(self, modelMP:gu.Model):
                     modelMP.modelSense = gu.GRB.MINIMIZE
                     return modelMP 
@@ -680,7 +682,7 @@ class Routing():
         class network_aux_methods():
             # Generate vertices and arches for a complete graph
             @staticmethod
-            def generate_complete_graph(inst_gen: instance_generator, pending_sup:list, requirements:dict) -> tuple[list,list,list]:
+            def generate_complete_graph(inst_gen:instance_generator,pending_sup:list,requirements:dict) -> tuple:
                 N = pending_sup
                 V:list = [0]+ N +[inst_gen.M+1]
                 A:list = [(i,j) for i in V for j in V if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1)]
