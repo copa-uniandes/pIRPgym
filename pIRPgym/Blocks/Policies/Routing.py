@@ -47,9 +47,9 @@ class Routing():
                 FO += distance
                 distances.append(distance)
 
-            routes = np.ndarray(routes)
-            distances = np.ndarray(distances)
-            loads = np.ndarray(loads)
+            routes = np.ndarray(routes) # type: ignore
+            distances = np.ndarray(distances)   # type: ignore
+            loads = np.ndarray(loads)   # type: ignore
             
             return routes,FO,(distances,loads),process_time() - start
         
@@ -87,9 +87,9 @@ class Routing():
                 distances.append(distance)
                 loads.append(load)
             
-            routes = np.ndarray(routes)
-            distances = np.ndarray(distances)
-            loads = np.ndarray(loads)   
+            routes = np.ndarray(routes) # type: ignore
+            distances = np.ndarray(distances)   # type: ignore
+            loads = np.ndarray(loads)    # type: ignore
                 
             return routes, FO, distances, loads, process_time() - start
         
@@ -736,18 +736,18 @@ class Routing():
             def __init__(self,sol_num:int=100)->None:
                 self.sol_num=sol_num
 
-                self.solutions=np.zeros(100)
-                self.objectives=np.zeros(100)
+                self.solutions=np.zeros(100)    # type: ignore
+                self.objectives=np.zeros(100)   # type: ignore
 
 
             def update_pool(self,solution:np.ndarray,objective:float):
                 exists = False
-                if np.count_nonzero(self.solutions):    # There are emtpy spots
+                if np.count_nonzero(self.solutions):    # There are emtpy spots # type: ignore
                     pass
                 
                 else:                                   # All positions have solutions
                     for route in self.solutions:
-                        if np.array_equal(solution,route):          # Solutions are the same
+                        if np.array_equal(solution,route):          # Solutions are the same # type: ignore
                             exists = True
                             break
                         
