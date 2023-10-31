@@ -10,37 +10,24 @@ import pIRPgym
 
 #%%##########################################  Instance Generator  ##########################################
 # Instance Generator
-# pIRP model's parameters
-T = 7
-M = 15
-K = 10
-F = 15
 
-demand_type = 'aggregated'
-
-# Vehicles
-Q = 2000
-d_max = 2000
-
+### pIRP model's parameters
 # Stochasticity
 stochastic_params = ['d','q']
 look_ahead = ['d','q']
-S = 6
-LA_horizon = 3 
+
 
 # Historical data
 historical_data = ['*']
-hist_window = 40
+
 
 # Other parameters
 backorders = 'backorders'
-back_o_cost = 10000  
 
-
-env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q, 
-              'S':S, 'LA_horizon':LA_horizon,
-             'd_max':d_max, 'hist_window':hist_window,
-             'back_o_cost':back_o_cost}
+env_config = {'M':15,'K':10,'T':7, 'F':15, 'Q':2000, 
+              'S':6, 'LA_horizon':3,
+             'd_max':2000, 'hist_window':60,
+             'back_o_cost':10000}
 
 # Creating instance generator object
 inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
@@ -58,10 +45,12 @@ h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 stoch_rd_seed = 0                                               # Random seeds
 det_rd_seed = 1
 
+# demand_type = 'aggregated'
 disc = ("strong","conc")
 
 inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
                                         p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
+
 
 #%%#########################################   CundiBoy Instance   ##########################################
 ### CundiBoy Instance
@@ -102,7 +91,6 @@ env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 state = env.reset(inst_gen, return_state = True)
 
 
-
 #%%####################################### Single Episode/Singe Routing Policy Simulation  ########################################
 # Episode simulation
 # Simulations 
@@ -131,12 +119,15 @@ while not done:
     states[env.t] = state 
 
     ''' Purchase'''
-    [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+    # [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+
+    purchase = pIRPgym.Purchasing.avg_purchase_all(inst_gen,env)
+    demand_compliance = pIRPgym.Inventory.det_FIFO(state,purchase,inst_gen,env)
 
     ''' Routing '''
     nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                      # Nearest Neighbor
 
-    [GA_routes,GA_distances,GA_loads,GA_time],GA_top = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
+    [GA_routes,GA_distances,GA_loads,GA_time], GA_top, _, _ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=time_limit);print('✅ GA routing')   # Genetic Algorithm
     GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)                     
 
     ''' Compound action'''        
@@ -151,7 +142,7 @@ while not done:
     backorders[env.t-1] = _["backorders"]
     perished[env.t-1] = {k:_["perished"][k] if k in _["perished"] else 0 for k in inst_gen.Products}
     # rewards[env.t] = reward
-    la_decisions[env.t-1] = la_dec
+    # la_decisions[env.t-1] = la_dec
 
 print('Finished')
 

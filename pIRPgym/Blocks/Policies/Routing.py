@@ -4,7 +4,7 @@ from numpy.random import seed,choice,randint
 from time import time,process_time
 from copy import deepcopy
 
-import gurobi as gu
+import gurobipy as gu
 import hygese as hgs
 
 from ..InstanceGenerator import instance_generator
@@ -20,10 +20,10 @@ class Routing():
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
-            routes:list = list()
-            loads:list = list()
-            t_distance:int = 0
-            distances:list = list()
+            routes = list()
+            loads = list()
+            FO:float = 0
+            distances = list()
 
             while len(pending_sup) > 0:
                 node: int = 0
@@ -41,14 +41,19 @@ class Routing():
                         route.append(node)
                         pending_sup.remove(node)
 
-                routes.append(route + [0])
+                routes.append(np.array(route + [0]))
                 distance += inst_gen.c[node,0]
                 loads.append(load)
-                t_distance += distance
+                FO += distance
                 distances.append(distance)
+
+            routes = np.ndarray(routes)
+            distances = np.ndarray(distances)
+            loads = np.ndarray(loads)
             
-            return routes, distances, loads, process_time() - start
+            return routes,FO,(distances,loads),process_time() - start
         
+
         class Nearest_Neighbor():      
             # Find nearest feasible (by capacity) node
             @staticmethod
@@ -65,15 +70,14 @@ class Routing():
         
         ''' RCL based constructive '''
         @staticmethod
-        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> dict:
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
-            routes:list = list()
-            FO:int = 0
-            distances:list = list()
-            loads:list = list()
-            dep_d_details:list = list() # TODO: Record departure times
+            routes = list()
+            FO:float = 0
+            distances = list()
+            loads = list()
 
             while len(pending_sup) > 0:
                 route, distance, load, pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen)
@@ -82,6 +86,10 @@ class Routing():
                 FO += distance
                 distances.append(distance)
                 loads.append(load)
+            
+            routes = np.ndarray(routes)
+            distances = np.ndarray(distances)
+            loads = np.ndarray(loads)   
                 
             return routes, FO, distances, loads, process_time() - start
         
@@ -706,7 +714,7 @@ class Routing():
 
         ''' Auxiliary method to compute total product to recover from suppliers '''
         @staticmethod
-        def consolidate_purchase(purchase,inst_gen,t) -> tuple[list,dict]:
+        def consolidate_purchase(purchase,inst_gen,t)->tuple:
             # purchse is given for suppliers and products
             if type(list(purchase.keys())[0]) == tuple:
                 pending_suppliers = list()
@@ -721,3 +729,40 @@ class Routing():
             # purchase is given for products
             else:
                 return list(purchase.keys()), purchase
+
+
+        class RouteMemoryAgent():
+
+            def __init__(self,sol_num:int=100)->None:
+                self.sol_num=sol_num
+
+                self.solutions=np.zeros(100)
+                self.objectives=np.zeros(100)
+
+
+            def update_pool(self,solution:np.ndarray,objective:float):
+                exists = False
+                if np.count_nonzero(self.solutions):    # There are emtpy spots
+                    pass
+                
+                else:                                   # All positions have solutions
+                    for route in self.solutions:
+                        if np.array_equal(solution,route):          # Solutions are the same
+                            exists = True
+                            break
+                        
+                            
+                    
+                
+
+
+        class RoutingAgent():
+
+            def __init__(self):
+                pass
+
+            def train(self,n_episodes):
+                pass
+
+            def route(self):
+                pass
