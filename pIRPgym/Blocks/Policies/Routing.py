@@ -1,5 +1,6 @@
 import pandas as np
 import numpy as np
+from numpy import count_nonzero,array_equal
 from numpy.random import seed,choice,randint
 from time import time,process_time
 from copy import deepcopy
@@ -41,15 +42,11 @@ class Routing():
                         route.append(node)
                         pending_sup.remove(node)
 
-                routes.append(np.array(route + [0]))
+                routes.append(route + [0])
                 distance += inst_gen.c[node,0]
                 loads.append(load)
                 FO += distance
                 distances.append(distance)
-
-            routes = np.ndarray(routes) # type: ignore
-            distances = np.ndarray(distances)   # type: ignore
-            loads = np.ndarray(loads)   # type: ignore
             
             return routes,FO,(distances,loads),process_time() - start
         
@@ -57,7 +54,7 @@ class Routing():
         class Nearest_Neighbor():      
             # Find nearest feasible (by capacity) node
             @staticmethod
-            def find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen):
+            def find_nearest_feasible_node(node:int,load:float,distance:float,pending_sup:int,requirements:dict,inst_gen:instance_generator):
                 target, dist = False, 1e6
                 for candidate in pending_sup:
                     if inst_gen.c[node,candidate] < dist and load + requirements[candidate] <= inst_gen.Q \
@@ -87,9 +84,6 @@ class Routing():
                 distances.append(distance)
                 loads.append(load)
             
-            routes = np.ndarray(routes) # type: ignore
-            distances = np.ndarray(distances)   # type: ignore
-            loads = np.ndarray(loads)    # type: ignore
                 
             return routes, FO, distances, loads, process_time() - start
         
@@ -736,20 +730,30 @@ class Routing():
             def __init__(self,sol_num:int=100)->None:
                 self.sol_num=sol_num
 
-                self.solutions=np.zeros(100)    # type: ignore
-                self.objectives=np.zeros(100)   # type: ignore
+                self.solutions = [] 
+                self.objectives = []
+
+                self.solution_num = 0
 
 
-            def update_pool(self,solution:np.ndarray,objective:float):
+            def update_pool(self,solution:list,objective:float):
+                sorted_sol = sorted(solution,key=len)
                 exists = False
-                if np.count_nonzero(self.solutions):    # There are emtpy spots # type: ignore
-                    pass
+                for i,sol in enumerate(self.solutions):
+                    if self.are_equal(sol,i,sorted_sol,objective):          # Solutions are the same
+                        exists = True
+                    
+                if not exists and len(self.solutions) < self.sol_num:       
+                    self.solutions.append(solution)
+                    self.objectives.append(objective)
+                    self.solution_num += 1
+                        
+
+            def are_equal(self,routes,i,solution,objective):
+                if objective != self.objectives[i] or len(routes) != len(solution): # Objectives or number of routes are different
+                    return False
                 
-                else:                                   # All positions have solutions
-                    for route in self.solutions:
-                        if np.array_equal(solution,route):          # Solutions are the same # type: ignore
-                            exists = True
-                            break
+            
                         
                             
                     

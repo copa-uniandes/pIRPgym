@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':15,'K':10,'T':7, 'F':15, 'Q':2000, 
+env_config = {'M':15,'K':10,'T':7, 'F':15, 'Q':2000,
               'S':6, 'LA_horizon':3,
              'd_max':2000, 'hist_window':60,
              'back_o_cost':10000}
@@ -42,10 +42,9 @@ d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
 
 h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
-stoch_rd_seed = 0                                               # Random seeds
+stoch_rd_seed = 0       # Random seeds
 det_rd_seed = 1
 
-# demand_type = 'aggregated'
 disc = ("strong","conc")
 
 inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
@@ -88,7 +87,7 @@ perishability = 'ages'
 env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
-state = env.reset(inst_gen, return_state = True)
+state = env.reset(inst_gen,return_state=True)
 
 
 #%%####################################### Single Episode/Singe Routing Policy Simulation  ########################################
