@@ -514,8 +514,8 @@ class Routing():
                 #     lambdas += [modelMP.getAttr("Pi", modelMP.getConstrs()[i])]
                 # lambdas = list(modelMP.getAttr("Pi", modelMP.getConstrs()))
                 lambdas = []
-                lambdas.append(modelMP.getAttr("Pi", RouteLimitCtr)[0])
-                lambdas+= modelMP.getAttr("Pi", NodeCtr)
+                lambdas.append(modelMP.getAttr("Pi",RouteLimitCtr)[0])
+                lambdas+= modelMP.getAttr("Pi",NodeCtr)
 
                 # for i in range(len(lambdas)):
                 #     print('lambda(',i,')=', lambdas[i], sep ='', flush = True)  
@@ -572,7 +572,7 @@ class Routing():
                 def __init__(self):
                     pass
 
-                def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,name:str = 'MasterProblem'):
+                def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,name:str='MasterProblem'):
                     modelMP = gu.Model(name)
 
                     modelMP.Params.Presolve = 0
@@ -587,7 +587,7 @@ class Routing():
                     return modelMP, theta, RouteLimitCtr, NodeCtr
             
 
-                def generateVariables(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, distances):
+                def generateVariables(self,inst_gen:instance_generator,modelMP:gu.Model,N:list,distances):
                     theta = list()
                     
                     #Initial set-covering model  (DUMMY INITIALIZATION)
@@ -607,7 +607,7 @@ class Routing():
                     return modelMP, theta
 
 
-                def generateConstraints(self, inst_gen:instance_generator, modelMP:gu.Model, N:list, theta:list):
+                def generateConstraints(self,inst_gen:instance_generator,modelMP:gu.Model,N:list,theta:list):
                     NodeCtr = list()                #Node covering constraints
                     for i in N:
                         NodeCtr.append(modelMP.addConstr(theta[i]>=1, f"Set_Covering_{i}")) #Set covering constraints
@@ -618,7 +618,7 @@ class Routing():
                     return modelMP, RouteLimitCtr, NodeCtr
 
 
-                def generateObjective(self, modelMP:gu.Model):
+                def generateObjective(self,modelMP:gu.Model):
                     modelMP.modelSense = gu.GRB.MINIMIZE
                     return modelMP 
 
@@ -626,7 +626,7 @@ class Routing():
             class SubProblem:
                 
                 @staticmethod
-                def solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements):
+                def solveAPModel(lambdas,a_star,inst_gen,N,V,A,distances,requirements):
                     
                     modelAP = gu.Model('SubProblem')
                     modelAP.Params.OutputFlag = 0
