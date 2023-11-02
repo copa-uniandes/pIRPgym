@@ -1,5 +1,5 @@
-# Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products
-A compilation of OR tools for the Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products (SD-IB-IRP-PP).
+# perishable Inventory Routing Problem
+A compilation of OR tools for the Stochastic-Dynamic perishable Inventory Routing Problem (pIRP).
 
 ## Powell model
 
@@ -14,19 +14,19 @@ A compilation of OR tools for the Stochastic-Dynamic Inventory-Routing-Problem w
 
 -   **Other deterministic info** ($Z_t$):
 
-        p: Prices: (dict) Forecasted rice of product k \in K at supplier i \in M
+        p: Prices: (dict) Price of product k \in K at supplier i \in M
     
-        q: Available quantities: (dict) Forecasted available quantity of product k \in K at supplier i \in M
-        
-        d: Demand: (Dict) Forecasted demand of product k \in K
+        h: Holding cost: (dict) Holding cost of product k \in K
     
-        h: Holding cost: (dict) Forecasted holding cost of product k \in K
-    
-        historical_data: (dict) Historical log of information (optional)
+        historical_data: (dict) Historical log of information
     
 -   **Belief State** ($B_t$):
     
         sample_paths: Simulated sample paths (optional)
+
+        q: Available quantities: (dict) Forecasted available quantity of product k \in K at supplier i \in M
+
+        d: Demand: (Dict) Forecasted demand of product k \in K
 
 
 ### Actions ($X_t$)
