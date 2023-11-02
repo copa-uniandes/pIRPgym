@@ -598,22 +598,22 @@ class Routing():
                         return c_0
 
                     dummyCost = calculateDummyCost()
-                    theta.append(modelMP.addVar(vtype = gu.GRB.CONTINUOUS, obj = dummyCost, lb = 0, name = "theta_0"))
+                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=dummyCost,lb=0,name="theta_0"))
 
-                    for i in N:
+                    for idx,i in enumerate(N):
                         route_cost = distances[0,i] + distances[i,inst_gen.M+1]
-                        theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{i}"))
+                        theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{idx}"))
 
                     return modelMP, theta
 
 
                 def generateConstraints(self,inst_gen:instance_generator,modelMP:gu.Model,N:list,theta:list):
                     NodeCtr = list()                #Node covering constraints
-                    for i in N:
-                        NodeCtr.append(modelMP.addConstr(theta[i]>=1, f"Set_Covering_{i}")) #Set covering constraints
+                    for idx,i in enumerate(N):
+                        NodeCtr.append(modelMP.addConstr(theta[idx]>=1, f"Set_Covering_{i}")) #Set covering constraints
                     
                     RouteLimitCtr = list()          #Limits the number of routes
-                    RouteLimitCtr.append(modelMP.addConstr(gu.quicksum(theta[i] for i in range(len(theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
+                    RouteLimitCtr.append(modelMP.addConstr(gu.quicksum(theta[idx] for i in range(len(theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
 
                     return modelMP, RouteLimitCtr, NodeCtr
 

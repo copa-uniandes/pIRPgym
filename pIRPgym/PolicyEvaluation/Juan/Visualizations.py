@@ -3,8 +3,8 @@
 ################################## Modules ##################################
 """
 ### SC classes
-from ..Blocks.InstanceGenerator import instance_generator
-from ..Blocks.pIRPenv import steroid_IRP
+from ...Blocks.InstanceGenerator import instance_generator
+from ...Blocks.pIRPenv import steroid_IRP
 
 ### Basic Librarires
 import matplotlib.pyplot as plt
