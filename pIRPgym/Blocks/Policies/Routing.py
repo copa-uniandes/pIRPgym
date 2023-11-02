@@ -494,17 +494,23 @@ class Routing():
             sup_map = {i:idx for idx,i in enumerate(N)}
 
             master = Routing.Column_Generation.MasterProblem()
-            modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
+            modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen, N, distances)
 
             card_omega = len(theta)    # number of routes
             same_objective_count = 0
             last_objective_value = None
 
             iter = 0;   start = process_time()
+            routes = [[0,0]]
+            loads = [1e6]
+            for i in N:
+                routes.append([0,i,0])
+                loads.append(requirements[i])
 
             print("--------- Column Generation Algorithm ---------\n",flush = True)
-            print('\t \t| Relaxed/Restr MP \t| Auxiliary Problem')
+            print('\t \t|    Relaxed/Restr MP \t|    Auxiliary Problem')
             print('Iter \ttime \t| MP_FO \t#Veh \t| r.c \t \tRoute')
+            print('------------------------------------------------------------------')
             while True:
                 # print('Solving Master Problem (MP)...', flush = True)
                 iter += 1
@@ -545,8 +551,9 @@ class Routing():
 
                 a_star = dict()
                 a_star.update({i:0 for i in N})
-                shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(
+                shortest_path,a_star,sol = Routing.Column_Generation.SubProblem.solveAPModel(
                                                         lambdas,a_star,inst_gen,N,V,A,distances,requirements,sup_map)
+                routes.append(sol[0]); objectives.append(sol[1]); loads.append(sol[2])
                 minReducedCost = shortest_path[0]
                 c_k = shortest_path[1]
 
@@ -555,7 +562,7 @@ class Routing():
                     print("\nStoping criterion: % gap ", flush = True)
                     break
                 else:
-                    print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))} \t| {round(minReducedCost,2)} ')
+                    print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))} \t| {round(minReducedCost,2)} \t{sol[0]}')
                     # print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
                     a_star = list(a_star.values())
                     a_star.append(1) #We add the 1 of the number of routes restrictions
@@ -582,8 +589,10 @@ class Routing():
             print(f'Vehicles:  {sum(list(modelMP.getAttr("X", modelMP.getVars())))}')
             print(f'Time:       {round(process_time()-start,2)}s')
             print('Normal termination. -o-')
+            
+            routes,distances,loads = Routing.Column_Generation.decode_CG_routes(inst_gen,modelMP,routes,objectives,loads)
 
-            return 0,0,0,0
+            return routes,distances,loads,process_time() - start
         
         class Column_Generation():
             # Master problem
@@ -599,16 +608,17 @@ class Routing():
                     modelMP.Params.Cuts = 0
                     modelMP.Params.OutputFlag = 0
 
-                    modelMP, theta = self.generateVariables(inst_gen, modelMP, N, distances)
-                    modelMP, RouteLimitCtr, NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
+                    modelMP,theta,objectives = self.generateVariables(inst_gen, modelMP, N, distances)
+                    modelMP,RouteLimitCtr,NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
                     modelMP = self.generateObjective(modelMP)
                     modelMP.update()
 
-                    return modelMP, theta, RouteLimitCtr, NodeCtr
+                    return modelMP,theta,RouteLimitCtr,NodeCtr,objectives
             
 
                 def generateVariables(self,inst_gen:instance_generator,modelMP:gu.Model,N:list,distances):
                     theta = list()
+                    objectives = list()
                     
                     #Initial set-covering model  (DUMMY INITIALIZATION)
                     def calculateDummyCost():
@@ -619,12 +629,14 @@ class Routing():
 
                     dummyCost = calculateDummyCost()
                     theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=dummyCost,lb=0,name="theta_0"))
+                    objectives.append(dummyCost)
 
                     for idx,i in enumerate(N):
                         route_cost = distances[0,i] + distances[i,inst_gen.M+1]
                         theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{idx}"))
+                        objectives.append(route_cost)
 
-                    return modelMP, theta
+                    return modelMP,theta,objectives
 
 
                 def generateConstraints(self,inst_gen:instance_generator,modelMP:gu.Model,N:list,theta:list):
@@ -698,8 +710,38 @@ class Routing():
                         for j in V:
                             if (i,j) in A and x[i,j].x>0.5:
                                 a_star[i] = 1
-                    return [modelAP.objVal, route_cost], a_star
 
+                    node = 0
+                    route = [node]
+                    load = 0
+                    route_complete = False
+                    while not route_complete:
+                        for j in V:
+                            if (node,j) in A and x[node,j].x>0.5:
+                                route.append(j)
+                                load+=requirements[j]
+                                node = j
+                                if j == inst_gen.M+1:
+                                    route_complete = True
+                                    route = route[:-1]+[0]
+                                    break
+
+                    return [modelAP.objVal,route_cost],a_star,[route,route_cost,load]
+
+            # Decode the routes generated by the CG algorihm
+            @staticmethod
+            def decode_CG_routes(inst_gen:instance_generator,modelMP:gu.Model,routes:list,objectives:list,loads:list):
+                solution = list()
+                objective = list()
+                load = list()
+                for i,theta in enumerate(modelMP.getVars()):
+                    if theta.x != 0:
+                        solution.append(routes[i])
+                        objective.append(objectives[i])
+                        load.append(loads[i])
+                
+                return solution,objective,loads
+                        
 
         ''' Auxiliary methods for network management '''
         class network_aux_methods():
