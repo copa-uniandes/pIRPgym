@@ -491,6 +491,7 @@ class Routing():
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
+            sup_map = {i:idx for idx,i in enumerate(N)}
 
             master = Routing.Column_Generation.MasterProblem()
             modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
@@ -513,7 +514,9 @@ class Routing():
                 # for i in N:
                 #     lambdas += [modelMP.getAttr("Pi", modelMP.getConstrs()[i])]
                 # lambdas = list(modelMP.getAttr("Pi", modelMP.getConstrs()))
-                lambdas = []
+                
+                
+                lambdas = list
                 lambdas.append(modelMP.getAttr("Pi",RouteLimitCtr)[0])
                 lambdas+= modelMP.getAttr("Pi",NodeCtr)
 
@@ -525,7 +528,7 @@ class Routing():
                 
                 a_star = dict()
                 a_star.update({i:0 for i in N})
-                shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(lambdas, a_star, inst_gen, N, V, A, distances, requirements)
+                shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(lambdas,a_star,inst_gen,N,V,A,distances,requirements,sup_map)
                 minReducedCost = shortest_path[0]
                 c_k = shortest_path[1]
 
@@ -626,7 +629,7 @@ class Routing():
             class SubProblem:
                 
                 @staticmethod
-                def solveAPModel(lambdas,a_star,inst_gen,N,V,A,distances,requirements):
+                def solveAPModel(lambdas,a_star,inst_gen,N,V,A,distances,requirements,sup_map):
                     
                     modelAP = gu.Model('SubProblem')
                     modelAP.Params.OutputFlag = 0
@@ -663,7 +666,7 @@ class Routing():
                     c_trans = dict()
                     for (i,j) in A:
                         if i in N:
-                            c_trans[i,j] = distances[i,j]-lambdas[i]
+                            c_trans[i,j] = distances[i,j]-lambdas[sup_map[i]]
                         else:
                             c_trans[i,j] = distances[i,j]
                     
