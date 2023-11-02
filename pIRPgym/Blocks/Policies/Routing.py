@@ -496,17 +496,23 @@ class Routing():
             master = Routing.Column_Generation.MasterProblem()
             modelMP, theta, RouteLimitCtr, NodeCtr = master.buidModel(inst_gen, N, distances)
 
-            card_omega = len(theta)
+            card_omega = len(theta)    # number of routes
+            same_objective_count = 0
+            last_objective_value = None
 
-            print("Entering Column Generation Algorithm",flush = True)
+            iter = 0;   start = process_time()
+
+            print("--------- Column Generation Algorithm ---------\n",flush = True)
+            print('\t \t| Relaxed/Restr MP \t| Auxiliary Problem')
+            print('Iter \ttime \t| MP_FO \t#Veh \t| r.c \t \tRoute')
             while True:
-                print('Solving Master Problem (MP)...', flush = True)
+                # print('Solving Master Problem (MP)...', flush = True)
+                iter += 1
                 modelMP.optimize()
-                print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
-
-                # for j in range(card_omewga): #Retrieving solution of RMP
-                #     if(theta[j].x!=0):
-                #         print(f'theta({j}) = {theta[j].x}', flush = True)
+                current_objective_value = modelMP.getObjective().getValue()
+                print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))}',end='\r')
+                # print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
+                
                 
                 #Retrieving duals of master problem
                 # lambdas = list()
@@ -515,58 +521,69 @@ class Routing():
                 #     lambdas += [modelMP.getAttr("Pi", modelMP.getConstrs()[i])]
                 # lambdas = list(modelMP.getAttr("Pi", modelMP.getConstrs()))
                 
-                
-                lambdas = list
+                lambdas = list()
                 lambdas.append(modelMP.getAttr("Pi",RouteLimitCtr)[0])
-                lambdas+= modelMP.getAttr("Pi",NodeCtr)
+                lambdas += modelMP.getAttr("Pi",NodeCtr)
 
                 # for i in range(len(lambdas)):
                 #     print('lambda(',i,')=', lambdas[i], sep ='', flush = True)  
 
                 # Solve subproblem (passing dual variables)
-                print('Solving subproblem (AP):', card_omega, flush = True)
+                # print('Solving subproblem (AP):', card_omega, flush = True)
                 
+                # Check stopping criterion
+                if (last_objective_value is not None and current_objective_value == last_objective_value):
+                    same_objective_count += 1
+                else:
+                    same_objective_count = 0
+
+                if same_objective_count >= 5:
+                    print("\nStoping criterion: Number of iterations without change", flush=True)
+                    break
+
+                last_objective_value = current_objective_value
+
                 a_star = dict()
                 a_star.update({i:0 for i in N})
-                shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(lambdas,a_star,inst_gen,N,V,A,distances,requirements,sup_map)
+                shortest_path, a_star = Routing.Column_Generation.SubProblem.solveAPModel(
+                                                        lambdas,a_star,inst_gen,N,V,A,distances,requirements,sup_map)
                 minReducedCost = shortest_path[0]
                 c_k = shortest_path[1]
 
                 # Check termination condition
                 if  minReducedCost >= -0.0005:
-                    print("Column generation stops! \n", flush = True)
+                    print("\nStoping criterion: % gap ", flush = True)
                     break
                 else:
-                    print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
-                    print('Adding column...', flush = True)
+                    print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))} \t| {round(minReducedCost,2)} ')
+                    # print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
                     a_star = list(a_star.values())
                     a_star.append(1) #We add the 1 of the number of routes restrictions
 
                     newCol = gu.Column(a_star, modelMP.getConstrs())
-                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=c_k,lb=0,column=newCol,name=f"theta_{card_omega}"))
+                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=c_k,lb=0,
+                                                column=newCol,name=f"theta_{card_omega}"))
                     card_omega+=1
                     # Update master model
                     modelMP.update()
 
 
-            for v in modelMP.getVars():
-                if v.x>0.5:
-                    print('%s=%g' % (v.varName, v.x))
+            # for v in modelMP.getVars():
+            #     if v.x>0.5:
+            #         print('%s=%g' % (v.varName, v.x))
             
             for v in modelMP.getVars():
                 v.setAttr("Vtype", gu.GRB.INTEGER)
 
             modelMP.optimize()
 
-            print('(Heuristic) integer master problem:')
-            print('Route time: %g' % modelMP.objVal)
-            for v in modelMP.getVars():
-                if v.x > 0.5:
-                    print('%s %g' % (v.varName, v.x))
-            
+            print('Integer Master Problem:')
+            print(f'Objective: {round(modelMP.objVal,2)}')
+            print(f'Vehicles:  {sum(list(modelMP.getAttr("X", modelMP.getVars())))}')
+            print(f'Time:       {round(process_time()-start,2)}s')
             print('Normal termination. -o-')
 
-            return tuple()
+            return 0,0,0,0
         
         class Column_Generation():
             # Master problem

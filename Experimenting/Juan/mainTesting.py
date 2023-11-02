@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':20,'K':15,'T':7, 'F':15, 'Q':2000,
+env_config = {'M':5,'K':15,'T':7, 'F':15, 'Q':2000,
               'S':6, 'LA_horizon':3,
              'd_max':2000, 'hist_window':60,
              'back_o_cost':10000}
@@ -42,8 +42,8 @@ d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
 
 h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
-stoch_rd_seed = 0       # Random seeds
-det_rd_seed = 1
+stoch_rd_seed = 1       # Random seeds
+det_rd_seed = 2
 
 disc = ("strong","conc")
 
@@ -122,10 +122,10 @@ while not done:
     # demand_compliance = pIRPgym.Inventory.det_FIFO(state,purchase,inst_gen,env)
 
     ''' Routing '''
-    # nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)         # Nearest Neighbor
+    nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)         # Nearest Neighbor
 
-    # [GA_routes,GA_distances,GA_loads,GA_time], GA_top, _, _ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=20);print('✅ GA routing')   # Genetic Algorithm
-    # GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
+    [GA_routes,GA_distances,GA_loads,GA_time], GA_top, _, _ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=20);print('✅ GA routing')   # Genetic Algorithm
+    GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
 
     CG_routes, CG_distances, CG_loads, CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t)       # Column Generation algorithm                  
 
