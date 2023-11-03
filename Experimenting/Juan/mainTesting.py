@@ -3,7 +3,7 @@
 import sys
 from time import process_time
 
-
+import verbose_module
 sys.path.append('../../.')
 import pIRPgym
 
@@ -24,9 +24,9 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':5,'K':15,'T':7, 'F':15, 'Q':2000,
-              'S':6, 'LA_horizon':3,
-             'd_max':2000, 'hist_window':60,
+env_config = {'M':5,'K':15,'T':4,'F':15,'Q':2000,
+              'S':6,'LA_horizon':3,
+             'd_max':2000,'hist_window':60,
              'back_o_cost':10000}
 
 # Creating instance generator object
@@ -93,11 +93,16 @@ state = env.reset(inst_gen,return_state=True)
 #%%####################################### Single Episode/Singe Routing Policy Simulation  ########################################
 # Episode simulation
 # Simulations 
-''' Simulations '''
+''' Parameters '''
 num_episodes = 1
+verbose = True
 
 
-print(f'################### Episode simulation ##################')
+# for episode in num_episodes:
+
+if verbose:
+    verbose_module.print_iteration_head()
+
 # Episode's and performance storage
 rewards=dict();  states=dict();   real_actions=dict();   backorders=dict();   la_decisions=dict()
 perished=dict(); actions=dict(); #times=dict() 
@@ -110,7 +115,10 @@ state = env.reset(inst_gen,return_state=True)
 
 done = False
 while not done:
-    print(f'-------------------- Step {env.t} --------------------')
+    print("--------- Column Generation Algorithm ---------\n",flush = True)
+    print('\t \t|    Relaxed/Restr MP \t|    Auxiliary Problem')
+    print('Iter \ttime \t| MP_FO \t#Veh \t| r.c \t \tRoute')
+    print('------------------------------------------------------------------')
     #print_state(env)
     # Environment transition
     states[env.t] = state 
@@ -122,12 +130,14 @@ while not done:
     # demand_compliance = pIRPgym.Inventory.det_FIFO(state,purchase,inst_gen,env)
 
     ''' Routing '''
-    nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)         # Nearest Neighbor
+    # GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
 
-    [GA_routes,GA_distances,GA_loads,GA_time], GA_top, _, _ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,top=False,rd_seed=0,time_limit=20);print('✅ GA routing')   # Genetic Algorithm
-    GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
-
-    CG_routes, CG_distances, CG_loads, CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t)       # Column Generation algorithm                  
+    nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t);print('✅ NN')                                           # Nearest Neighbor
+    RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
+    GA_routes,GA_distances,GA_loads,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,rd_seed=0,time_limit=20)    # Genetic Algorithm
+    HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t)                                   # Hybrid Genetic Search (CVRP)
+    MIP_routes, MIP_distances, MIP_loads, MIP_time = pIRPgym.Routing.MixedIntegerProgram(purchase,inst_gen,env.t)
+    CG_routes, CG_distances, CG_loads, CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,verbose=False)       # Column Generation algorithm                  
 
     ''' Compound action'''        
     action = {'routing':CG_routes, 'purchase':purchase, 'demand_compliance':demand_compliance}
@@ -148,3 +158,10 @@ print('Finished')
 
 
 #%%####################################### Single Episode Simulation  ######################################## 
+
+
+
+  
+# %%
+
+# %%

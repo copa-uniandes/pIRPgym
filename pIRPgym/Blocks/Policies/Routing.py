@@ -139,7 +139,7 @@ class Routing():
 
         ''' Genetic Algorithm '''
         @staticmethod
-        def HybridGenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,top:int or bool=False,rd_seed:int=0,time_limit:float=30):
+        def HybridGenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,rd_seed:int=0,time_limit:float=30):
             start = process_time()
             seed(rd_seed)
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
@@ -193,12 +193,12 @@ class Routing():
 
                     # No operator is performed
                     if not mutated: 
-                        new_individual = Population[individual_i]; new_FO = FOs[individual_i] 
-                        new_distances = Distances[individual_i]; new_loads = Loads[individual_i]
+                        new_individual = Population[individual_i];new_FO = FOs[individual_i] 
+                        new_distances = Distances[individual_i];new_loads = Loads[individual_i]
 
                     # Store new individual
-                    New_Population.append(new_individual); New_FOs.append(new_FO); 
-                    New_Distances.append(new_distances); New_Loads.append(new_loads)
+                    New_Population.append(new_individual);New_FOs.append(new_FO); 
+                    New_Distances.append(new_distances);New_Loads.append(new_loads)
 
                     # Updating incumbent
                     if sum(new_distances) < incumbent:
@@ -216,8 +216,8 @@ class Routing():
             if verbose:
                 print('\n')
 
-            if not top:
-                return best_individual,None,None,None
+            if not return_top:
+                return *best_individual,None
             else:
                 combined = list(zip(Distances, Population))                 # Combine 'Distances' and 'Population' into tuples
                 sorted_combined = sorted(combined, key=lambda x: x[0])      # Sort the combined list based on the 'Distances' values
@@ -232,7 +232,7 @@ class Routing():
                         if len(result) == 5:
                             break
 
-                return best_individual,result,None,None
+                return *best_individual,result
 
         class GA():
             ''' Generate initial population '''
@@ -487,7 +487,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict[float],inst_gen:instance_generator,t:int):
+        def ColumnGeneration(purchase:dict[float],inst_gen:instance_generator,t:int,verbose:bool=False):
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
@@ -507,16 +507,18 @@ class Routing():
                 routes.append([0,i,0])
                 loads.append(requirements[i])
 
-            print("--------- Column Generation Algorithm ---------\n",flush = True)
-            print('\t \t|    Relaxed/Restr MP \t|    Auxiliary Problem')
-            print('Iter \ttime \t| MP_FO \t#Veh \t| r.c \t \tRoute')
-            print('------------------------------------------------------------------')
+            if verbose:
+                print("--------- Column Generation Algorithm ---------\n",flush = True)
+                print('\t \t|    Relaxed/Restr MP \t|    Auxiliary Problem')
+                print('Iter \ttime \t| MP_FO \t#Veh \t| r.c \t \tRoute')
+                print('------------------------------------------------------------------')
             while True:
                 # print('Solving Master Problem (MP)...', flush = True)
                 iter += 1
                 modelMP.optimize()
                 current_objective_value = modelMP.getObjective().getValue()
-                print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))}',end='\r')
+                if verbose:
+                    print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))}',end='\r')
                 # print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
                 
                 
@@ -584,11 +586,12 @@ class Routing():
 
             modelMP.optimize()
 
-            print('Integer Master Problem:')
-            print(f'Objective: {round(modelMP.objVal,2)}')
-            print(f'Vehicles:  {sum(list(modelMP.getAttr("X", modelMP.getVars())))}')
-            print(f'Time:       {round(process_time()-start,2)}s')
-            print('Normal termination. -o-')
+            if verbose:
+                print('Integer Master Problem:')
+                print(f'Objective: {round(modelMP.objVal,2)}')
+                print(f'Vehicles:  {sum(list(modelMP.getAttr("X", modelMP.getVars())))}')
+                print(f'Time:       {round(process_time()-start,2)}s')
+                print('Normal termination. -o-')
             
             routes,distances,loads = Routing.Column_Generation.decode_CG_routes(inst_gen,modelMP,routes,objectives,loads)
 
