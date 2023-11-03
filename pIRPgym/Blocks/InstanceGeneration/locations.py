@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.random import seed, randint
-
+import os
 
 class locations():
 
@@ -32,8 +32,11 @@ class locations():
 
         if set in ['Li','Golden']: CVRPtype = 'dCVRP'; sep = ' '
         elif set == 'Uchoa': CVRPtype = 'CVRP'; sep = '\t'
-        file = open(f'./CVRP Instances/{CVRPtype}/{set}/{instance}', mode = 'r');     file = file.readlines()
+        # file = open(f'../../../Instances/CVRP Instances/{CVRPtype}/{set}/{instance}', mode = 'r');     file = file.readlines()
 
+        script_path = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(script_path, f'../../Instances/CVRP Instances/{CVRPtype}/{set}/{instance}')
+        file = open(path, mode = 'r');     file = file.readlines()
 
         line =  int(file[3][13:17]) - 1
 

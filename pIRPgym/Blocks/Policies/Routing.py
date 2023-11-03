@@ -404,7 +404,7 @@ class Routing():
             routes, distances, loads = Routing.MIP.get_MIP_decisions(inst_gen, model, V, A, distances, requirements)
             cost = model.getObjective().getValue()
 
-            return routes, distances, loads, process_time() - start    
+            return routes, cost, (distances, loads), process_time() - start    
         
         class MIP():
             # Generate complete MIP model
@@ -474,13 +474,11 @@ class Routing():
                         if node == inst_gen.M+1:
                             del route[-1]
                             route.append(0)
-                            routes.append(route)
+                            if route != [0,0]:
+                                routes.append(route)
+                                dist.append(distance)
+                                loads.append(load)
                             break
-                    
-                    dist.append(distance)
-                    loads.append(load)
-                    # print(f'Route {f} - {route}')
-
 
                 return routes, dist, loads
         
@@ -501,7 +499,8 @@ class Routing():
             last_objective_value = None
 
             iter = 0;   start = process_time()
-            routes = [[0,0]]
+            # routes = [[0,0]]
+            routes = list()
             loads = [1e6]
             for i in N:
                 routes.append([0,i,0])
@@ -610,9 +609,12 @@ class Routing():
                 def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,name:str='MasterProblem'):
                     modelMP = gu.Model(name)
 
-                    modelMP.Params.Presolve = 0
-                    modelMP.Params.Cuts = 0
+                    # modelMP.Params.Presolve = 0
+                    # modelMP.Params.Cuts = 0
                     modelMP.Params.OutputFlag = 0
+
+                    modelMP.setParam('Presolve', 0)
+                    modelMP.setParam('Cuts', 0)
 
                     modelMP,theta,objectives = self.generateVariables(inst_gen, modelMP, N, distances)
                     modelMP,RouteLimitCtr,NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
@@ -634,11 +636,11 @@ class Routing():
                         return c_0
 
                     dummyCost = calculateDummyCost()
-                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=dummyCost,lb=0,name="theta_0"))
-                    objectives.append(dummyCost)
+                    # theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=dummyCost,lb=0,name="theta_0"))
+                    # objectives.append(dummyCost)
 
                     for idx,i in enumerate(N):
-                        route_cost = distances[0,i] + distances[i,inst_gen.M+1]
+                        route_cost = 2 * (distances[0,i] + distances[i,inst_gen.M+1])
                         theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{idx}"))
                         objectives.append(route_cost)
 
@@ -651,7 +653,7 @@ class Routing():
                         NodeCtr.append(modelMP.addConstr(theta[idx]>=1, f"Set_Covering_{i}")) #Set covering constraints
                     
                     RouteLimitCtr = list()          #Limits the number of routes
-                    RouteLimitCtr.append(modelMP.addConstr(gu.quicksum(theta[idx] for i in range(len(theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
+                    RouteLimitCtr.append(modelMP.addConstr(gu.quicksum(theta[i] for i in range(len(theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
 
                     return modelMP, RouteLimitCtr, NodeCtr
 
