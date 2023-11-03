@@ -546,7 +546,8 @@ class Routing():
                     same_objective_count = 0
 
                 if same_objective_count >= 5:
-                    print("\nStoping criterion: Number of iterations without change", flush=True)
+                    if verbose:
+                        print("\nStoping criterion: Number of iterations without change", flush=True)
                     break
 
                 last_objective_value = current_objective_value
@@ -561,10 +562,12 @@ class Routing():
 
                 # Check termination condition
                 if  minReducedCost >= -0.0005:
-                    print("\nStoping criterion: % gap ", flush = True)
+                    if verbose:
+                        print("\nStoping criterion: % gap ", flush = True)
                     break
                 else:
-                    print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))} \t| {round(minReducedCost,2)} \t{sol[0]}')
+                    if verbose:
+                        print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))} \t| {round(minReducedCost,2)} \t{sol[0]}')
                     # print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
                     a_star = list(a_star.values())
                     a_star.append(1) #We add the 1 of the number of routes restrictions
