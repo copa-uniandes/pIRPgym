@@ -30,15 +30,18 @@ def print_step(t,start):
     
     return string
 
+
 def print_purchase_update(string,prices,purchase):
     cost = sum(purchase[i,k]*prices[i,k] for (i,k) in purchase.keys())
     string += f'{round(cost)}\t{round(cost)}\t|'
     print(string,end='\r')
     return string
 
+
 def print_routing_update(string,FO,veh,end=False):
-    string += f' {round(FO)} \t  {veh}\t|'
+    string += f' {round(FO)} \t  {veh}\t'
     if not end:
+        string += '|'
         print(string,end='\r')
     else:
         print(string)
