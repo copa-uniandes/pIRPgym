@@ -47,3 +47,14 @@ def print_routing_update(string,FO,veh,end=False):
         print(string)
     return string
  
+
+
+class routing_instances():
+
+    @staticmethod
+    def print_head():
+        print('*'*50 + "  Routing Strategies  "+'*'*50,flush = True)
+        print(f'{"-"*8}|-- Purchasing -|{"-"*43} Routing {"-"*43}')
+        print(f'{"-"*8}| Stochastic RH |       NN \t|       RCL \t|       HGA \t|       HGS*\t|       MIP\t|     CG')
+        print('t t(s)\t| cost \treal c.\t| Obj \t #Veh \t| Obj \t #Veh \t| Obj \t #Veh \t| Obj \t #Veh \t| Obj \t #Veh \t| Obj \t #Veh \t')
+        print('-'*120)

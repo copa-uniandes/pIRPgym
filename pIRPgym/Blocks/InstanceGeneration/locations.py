@@ -45,7 +45,7 @@ class locations():
 
         # Max distance per route
         fila:int = 6
-        d_max:int = 1e6   # Max_time
+        d_max:float = 1e6   # Max_time
         if file[fila][0]=='D':
             d_max = float(file[fila].split(' ')[-1][:-1])
             fila += 1

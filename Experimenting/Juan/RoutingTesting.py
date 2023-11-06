@@ -2,43 +2,30 @@
 import sys
 from time import process_time
 
+import verbose_module
 sys.path.append('../../.')
-import pIRPgym
 import pIRPgym
 
 ########################################## Instance generator ###########################################
 # Instance Generator
-# pIRP model's parameters
-T = 7
-M = 15
-K = 10
-F = 15
-
-demand_type = 'aggregated'
-
-# Vehicles
-Q = 2000
-d_max = 2000
-
+### pIRP model's parameters
 # Stochasticity
 stochastic_params = ['d','q']
 look_ahead = ['d','q']
-S = 6
-LA_horizon = 3 
+
 
 # Historical data
 historical_data = ['*']
-hist_window = 40
+
 
 # Other parameters
 backorders = 'backorders'
-back_o_cost = 10000  
 
-
-env_config = {'M':M, 'K':K, 'T':T, 'F':F, 'Q':Q, 
-              'S':S, 'LA_horizon':LA_horizon,
-             'd_max':d_max, 'hist_window':hist_window,
-             'back_o_cost':back_o_cost}
+env_config = {  'M':13,'K':15,'T':12,'F':13,'Q':2000,
+                'S':6,'LA_horizon':4,
+                'd_max':2000,'hist_window':60,
+                'back_o_cost':10000
+            }
 
 # Creating instance generator object
 inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
@@ -47,60 +34,64 @@ inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
 
 
 
-
 #%%######################################## Random Instance ##########################################
 # Random Instance
-q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
-p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+# q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
+# p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
 
-d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
+# d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
 
-h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
+# h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
-stoch_rd_seed = 0                                               # Random seeds
-det_rd_seed = 1
+# stoch_rd_seed = 0                                               # Random seeds
+# det_rd_seed = 1
 
-disc = ("strong","conc")
+# disc = ("strong","conc")
 
-inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
-                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
+# inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+#                                         p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
 
 #%%######################################## CVRP Instance ##########################################
 # CVRP Instance
 # set = 'Li'
 # instance = 'Li_21.vrp'
-# # set = 'Golden'
-# # instance = 'Golden_1.vrp'
+set = 'Golden'
+instance = 'Golden_1.vrp'
 
-# purchase = inst_gen.upload_CVRP_instance(set, instance)
+purchase = inst_gen.upload_CVRP_instance(set, instance)
+purchase = {key[0]:value for key,value in purchase.items()}
 
 
 #%%######################################## Environment ##########################################
 # Environment
 # Creating environment object
 routing = True
-inventory = True    
-perishability = 'ages'
-env = pIRPgym.steroid_IRP(routing, inventory, perishability)
+inventory = False    
+perishability = False
+env = pIRPgym.steroid_IRP(routing,inventory,perishability)
+env.reset(inst_gen)
 
-# Reseting the environment
-state = env.reset(inst_gen, return_state = True)
+''' Parameters '''
+verbose = True
+instances = []
 
-
-#%%######################################### Diverse Routing Strategies ##########################################
-purchase = pIRPgym.Purchasing.avg_purchase_all(inst_gen, env)
-
-nn_routes, nn_distances, nn_loads, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                                           # Nearest Neighbor
-RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
-GA_routes, GA_distances, GA_loads, GA_time  = pIRPgym.Routing.HybridGenticAlgorithm(purchase, inst_gen,env.t,rd_seed=0,time_limit=30)           # Genetic Algorithm
-HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t)                                   # Hybrid Genetic Search (CVRP)
-MIP_routes, MIP_distances, MIP_loads, MIP_time = pIRPgym.Routing.MixedIntegerProgram(purchase,inst_gen,env.t)                                   # Complete MIP
-# CG_routes, CG_distances, CG_loads, CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t)                                          # Column Generation algorithm
+#%%######################################### Routing testing on classic instances ##########################################
+for instance in instances:
+    nn_routes, nn_obj, nn_info, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                                         # Nearest Neighbor
+    if verbose: string = verbose_module.print_routing_update(string,nn_obj,len(nn_info[0]))
+    RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
+    if verbose: string = verbose_module.print_routing_update(string,sum(RCLc_distances),len(RCLc_routes))
+    GA_routes,GA_distances,GA_loads,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,rd_seed=0,time_limit=5)    # Genetic Algorithm
+    if verbose: string = verbose_module.print_routing_update(string,sum(GA_distances),len(GA_routes))
+    HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=5)                                   # Hybrid Genetic Search (CVRP)
+    if verbose: string = verbose_module.print_routing_update(string,HyGeSe_distance,len(HyGeSe_routes))
+    MIP_routes, MIP_obj, MIP_info, MIP_time = pIRPgym.Routing.MixedIntegerProgram(purchase,inst_gen,env.t)
+    if verbose: string = verbose_module.print_routing_update(string,MIP_obj,len(MIP_info[0]))
+    CG_routes, CG_distances, CG_loads, CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,verbose=False)       # Column Generation algorithm                  
+    if verbose: string = verbose_module.print_routing_update(string,sum(CG_distances),len(CG_routes),end=True)                                        # Column Generation algorithm
 
 
 #%%
-
-
 import time
 
 def simulate_episode():
