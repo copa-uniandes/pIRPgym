@@ -25,9 +25,15 @@ class locations():
         return coor, locations.euclidean_distance(coor, _)
     
 
+    benchmarks = {'Golden_1':(5623.47,9),'Golden_2':(8404.61,10),'Golden_3':(10997.8,9),'Golden_4':(13588.6,10),
+                  'Golden_5':(6460.98,5),'Golden_6':(8400.33,7), 'Golden_7':(10102.7,8),'Golden_8':(11635.3,10),
+                  'Li_21':(16212.83,10),'Li_22':(14499.04,15),'Li_23':(18801.13,10),'Li_24':(21389.43,10),
+                  'Li_25':(16665.7,19),'Li_26':(23977.73,10),'Li_27':(17320,20),'Li_28':(26566.03,10),
+                  'Li_29':(29154.34,10),'Li_30':(31742.64,10),'Li_31':(34330.94,10),'Li_32':(37159.41,11)}
+
     # Uploading 
     @staticmethod
-    def upload_cvrp_instance(set,instance) -> tuple[int,int,int,dict[float],dict[float]]:
+    def upload_cvrp_instance(set,instance) -> tuple:
         assert set in ['Li','Golden','Uchoa'], 'The dCVRP instance set is not available for the pIRPenv'
 
         if set in ['Li','Golden']: CVRPtype = 'dCVRP'; sep = ' '
@@ -70,6 +76,9 @@ class locations():
                     purchase[float(vals[0]) - 1] = float(vals[1])
             else:   break
         
+        return M-1,Q,d_max,coor,purchase,locations.benchmarks[instance[:-4]]
 
-        return M-1, Q, d_max, coor, purchase
+
+    
+
         

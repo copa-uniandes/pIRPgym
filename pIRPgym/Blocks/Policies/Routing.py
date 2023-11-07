@@ -27,17 +27,17 @@ class Routing():
             distances = list()
 
             while len(pending_sup) > 0:
-                node: int = 0
-                load: int = 0
-                route: list = [node]
-                distance: float = 0
+                node:int = 0
+                load:int = 0
+                route:list = [node]
+                distance:float = 0
                 while load < inst_gen.Q:
                     target = Routing.Nearest_Neighbor.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
                     if target == False:
                         break
                     else:
                         load += requirements[target]
-                        distance += inst_gen.c[node, target]
+                        distance += inst_gen.c[node,target]
                         node = target
                         route.append(node)
                         pending_sup.remove(node)
@@ -57,8 +57,8 @@ class Routing():
             def find_nearest_feasible_node(node:int,load:float,distance:float,pending_sup:int,requirements:dict,inst_gen:instance_generator):
                 target, dist = False, 1e6
                 for candidate in pending_sup:
-                    if inst_gen.c[node,candidate] < dist and load + requirements[candidate] <= inst_gen.Q \
-                        and distance + inst_gen.c[node,candidate] + inst_gen.c[candidate,0] <= inst_gen.d_max:
+                    if (inst_gen.c[node,candidate] < dist) and (load + requirements[candidate] <= inst_gen.Q) \
+                        and (distance + inst_gen.c[node,candidate] + inst_gen.c[candidate,0] <= inst_gen.d_max):
                         target = candidate
                         dist = inst_gen.c[node,target]
                 
@@ -77,20 +77,19 @@ class Routing():
             loads = list()
 
             while len(pending_sup) > 0:
-                route, distance, load, pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen)
+                route,distance,load,pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha,pending_sup,requirements,inst_gen)
 
                 routes.append(route)
                 FO += distance
                 distances.append(distance)
                 loads.append(load)
             
-                
-            return routes, FO, distances, loads, process_time() - start
+            return routes,FO,(distances,loads),process_time() - start
         
         class RCL_constructive():
             # Generate candidate from RCL
             @staticmethod
-            def generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen):
+            def generate_RCL_candidate(RCL_alpha,node,load,distance,pending_sup,requirements,inst_gen):
                 feasible_candidates:list = list()
                 max_crit:float = -1e9
                 min_crit:float = 1e9
@@ -114,19 +113,19 @@ class Routing():
 
             # Generate route from RCL
             @staticmethod
-            def generate_RCL_route(RCL_alpha, pending_sup, requirements, inst_gen):
+            def generate_RCL_route(RCL_alpha,pending_sup,requirements,inst_gen):
                 node:int = 0
                 load:int = 0
                 route:list = [node]
                 distance:float = 0
 
                 while load < inst_gen.Q:
-                    target = Routing.RCL_constructive.generate_RCL_candidate(RCL_alpha, node, load, distance, pending_sup, requirements, inst_gen)
+                    target = Routing.RCL_constructive.generate_RCL_candidate(RCL_alpha,node,load,distance,pending_sup,requirements,inst_gen)
                     if target == False:
                         break
                     else:
                         load += requirements[target]
-                        distance += inst_gen.c[node, target]
+                        distance += inst_gen.c[node,target]
                         node = target
                         route.append(node)
                         pending_sup.remove(node)
@@ -134,7 +133,7 @@ class Routing():
                 route.append(0)
                 distance += inst_gen.c[node,0]
 
-                return route, distance, load, pending_sup
+                return route,distance,load,pending_sup
 
 
         ''' Genetic Algorithm '''
@@ -146,14 +145,15 @@ class Routing():
 
             # Parameters
             verbose = False
-            Population_size:int = 5_000
+            Population_size:int = 200
             Population_iter:range = range(Population_size)
-            training_time:float = 0.15*time_limit
+            training_time:float = 0.3*time_limit
             Elite_size:int = int(Population_size*0.25)
 
             crossover_rate:float = 0.5
             mutation_rate:float = 0.5
 
+            if verbose: print('Generating population')
             Population, FOs, Distances, Loads, incumbent, best_individual, alpha_performance =\
                             Routing.GA.generate_population(inst_gen, start, requirements, verbose, 
                                                                             Population_iter, training_time)
@@ -203,7 +203,7 @@ class Routing():
                     # Updating incumbent
                     if sum(new_distances) < incumbent:
                         incumbent = sum(new_distances)
-                        best_individual:list = [new_individual, new_distances, new_loads, process_time() - start]
+                        best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time() - start]
                         print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
 
                 # Update population
@@ -237,19 +237,19 @@ class Routing():
         class GA():
             ''' Generate initial population '''
             @staticmethod
-            def generate_population(inst_gen:instance_generator, start:float, requirements:dict, verbose:bool, Population_iter:range,
+            def generate_population(inst_gen:instance_generator,start:float,requirements:dict,verbose:bool,Population_iter:range,
                                     training_time: float):
                 # Initalizing data storage
-                Population:list[list] = list()
-                FOs:list[float] = list()
-                Distances:list[float] = list()
-                Loads:list[float] = list()
+                Population = list()
+                FOs = list()
+                Distances = list()
+                Loads = list()
 
                 incumbent:float = 1e9
                 best_individual:list = list()
                 
                 # Adaptative-Reactive Constructive
-                RCL_alpha_list:list[float] = [0.15, 0.25, 0.35, 0.5, 0.75]
+                RCL_alpha_list:list = [0,0.001,0.005]
                 alpha_performance:dict = {alpha:0 for alpha in RCL_alpha_list}
 
                 # Calibrating alphas
@@ -266,12 +266,12 @@ class Routing():
                     RCL_alpha = choice(RCL_alpha_list, p = [alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alpha_list])    
                 
                     # Generating individual
-                    individual, FO, distances, loads, _ = Routing.RCL_Heuristic(requirements2, inst_gen, RCL_alpha)
+                    individual, FO, (distances, loads), _ = Routing.RCL_Heuristic(requirements2,inst_gen,0,RCL_alpha)
 
                     # Updating incumbent
                     if FO < incumbent:
                         incumbent = FO
-                        best_individual: list = [individual, distances, loads, process_time() - start]
+                        best_individual: list = [individual, FO, (distances, loads), process_time() - start]
 
                     # Saving individual
                     Population.append(individual)
@@ -284,11 +284,11 @@ class Routing():
 
             ''' Calibrate alphas for RCL '''
             @staticmethod
-            def calibrate_alpha(RCL_alpha_list:list, alpha_performance:dict, requirements:dict, inst_gen:instance_generator) -> dict:
+            def calibrate_alpha(RCL_alpha_list:list,alpha_performance:dict,requirements:dict,inst_gen:instance_generator) -> dict:
                 requirements2 = deepcopy(requirements)
                 tr_distance:float = 0
                 RCL_alpha:float = choice(RCL_alpha_list)
-                routes, FO, distances, loads, _ = Routing.RCL_Heuristic(requirements2, inst_gen, RCL_alpha)
+                routes, FO, (distances, loads), _ = Routing.RCL_Heuristic(requirements2,inst_gen,0,RCL_alpha)
                 tr_distance += FO
                 alpha_performance[RCL_alpha] += 1/tr_distance
 
@@ -434,7 +434,7 @@ class Routing():
                         model.addConstr(gu.quicksum(x[i,j,f] for j in V if (i,j) in A) - gu.quicksum(x[j,i,f] for j in V if (j,i) in A) == 0)
 
                     # 6. Max distance per vehicle
-                    # model.addConstr(gu.quicksum(distances[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
+                    model.addConstr(gu.quicksum(distances[i,j]*x[i,j,f] for (i,j) in A) <= inst_gen.d_max)
 
                     # 7. Max capacity per vehicle
                     model.addConstr(gu.quicksum(requirements[i] * gu.quicksum(x[i,j,f] for j in V if (i,j) in A) for i in V) <= inst_gen.Q)
@@ -489,7 +489,7 @@ class Routing():
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
-            sup_map = {i:idx for idx,i in enumerate(N)}
+            sup_map = {i:(idx+1) for idx,i in enumerate(N)}
 
             master = Routing.Column_Generation.MasterProblem()
             modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen, N, distances)
@@ -501,7 +501,7 @@ class Routing():
             iter = 0;   start = process_time()
             # routes = [[0,0]]
             routes = list()
-            loads = [1e6]
+            loads = list()
             for i in N:
                 routes.append([0,i,0])
                 loads.append(requirements[i])
@@ -632,7 +632,7 @@ class Routing():
                     def calculateDummyCost():
                         c_0 = 0
                         for i in N:
-                            c_0+=2*distances[i,inst_gen.M+1]
+                            c_0+=distances[i,inst_gen.M+1]
                         return c_0
 
                     dummyCost = calculateDummyCost()
@@ -640,7 +640,7 @@ class Routing():
                     # objectives.append(dummyCost)
 
                     for idx,i in enumerate(N):
-                        route_cost = 2 * (distances[0,i] + distances[i,inst_gen.M+1])
+                        route_cost = distances[0,i] + distances[i,inst_gen.M+1]
                         theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{idx}"))
                         objectives.append(route_cost)
 
@@ -680,10 +680,10 @@ class Routing():
                         w[i] = modelAP.addVar(vtype = gu.GRB.CONTINUOUS, name = f"w_{i}")
             
                     # 3. All vehicles start at depot
-                    modelAP.addConstr(gu.quicksum(x[0,j] for j in N) == 1, "Depart from depot")
+                    modelAP.addConstr(gu.quicksum(x[0,j] for j in N if (0,j) in A) == 1, "Depart from depot")
 
                     # 4. All vehicles arrive at depot
-                    modelAP.addConstr(gu.quicksum(x[i,inst_gen.M+1] for i in N) == 1, "Reach the depot")
+                    modelAP.addConstr(gu.quicksum(x[i,inst_gen.M+1] for i in V if (i,inst_gen.M+1) in A) == 1, "Reach the depot")
 
                     # 5. Flow preservation
                     for i in N:
@@ -693,11 +693,11 @@ class Routing():
                     modelAP.addConstr(gu.quicksum(distances[i,j]*x[i,j] for (i,j) in A) <= inst_gen.d_max, 'Max distance')
 
                     # 7. Max capacity per vehicle
-                    modelAP.addConstr(gu.quicksum(requirements[i]*gu.quicksum(x[i,j] for j in V if (i,j) in A) for i in N) <= inst_gen.Q, "Capacity")
+                    modelAP.addConstr(gu.quicksum(requirements[i]*gu.quicksum(x[i,j] for j in V if (i,j) in A) for i in V) <= inst_gen.Q, "Capacity")
 
                     # 8. Distance tracking/No loops
                     for (i,j) in A:
-                        modelAP.addConstr(w[i]+distances[i,j]-w[j] <= (1-x[i,j])*1e9, f'Distance tracking_{i}{j}')
+                        modelAP.addConstr(w[i]+distances[i,j]-w[j] <= (1-x[i,j])*1e4, f'Distance tracking_{i}{j}')
 
                     #Shortest path objective
                     c_trans = dict()

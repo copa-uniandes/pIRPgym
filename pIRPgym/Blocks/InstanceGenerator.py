@@ -261,19 +261,20 @@ class instance_generator():
 
 
     # Generates an CVRPTW instance of the literature
-    def upload_CVRP_instance(self, set:str = 'Li', instance:str = 'Li_21.vrp') -> dict[float]:
+    def upload_CVRP_instance(self, set:str = 'Li', instance:str = 'Li_21.vrp') -> tuple:
         self.K:int = 1         # One product
         self.T:int = 1         # One period 
         self.F:int = 100       # 100 vehicles
 
-        self.M, self.Q, self.d_max, self.coor, purchase = locations.upload_cvrp_instance(set, instance)
-        purchase = {(i,0):purchase[i] for i in purchase.keys()}
+        self.M,self.Q,self.d_max,self.coor,purchase,benchmark = locations.upload_cvrp_instance(set, instance)
+        # purchase = {(i):purchase[i] for i in purchase.keys()}
 
         self.gen_sets()
 
-        self.c = locations.euclidean_distance(self.coor, self.V)
+        self.c = locations.euclidean_distance(self.coor,self.V)
 
-        return purchase        
+
+        return purchase,benchmark  
 
 
     # Auxiliary method: Generate iterables of sets

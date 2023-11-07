@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':13,'K':15,'T':12,'F':13,'Q':2000,
+env_config = {'M':9,'K':10,'T':12,'F':9,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
              'back_o_cost':10000}
@@ -35,50 +35,22 @@ inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
 
 ##########################################    Random Instance    ##########################################
 # Random Instance
-# q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
-# p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
+p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
 
-# d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
+d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
 
-# h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
+h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
-# stoch_rd_seed = 0       # Random seeds
-# det_rd_seed = 0
+stoch_rd_seed = 0       # Random seeds
+det_rd_seed = 0
 
-# disc = ("strong","conc")
+disc = ("strong","conc")
 
-# inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
-                                        # p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
+inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
 
-
-##########################################   CundiBoy Instance   ##########################################
-# ### CundiBoy Instance
-# # Random seeds
-# det_rd_seed = 2
-# stoch_rd_seed = 1                                        
-
-# # Random Instance
-# q_params = {'dist': 'c_uniform', 'r_f_params': 10}          # Offer
-# p_params = {'dist': 'd_uniform', 'r_f_params': 0.3}
-
-# d_params = {'dist': 'log-normal', 'r_f_params': 13}        # Demand
-
-# h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
-
-# I0 = 0
-
-# inst_gen.generate_CundiBoy_instance(det_rd_seed,stoch_rd_seed,I0,q_params=q_params,p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
-
-##########################################     CVRP Instance     ##########################################
-# CVRP Instance
-set = 'Li'
-instance = 'Li_21.vrp'
-# set = 'Golden'
-# instance = 'Golden_1.vrp'
-
-purchase = inst_gen.upload_CVRP_instance(set, instance)
-
-#%%#########################################      Environment      ##########################################
+#########################################      Environment      ##########################################
 # Environment
 # Creating environment object
 routing = True
@@ -128,10 +100,10 @@ while not done:
     # GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
 
     nn_routes, nn_obj, nn_info, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                                         # Nearest Neighbor
-    if verbose: string = verbose_module.print_routing_update(string,nn_obj,len(nn_info[0]))
-    RCLc_routes, _, RCLc_distances, RCLc_loads, RCLc_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
-    if verbose: string = verbose_module.print_routing_update(string,sum(RCLc_distances),len(RCLc_routes))
-    GA_routes,GA_distances,GA_loads,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,rd_seed=0,time_limit=5)    # Genetic Algorithm
+    if verbose: string = verbose_module.print_routing_update(string,nn_obj,len(nn_routes))
+    RCL_routes, RCL_obj, (RCL_distances, RCL_loads), RCL_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
+    if verbose: string = verbose_module.print_routing_update(string,RCL_obj,len(RCL_routes))
+    GA_routes,GA_obj,(GA_distances,GA_loads),GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,rd_seed=0,time_limit=5)    # Genetic Algorithm
     if verbose: string = verbose_module.print_routing_update(string,sum(GA_distances),len(GA_routes))
     HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=5)                                   # Hybrid Genetic Search (CVRP)
     if verbose: string = verbose_module.print_routing_update(string,HyGeSe_distance,len(HyGeSe_routes))
@@ -141,7 +113,7 @@ while not done:
     if verbose: string = verbose_module.print_routing_update(string,sum(CG_distances),len(CG_routes),end=True)
 
     ''' Compound action'''        
-    action = {'routing':CG_routes, 'purchase':purchase, 'demand_compliance':demand_compliance}
+    action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
 
     state, reward, done, real_action, _,  = env.step(action,inst_gen)
     if done:   states[env.t] = state
@@ -154,7 +126,7 @@ while not done:
     # rewards[env.t] = reward
     # la_decisions[env.t-1] = la_dec
 
-print('Finished')
+print('Finished episode!!!')
 
 
 
