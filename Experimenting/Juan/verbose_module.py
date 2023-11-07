@@ -46,7 +46,12 @@ def print_purchase_update(string,prices,purchase):
 
 
 def print_routing_update(string,FO,veh,end=False):
-    string += f' {round(FO)} \t  {veh}\t'
+    if FO < 10000:
+        string += f' {round(FO)} \t  {veh}\t'
+    else:
+        string += f' {round(FO)}\t  {veh}\t'
+
+
     if not end:
         string += '|'
         print(string,end='\r')
