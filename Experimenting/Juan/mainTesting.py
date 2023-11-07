@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':9,'K':10,'T':12,'F':9,'Q':2000,
+env_config = {'M':20,'K':25,'T':12,'F':20,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
              'back_o_cost':10000}
@@ -107,10 +107,13 @@ while not done:
     if verbose: string = verbose_module.print_routing_update(string,sum(GA_distances),len(GA_routes))
     HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=5)                                   # Hybrid Genetic Search (CVRP)
     if verbose: string = verbose_module.print_routing_update(string,HyGeSe_distance,len(HyGeSe_routes))
-    MIP_routes, MIP_obj, MIP_info, MIP_time = pIRPgym.Routing.MixedIntegerProgram(purchase,inst_gen,env.t)
-    if verbose: string = verbose_module.print_routing_update(string,MIP_obj,len(MIP_info[0]))
+    # MIP_routes, MIP_obj, MIP_info, MIP_time = pIRPgym.Routing.MixedIntegerProgram(purchase,inst_gen,env.t)
+    # if verbose: string = verbose_module.print_routing_update(string,MIP_obj,len(MIP_info[0]))
     CG_routes, CG_distances, CG_loads, CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,verbose=False)       # Column Generation algorithm                  
     if verbose: string = verbose_module.print_routing_update(string,sum(CG_distances),len(CG_routes),end=True)
+    
+    pending_s,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+    feasible,objective,(distances,loads) = pIRPgym.Routing_management.evaluate_routes(inst_gen,CG_routes,requirements)
 
     ''' Compound action'''        
     action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}

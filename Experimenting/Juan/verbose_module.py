@@ -32,7 +32,7 @@ def print_step(t,start):
             string = f'{t+1} {round(process_time()-start,2)} |' 
             print(string,end='\r')
         else:
-            string = f'{t+1} {round(process_time()-start,1)} |'
+            string = f'{t+1} {round(process_time()-start)} |'
             print(string,end='\r')
     
     return string
@@ -65,10 +65,10 @@ class routing_instances():
         else:
             item = 'Obj'
 
-        print('*'*50 + "  Routing Strategies on Classic Instances  "+'*'*50,flush = True)
-        print(f'{"-"*8}|\tBKS \t|\t   NN \t \t|\t   RCL \t \t|\t   HGA \t \t|\t  HGS* \t \t|\t   CG \t \t')
-        print(f'Inst\t| #Veh \t Obj \t| t(s)\t #Veh \t {item} \t| t(s) \t #Veh \t{item} \t| t(s) \t #Veh \t {item} \t| t(s) \t #Veh \t {item} \t| t(s) \t #Veh \t{ item}')
-        print('-'*143)
+        print('*'*37 + "  Routing Strategies on Classic Instances  "+'*'*37,flush = True)
+        print(f'{"-"*8}|\tBKS \t|\t   NN \t \t|\t   RCL \t \t|\t   HGA \t \t|\t  HGS*')# \t \t|\t   CG \t \t')
+        print(f'Inst\t| #Veh \t Obj \t| t(s)\t #Veh \t {item} \t| t(s) \t #Veh \t{item} \t| t(s) \t #Veh \t {item} \t| t(s) \t #Veh \t {item} \t|')# \t| t(s) \t #Veh \t{ item}')
+        print('-'*118)
 
     @staticmethod
     def print_inst(set,instance,bks,k):
@@ -82,7 +82,8 @@ class routing_instances():
     @staticmethod
     def print_routing_update(string,obj,veh,t,show_gap,benchmark,end=False):
         if t < 10: tt = round(t,2)
-        else: tt = round(t,1)
+        elif t < 100: tt = round(t,1)
+        else: tt = round(t)
         if not show_gap:
             if tt <100: 
                 string += f' {tt} \t   {veh}\t{round(obj,1)} \t|'

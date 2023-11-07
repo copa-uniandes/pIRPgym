@@ -11,11 +11,31 @@ from termcolor import colored
 class Routing_management():
 
     @staticmethod
-    def evaluate_routes(inst_gen, routes):
-        transport_cost = 0
+    def price_routes(inst_gen,routes):
+        transport_cost=0
         for route in routes:
-            transport_cost += sum(inst_gen.c[route[i], route[i + 1]] for i in range(len(route) - 1))
+            transport_cost += sum(inst_gen.c[route[i],route[i + 1]] for i in range(len(route) - 1))
         return transport_cost
+
+    @staticmethod
+    def evaluate_routes(inst_gen,routes,purchase):
+        feasible = True
+        objective = 0
+        distances = list()
+        loads = list()
+        for route in routes:
+            distance = inst_gen.c[0,route[1]]
+            load = 0
+            for i,node in enumerate(route[1:-1]):
+                distance += inst_gen.c[node,route[i+2]]
+                load += purchase[node]
+            objective += distance
+            distances.append(distance);loads.append(load)
+
+            if distance > inst_gen.d_max or load > inst_gen.Q:
+                feasible = False
+
+        return feasible,objective,(distances,loads)
 
 
 class Inventory_management():

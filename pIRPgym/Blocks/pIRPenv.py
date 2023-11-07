@@ -142,7 +142,7 @@ class steroid_IRP():
         # Reward
         reward = dict()
         if self.config['routing']:
-            transport_cost = Routing_management.evaluate_routes(inst_gen, real_routing)
+            transport_cost = Routing_management.price_routes(inst_gen,real_routing)
             reward['transport cost'] = transport_cost
         if self.config['inventory']:
             if self.config['perishability'] == 'ages':

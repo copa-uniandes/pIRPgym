@@ -485,7 +485,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict[float],inst_gen:instance_generator,t:int,verbose:bool=False):
+        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,verbose:bool=False):
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
@@ -518,25 +518,10 @@ class Routing():
                 current_objective_value = modelMP.getObjective().getValue()
                 if verbose:
                     print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))}',end='\r')
-                # print('Value of LP relaxation of MP: ', modelMP.getObjective().getValue(), flush = True)
-                
-                
-                #Retrieving duals of master problem
-                # lambdas = list()
-                # lambdas.append(modelMP.getAttr("Pi", modelMP.getConstrs()[0])[0])
-                # for i in N:
-                #     lambdas += [modelMP.getAttr("Pi", modelMP.getConstrs()[i])]
-                # lambdas = list(modelMP.getAttr("Pi", modelMP.getConstrs()))
                 
                 lambdas = list()
                 lambdas.append(modelMP.getAttr("Pi",RouteLimitCtr)[0])
                 lambdas += modelMP.getAttr("Pi",NodeCtr)
-
-                # for i in range(len(lambdas)):
-                #     print('lambda(',i,')=', lambdas[i], sep ='', flush = True)  
-
-                # Solve subproblem (passing dual variables)
-                # print('Solving subproblem (AP):', card_omega, flush = True)
                 
                 # Check stopping criterion
                 if (last_objective_value is not None and current_objective_value == last_objective_value):
@@ -544,10 +529,10 @@ class Routing():
                 else:
                     same_objective_count = 0
 
-                if same_objective_count >= 5:
-                    if verbose:
-                        print("\nStoping criterion: Number of iterations without change", flush=True)
-                    break
+                # if same_objective_count >= 5:
+                #     if verbose:
+                #         print("\nStoping criterion: Number of iterations without change", flush=True)
+                #     break
 
                 last_objective_value = current_objective_value
 
@@ -750,6 +735,60 @@ class Routing():
                 
                 return solution,objective,loads
                         
+
+        ''' Pricing algorithm '''
+        @staticmethod
+        def PriceRoute(solution,route,inst_gen:instance_generator):
+            if solution == 'canonic':
+                ### MASTER PROBLEM
+                N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
+                sup_map = {i:(idx+1) for idx,i in enumerate(N)}
+
+                master = Routing.Column_Generation.MasterProblem()
+                modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen, N, distances)
+
+                card_omega = len(theta)    # number of routes
+
+                start = process_time()
+                routes = list()
+                loads = list()
+                for i in N:
+                    routes.append([0,i,0])
+                    loads.append(requirements[i])
+
+                modelMP.optimize()
+                current_objective_value = modelMP.getObjective().getValue()
+                    
+                lambdas = list()
+                lambdas.append(modelMP.getAttr("Pi",RouteLimitCtr)[0])
+                lambdas += modelMP.getAttr("Pi",NodeCtr)
+
+                a_star = dict()
+                a_star.update({i:0 for i in N})
+
+
+                ### ROUTE PRICING
+                c_trans = dict()
+                for (i,j) in A:
+                    if i in N:
+                        c_trans[i,j] = distances[i,j]-lambdas[sup_map[i]]
+                    else:
+                        c_trans[i,j] = distances[i,j]
+                
+                reduced_cost = 0  
+                for i,node in enumerate(route[:-1]):
+                    reduced_cost += c_trans[node,route[i+1]]
+
+                return reduced_cost
+
+
+
+
+
+
+
+
+
 
         ''' Auxiliary methods for network management '''
         class network_aux_methods():
