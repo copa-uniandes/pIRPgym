@@ -49,7 +49,6 @@ class Routing():
                 distances.append(distance)
             
             return routes,FO,(distances,loads),process_time() - start
-        
 
         class Nearest_Neighbor():      
             # Find nearest feasible (by capacity) node
@@ -67,9 +66,12 @@ class Routing():
         
         ''' RCL based constructive '''
         @staticmethod
-        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35) -> tuple:
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,seed=None) -> tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
+
+            if seed != None:
+                seed(seed)
 
             routes = list()
             FO:float = 0
@@ -782,6 +784,31 @@ class Routing():
                 return reduced_cost
 
 
+        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env,n=30,averages=True,**kwargs):
+            times = list()
+            vehicles = list()
+            objectives = list()
+
+            if router == Routing.RCL_Heuristic:
+                for i in range(n):
+                    seed = i
+                    RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.001)
+                    times.append(RCL_time)
+                    vehicles.append(len(RCL_routes))
+                    objectives.append(RCL_obj)
+            
+            # elif router == Routing.GA:
+            #     for i in range(n):
+            #         seed = i
+            #         RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.001)
+            #         times.append(RCL_time)
+            #         vehicles.append(len(RCL_routes))
+            #         objectives.append(RCL_obj)
+
+            if averages:
+                return sum(objectives)/len(objectives),round(sum(vehicles)/len(vehicles),2),sum(times)/len(times)
+            else:
+                return objectives,vehicles,times
 
 
 
@@ -861,11 +888,6 @@ class Routing():
             def are_equal(self,routes,i,solution,objective):
                 if objective != self.objectives[i] or len(routes) != len(solution): # Objectives or number of routes are different
                     return False
-                
-            
-                        
-                            
-                    
                 
 
 
