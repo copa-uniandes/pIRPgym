@@ -99,4 +99,4 @@ for ss,inst_list in instances.items():
 # #%%
 # pIRPgym.Visualizations.RoutingV.routes_total_availability(routes, inst_gen, env)
 
-# %%
+

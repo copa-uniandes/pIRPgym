@@ -795,6 +795,7 @@ class Routing():
                 return reduced_cost
 
 
+        @staticmethod
         def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env,n=30,averages=True,**kwargs):
             times = list()
             vehicles = list()
@@ -807,14 +808,6 @@ class Routing():
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
-            
-            # elif router == Routing.GA:
-            #     for i in range(n):
-            #         seed = i
-            #         RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.001)
-            #         times.append(RCL_time)
-            #         vehicles.append(len(RCL_routes))
-            #         objectives.append(RCL_obj)
 
             if averages:
                 return sum(objectives)/len(objectives),round(sum(vehicles)/len(vehicles),2),sum(times)/len(times)

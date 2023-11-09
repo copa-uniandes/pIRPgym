@@ -27,7 +27,7 @@ backorders = 'backorders'
 env_config = {'M':13,'K':16,'T':12,'F':13,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
-             'back_o_cost':10000}
+             'back_o_cost':100}
 
 # Creating instance generator object
 inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
@@ -35,12 +35,12 @@ inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
 
 ##########################################    Random Instance    ##########################################
 # Random Instance
-q_params = {'dist': 'c_uniform', 'r_f_params': [6,20]}          # Offer
-p_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}
+q_params = {'dist': 'c_uniform', 'r_f_params': (6,20)}          # Offer
+p_params = {'dist': 'd_uniform', 'r_f_params': (20,61)}
 
-d_params = {'dist': 'log-normal', 'r_f_params': [3,1]}          # Demand
+d_params = {'dist': 'log-normal', 'r_f_params': (3,1)}          # Demand
 
-h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
+h_params = {'dist': 'd_uniform', 'r_f_params': (20,61)}         # Holding costs
 
 stoch_rd_seed = 1       # Random seeds
 det_rd_seed = 1
@@ -50,6 +50,10 @@ disc = ("strong","conc")
 inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
                                         p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
 
+
+pIRPgym.Visualizations.InstanceV.plot_overlapping_distributions(q_params['r_f_params'],d_params['r_f_params'])
+
+#%%
 #########################################      Environment      ##########################################
 # Environment
 # Creating environment object

@@ -2,10 +2,6 @@
 @author: Juan Betancourt
 ################################## Modules ##################################
 """
-### SC classes
-from ...Blocks.InstanceGenerator import instance_generator
-from ...Blocks.pIRPenv import steroid_IRP
-
 ### Basic Librarires
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -14,6 +10,12 @@ import matplotlib.patches as mpatches
 import numpy as np
 import networkx as nx
 from copy import deepcopy
+
+from sklearn.neighbors import KernelDensity
+
+### SC classes
+from ...Blocks.InstanceGenerator import instance_generator
+from ...Blocks.pIRPenv import steroid_IRP
 
 
 class RoutingV():
@@ -571,5 +573,82 @@ class InventoryV():
         return ax
 
 
-class PerishabilityV():
-    pass
+class InstanceV():
+    
+    @staticmethod
+    def plot_overlapping_distributions(q_params,d_params,num_samples=100_000):
+        # # Extract parameters for the uniform distribution
+        # q_min, q_max = q_params
+
+        # # Generate samples for the uniform distribution
+        # uniform_samples = np.random.uniform(q_min, q_max, num_samples)
+
+        # # Extract parameters for the log-normal distribution
+        # d_mean, d_dev = d_params
+
+        # # Generate samples for the log-normal distribution
+        # lognorm_samples = np.random.lognormal(mean=np.log(d_mean), sigma=d_dev, size=num_samples)
+
+        # # Set up figure and axis
+        # fig, ax = plt.subplots(figsize=(8, 6))
+        # ax.set_xlim([0,2*q_max])
+
+        # # Plot the histograms with customized appearance
+        # ax.hist(uniform_samples, bins=50, density=True, alpha=0.7, color='skyblue', edgecolor='black', linewidth=1.2, label='Availabilty (per supplier)')
+        # ax.hist(lognorm_samples, bins=50, density=True, alpha=0.7, color='salmon', edgecolor='black', linewidth=1.2, label='Demand')
+
+        # # Add labels and a legend
+        # ax.set_xlabel('Quantity', fontsize=12)
+        # ax.set_ylabel('Probability Density', fontsize=12)
+        # ax.set_title('Overlapping Demand and Offer Distributions', fontsize=14)
+        # ax.legend(fontsize=10)
+
+        # # Show a grid for better readability
+        # ax.grid(True, linestyle='--', alpha=0.5)
+
+        # # Show the plot
+        # plt.show()
+    
+        # Extract parameters for the uniform distribution
+        q_min, q_max = q_params
+
+        # Generate samples for the uniform distribution
+        uniform_samples = np.random.uniform(q_min, q_max, num_samples)
+
+        # Extract parameters for the log-normal distribution
+        d_mean, d_dev = d_params
+
+        # Generate samples for the log-normal distribution
+        lognorm_samples = np.random.lognormal(mean=np.log(d_mean), sigma=d_dev, size=num_samples)
+
+        # Set up figure and axis
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        # Set x-axis range to extend until twice the maximum value of the uniform distribution
+        x_max = 2 * q_max
+
+        # Perform kernel density estimation (KDE)
+        kde_uniform = KernelDensity(bandwidth=0.5).fit(uniform_samples.reshape(-1, 1))
+        kde_lognorm = KernelDensity(bandwidth=0.5).fit(lognorm_samples.reshape(-1, 1))
+
+        # Generate values for the x-axis
+        x_values = np.linspace(0, x_max, 1000).reshape(-1, 1)
+
+        # Plot KDEs with a smooth line
+        ax.plot(x_values, np.exp(kde_uniform.score_samples(x_values)), label='Offer', color='skyblue')
+        ax.plot(x_values, np.exp(kde_lognorm.score_samples(x_values)), label='Demand', color='salmon')
+
+        # Add labels and a legend
+        ax.set_xlabel('Quantity', fontsize=12)
+        ax.set_ylabel('Probability Density', fontsize=12)
+        ax.set_title('Overlapping Offer and Demand Distributions', fontsize=14)
+        ax.legend(fontsize=10)
+
+        # Show a grid for better readability
+        ax.grid(True, linestyle='--', alpha=0.5)
+
+        # Show the plot
+        plt.show()
+
+
+
