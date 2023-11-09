@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':20,'K':25,'T':12,'F':20,'Q':2000,
+env_config = {'M':15,'K':20,'T':12,'F':20,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
              'back_o_cost':10000}
@@ -66,13 +66,12 @@ state = env.reset(inst_gen,return_state=True)
 # Episode simulation
 # Simulations 
 ''' Parameters '''
-num_episodes = 1
 verbose = True
+strategies = ['CG','NN','RCL','GA','HGS*']
 start = process_time()
+show_gap = True
 
-# for episode in num_episodes:
-
-if verbose: string = verbose_module.print_iteration_head()
+if verbose: string = verbose_module.routing_progress.print_iteration_head(strategies,show_gap)
 
 # Episode's and performance storage
 rewards=dict();  states=dict();   real_actions=dict();   backorders=dict();   la_decisions=dict()
@@ -86,31 +85,49 @@ state = env.reset(inst_gen,return_state=True)
 
 done = False
 while not done:
-    if verbose: string = verbose_module.print_step(env.t,start)
+    if verbose: string = verbose_module.routing_progress.print_step(env.t,start)
 
     #print_state(env)
     # Environment transition
-    states[env.t] = state 
+    states[env.t] = state
 
     ''' Purchase'''
     [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
-    if verbose:     string = verbose_module.print_purchase_update(string,inst_gen.W_p[env.t],purchase)
 
     ''' Routing '''
     # GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
+    if 'CG' in strategies:
+        CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,verbose=False)       # Column Generation algorithm                  
+        if verbose: string = verbose_module.routing_progress.print_routing_update(string,CG_time,len(CG_routes),CG_obj)
 
-    nn_routes, nn_obj, nn_info, nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                                         # Nearest Neighbor
-    if verbose: string = verbose_module.print_routing_update(string,nn_obj,len(nn_routes))
-    RCL_routes, RCL_obj, (RCL_distances, RCL_loads), RCL_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
-    if verbose: string = verbose_module.print_routing_update(string,RCL_obj,len(RCL_routes))
-    GA_routes,GA_obj,(GA_distances,GA_loads),GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,rd_seed=0,time_limit=5)    # Genetic Algorithm
-    if verbose: string = verbose_module.print_routing_update(string,sum(GA_distances),len(GA_routes))
-    HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=5)                                   # Hybrid Genetic Search (CVRP)
-    if verbose: string = verbose_module.print_routing_update(string,HyGeSe_distance,len(HyGeSe_routes))
-    # MIP_routes, MIP_obj, MIP_info, MIP_time = pIRPgym.Routing.MixedIntegerProgram(purchase,inst_gen,env.t)
-    # if verbose: string = verbose_module.print_routing_update(string,MIP_obj,len(MIP_info[0]))
-    CG_routes, CG_distances, CG_loads, CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,verbose=False)       # Column Generation algorithm                  
-    if verbose: string = verbose_module.print_routing_update(string,sum(CG_distances),len(CG_routes),end=True)
+    if 'NN' in strategies:
+        nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                                         # Nearest Neighbor
+        if verbose and show_gap: 
+            string = verbose_module.routing_progress.print_routing_update(string,nn_time,len(nn_routes),nn_obj,CG_obj=CG_obj)
+        elif verbose and not show_gap:
+            string = verbose_module.routing_progress.print_routing_update(string,nn_time,len(nn_routes),nn_obj)
+
+    if 'RCL' in strategies:
+        RCL_routes,RCL_obj,(RCL_distances,RCL_loads),RCL_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
+        if verbose and show_gap:
+            string = verbose_module.routing_progress.print_routing_update(string,RCL_time,len(RCL_routes),RCL_obj,CG_obj=CG_obj)
+        elif verbose and not show_gap:
+            string = verbose_module.routing_progress.print_routing_update(string,RCL_time,len(RCL_routes),RCL_obj)
+
+    if 'GA' in strategies:
+        GA_routes,GA_obj,(GA_distances,GA_loads),GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,rd_seed=0,time_limit=40)    # Genetic Algorithm
+        if verbose and show_gap: 
+            string = verbose_module.routing_progress.print_routing_update(string,GA_time,len(GA_routes),sum(GA_distances),CG_obj=CG_obj)
+        elif verbose and not show_gap:
+            string = verbose_module.routing_progress.print_routing_update(string,GA_time,len(GA_routes),sum(GA_distances))
+
+    if 'HGS*' in strategies:
+        HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=5)                                   # Hybrid Genetic Search (CVRP)
+        if verbose and show_gap: 
+            string = verbose_module.routing_progress.print_routing_update(string,HyGeSe_time,len(HyGeSe_routes),HyGeSe_distance,CG_obj=CG_obj,end=True)
+        elif verbose and not show_gap: 
+            string = verbose_module.routing_progress.print_routing_update(string,HyGeSe_time,len(HyGeSe_routes),HyGeSe_distance,end=True)
+    
     
     pending_s,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
     feasible,objective,(distances,loads) = pIRPgym.Routing_management.evaluate_routes(inst_gen,CG_routes,requirements)

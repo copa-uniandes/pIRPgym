@@ -147,7 +147,7 @@ class Routing():
 
             # Parameters
             verbose = False
-            Population_size:int = 200
+            Population_size:int = 1000
             Population_iter:range = range(Population_size)
             training_time:float = 0.3*time_limit
             Elite_size:int = int(Population_size*0.25)
@@ -251,7 +251,8 @@ class Routing():
                 best_individual:list = list()
                 
                 # Adaptative-Reactive Constructive
-                RCL_alpha_list:list = [0,0.001,0.005]
+                # RCL_alpha_list:list = [0,0.001,0.005]
+                RCL_alpha_list:list = [0.01, 0.05, 0.15, 0.3]
                 alpha_performance:dict = {alpha:0 for alpha in RCL_alpha_list}
 
                 # Calibrating alphas
@@ -488,6 +489,7 @@ class Routing():
         ''' Column generation algorithm '''
         @staticmethod
         def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,verbose:bool=False):
+            start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
@@ -500,7 +502,7 @@ class Routing():
             same_objective_count = 0
             last_objective_value = None
 
-            iter = 0;   start = process_time()
+            iter = 0
             # routes = [[0,0]]
             routes = list()
             loads = list()
@@ -584,7 +586,7 @@ class Routing():
             
             routes,distances,loads = Routing.Column_Generation.decode_CG_routes(inst_gen,modelMP,routes,objectives,loads)
 
-            return routes,distances,loads,process_time() - start
+            return routes,sum(distances),(distances,loads),process_time() - start
         
         class Column_Generation():
             # Master problem
