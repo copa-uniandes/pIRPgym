@@ -812,9 +812,9 @@ class Routing():
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
 
-                    extra_cost,missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase)
+                    extra_cost,missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase,discriminate_missing=False)
                     extra_costs.append(extra_cost)
-                    missings.append(sum([i for i in missing.values()]))
+                    missings.append(missing)
 
             if averages:
                 return sum(objectives)/n,round(sum(vehicles)/n,2),sum(times)/n,sum(extra_costs)/n,sum(missings)/n

@@ -99,7 +99,8 @@ class routing_progress():
         print(f'---------{"-"*num*24}')
     
     @staticmethod
-    def print_step(t,start):
+    def print_step(t,start,purchase):
+        num_suppliers = len(set(key[0] for key in purchase.keys()))
         time = round(process_time()-start,2)
         if t+1 < 10:
             if time < 10:
@@ -108,8 +109,11 @@ class routing_progress():
             elif time < 100:
                 string = f'{t+1} {round(process_time()-start,2):.2f} |' 
                 print(string,end='\r')
-            else:
+            elif time < 1000:
                 string = f'{t+1} {round(process_time()-start,1):.1f} |'
+                print(string,end='\r')
+            else:
+                string = f'{t+1} {round(process_time()-start):.0f} |'
                 print(string,end='\r')
         else:
             if time < 10:
@@ -118,8 +122,11 @@ class routing_progress():
             elif time < 100:
                 string = f'{t+1} {round(process_time()-start,2):.2f} |' 
                 print(string,end='\r')
-            else:
+            elif time < 1000:
                 string = f'{t+1} {round(process_time()-start):.1f} |'
+                print(string,end='\r')
+            else:
+                string = f'{t+1} {round(process_time()-start):.0f} |'
                 print(string,end='\r')
         
         return string

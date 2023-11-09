@@ -41,7 +41,7 @@ class Routing_management():
 
     ''' Compute route's dynamic purchasing delta'''
     @staticmethod
-    def evaluate_dynamic_potential(inst_gen:instance_generator,env,routes:list[list],purchase:dict):
+    def evaluate_dynamic_potential(inst_gen:instance_generator,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
         extra_cost = 0
         total_missing = {k:0 for k in inst_gen.Products}
         for route in routes:
@@ -69,8 +69,11 @@ class Routing_management():
             for k,pending in missing.items():
                 total_missing[k] += pending
                 extra_cost += inst_gen.back_o_cost*pending
-        
-        return extra_cost,total_missing
+            
+        if discriminate_missing:
+            return extra_cost,total_missing
+        else:
+            return extra_cost,sum([i for i in total_missing.values()])
 
 class Inventory_management():
     

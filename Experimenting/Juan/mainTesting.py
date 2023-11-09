@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':13,'K':16,'T':12,'F':13,'Q':2000,
+env_config = {'M':18,'K':22,'T':7,'F':18,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
              'back_o_cost':100}
@@ -53,7 +53,6 @@ inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_par
 
 # pIRPgym.Visualizations.InstanceV.plot_overlapping_distributions(q_params['r_f_params'],d_params['r_f_params'],type='line')
 
-#%%
 #########################################      Environment      ##########################################
 # Environment
 # Creating environment object
@@ -90,15 +89,14 @@ state = env.reset(inst_gen,return_state=True)
 
 done = False
 while not done:
-    if verbose: string = verbose_module.routing_progress.print_step(env.t,start)
-
     # Environment transition
     states[env.t] = state
 
     ''' Purchase'''
     [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
 
-
+    if verbose: string = verbose_module.routing_progress.print_step(env.t,start,purchase)
+    
     ''' Routing '''
     # GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
     if 'CG' in strategies:
@@ -174,6 +172,44 @@ while not done:
 
 print('Finished episode!!!')
 
-
+### Storing 
 
 #%%####################################### Single Episode Simulation  ######################################## 
+import matplotlib.pyplot as plt
+def plot_indicator_evolution(routing_performance,indicator):
+    """
+    Plot the evolution of a specific indicator for different routing policies.
+
+    Parameters:
+    - routing_performance (dict): Dictionary containing routing policies and their indicators.
+    - indicator (str): Indicator to plot ('Obj', 'time', 'vehicles', 'reactive_missing', 'extra_cost').
+    """
+    # Set up figure and axis
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Define a list of colors and markers for better visibility
+    colors = ['blue', 'green', 'orange', 'red', 'purple']
+    markers = ['o', 's', '^', 'D', '*']
+
+    # Plot the evolution for each routing policy
+    for i, (policy, data) in enumerate(routing_performance.items()):
+        if indicator in data:
+            ax.plot(data[indicator], label=f'{policy}', color=colors[i % len(colors)], marker=markers[i % len(markers)], linestyle='-', markersize=8, linewidth=2)
+
+    # Add labels and a legend
+    ax.set_xlabel('Time step', fontsize=12)
+    ax.set_ylabel(indicator, fontsize=12)
+    ax.set_title(f'Routing strategies performance: {indicator}', fontsize=14)
+    ax.legend(fontsize=10, loc='upper right')
+
+    # Add grid for better readability
+    ax.grid(True, linestyle='--', alpha=0.5)
+
+    # Show the plot
+    plt.show()
+
+
+for indicator in indicators:
+    plot_indicator_evolution(routing_performance,indicator)
+
+# %%
