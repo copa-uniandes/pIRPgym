@@ -1,5 +1,5 @@
 from time import process_time
-import gurobi as gu
+import gurobipy as gu
 
 mmm = gu.Model()
 del mmm
