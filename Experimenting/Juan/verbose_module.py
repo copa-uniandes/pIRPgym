@@ -138,7 +138,6 @@ class routing_progress():
             else:
                 string += f' {round(time)}\t   {round(vehicles)} \t {round(gap*100,2)}\t|'
 
-
         if not end:
             print(string,end='\r')
         else:

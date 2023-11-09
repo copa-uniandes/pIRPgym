@@ -203,7 +203,7 @@ class Inventory():
 
         la_decisions = [I0, zz, bb, yy]
 
-        return action, la_decisions
+        return action,la_decisions
 
 
     @staticmethod

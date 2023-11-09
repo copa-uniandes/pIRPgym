@@ -488,7 +488,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,verbose:bool=False):
+        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,time_limit=False,verbose:bool=False):
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -503,7 +503,9 @@ class Routing():
             last_objective_value = None
 
             iter = 0
-            # routes = [[0,0]]
+            opt_flag = False
+
+            
             routes = list()
             loads = list()
             for i in N:
@@ -515,6 +517,7 @@ class Routing():
                 print('\t \t|    Relaxed/Restr MP \t|    Auxiliary Problem')
                 print('Iter \ttime \t| MP_FO \t#Veh \t| r.c \t \tRoute')
                 print('------------------------------------------------------------------')
+            
             while True:
                 # print('Solving Master Problem (MP)...', flush = True)
                 iter += 1
@@ -549,9 +552,14 @@ class Routing():
                 c_k = shortest_path[1]
 
                 # Check termination condition
-                if  minReducedCost >= -0.0005:
+                if  minReducedCost >= -0.00005:
                     if verbose:
-                        print("\nStoping criterion: % gap ", flush = True)
+                        opt_flag = True
+                        print("\nStoping criterion: % gap", flush = True)
+                    break
+                elif time_limit and process_time() - start > time_limit:
+                    if verbose:
+                        print("\nStoping criterion: time", flush = True)
                     break
                 else:
                     if verbose:
@@ -566,6 +574,7 @@ class Routing():
                     card_omega+=1
                     # Update master model
                     modelMP.update()
+
 
 
             # for v in modelMP.getVars():
@@ -586,7 +595,7 @@ class Routing():
             
             routes,distances,loads = Routing.Column_Generation.decode_CG_routes(inst_gen,modelMP,routes,objectives,loads)
 
-            return routes,sum(distances),(distances,loads),process_time() - start
+            return routes,sum(distances),(distances,loads,opt_flag),process_time() - start
         
         class Column_Generation():
             # Master problem
@@ -794,7 +803,7 @@ class Routing():
             if router == Routing.RCL_Heuristic:
                 for i in range(n):
                     seed = i
-                    RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.001)
+                    RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.35)
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)

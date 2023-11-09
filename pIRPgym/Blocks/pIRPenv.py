@@ -265,28 +265,6 @@ class steroid_IRP():
         return purchase, demand_compliance
 
 
-    ''' Compute route's real distance (cost)'''
-    def compute_solution_real_cost(self,inst_gen:instance_generator,routes:list[list],purchase:dict):
-        extra_cost = 0
-        for route in routes:
-            missing = {k:0 for k in inst_gen.Products}
-            for sup in route[1:-1]:
-                for k in inst_gen.K_it[sup,self.t]:
-                    if (sup,k) in list(purchase.keys()) and inst_gen.W_q[self.t][sup,k] < purchase[sup,k]:
-                        not_bought = purchase[sup,k] - inst_gen.W_q[self.t][sup,k]
-                        missing[k] += not_bought
-                        extra_cost -=  not_bought*inst_gen.W_p[self.t][sup,k]
-                
-                for k in missing.keys():
-                    if missing[k] > 0:
-                        if sup in inst_gen.M_kt[k,self.t] and inst_gen.W_q[self.t][sup,k] > purchase[sup,k]:
-                            to_buy = min(inst_gen.W_q[self.t][sup,k]-purchase[sup,k], missing[k])
-                            missing[k] -= to_buy
-                            extra_cost += to_buy*inst_gen.W_p[self.t][sup,k]
-            for k,pending in missing.items():
-                extra_cost += inst_gen.back_o_cost*pending
-        return extra_cost
-
 
     ''' Visualize the inventory'''
     def print_inventory(self,inst_gen:instance_generator) -> None:
