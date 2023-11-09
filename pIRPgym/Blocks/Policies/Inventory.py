@@ -1,6 +1,6 @@
 import numpy as np
 
-import gurobi as gu
+import gurobipy as gu
 
 from ..InstanceGenerator import instance_generator
 from ..pIRPenv import steroid_IRP
