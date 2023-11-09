@@ -41,8 +41,9 @@ class Routing_management():
 
     ''' Compute route's dynamic purchasing delta'''
     @staticmethod
-    def compute_solution_real_cost(self,inst_gen:instance_generator,routes:list[list],purchase:dict):
+    def evaluate_dynamic_potential(inst_gen:instance_generator,routes:list[list],purchase:dict):
         extra_cost = 0
+        total_missing = {k:0 for k in inst_gen.Products}
         for route in routes:
             missing = {k:0 for k in inst_gen.Products}
             for sup in route[1:-1]:
@@ -64,11 +65,12 @@ class Routing_management():
                                 to_buy = min(inst_gen.W_q[self.t][sup,k]-purchase[sup,k], missing[k])
                                 missing[k] -= to_buy
                                 extra_cost += to_buy*inst_gen.W_p[self.t][sup,k]
-                                
+
             for k,pending in missing.items():
+                total_missing[k] += pending
                 extra_cost += inst_gen.back_o_cost*pending
         
-        return extra_cost
+        return extra_cost,total_missing
 
 class Inventory_management():
     
