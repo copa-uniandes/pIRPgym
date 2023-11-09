@@ -128,22 +128,21 @@ class routing_progress():
     def print_routing_update(string,time,vehicles,objective,end=False,CG_obj=None):
         if CG_obj==None:
             if time < 1000:
-                string += f' {round(time,1)}\t   {round(vehicles)} \t {round(objective)}\t|'
+                string += f' {round(time,1)}\t  {round(vehicles,1)} \t {round(objective)}\t|'
             else:
-                string += f' {round(time)}\t   {round(vehicles)} \t {round(objective)}\t|'
+                string += f' {round(time)}\t  {round(vehicles,1)} \t {round(objective)}\t|'
         else:
             gap = round((objective-CG_obj)/CG_obj,4)
             if time < 1000:
-                string += f' {round(time,1)}\t   {round(vehicles)} \t {round(gap*100,2)}\t|'
+                string += f' {round(time,1)}\t  {round(vehicles,1)} \t {round(gap*100,2)}\t|'
             else:
-                string += f' {round(time)}\t   {round(vehicles)} \t {round(gap*100,2)}\t|'
+                string += f' {round(time)}\t  {round(vehicles,1)} \t {round(gap*100,2)}\t|'
 
         if not end:
             print(string,end='\r')
         else:
             print(string)
         return string
-
 
 
 class routing_instances():

@@ -74,6 +74,7 @@ verbose = True
 strategies = ['CG','NN','RCL','GA']
 start = process_time()
 show_gap = True
+string = str()
 
 if verbose: string = verbose_module.routing_progress.print_iteration_head(strategies,show_gap)
 
@@ -81,7 +82,7 @@ if verbose: string = verbose_module.routing_progress.print_iteration_head(strate
 rewards=dict();  states=dict();   real_actions=dict();   backorders=dict();   la_decisions=dict()
 perished=dict(); actions=dict()
 
-indicators = ['Obj','time','vehicles','missing','extra_cost']
+indicators = ['Obj','time','vehicles','reactive_missing','extra_cost']
 routing_performance = {s:{ind:list() for ind in indicators} for s in strategies}
 
 # Reseting the environment
@@ -102,57 +103,56 @@ while not done:
     # GA_extra_cost = env.compute_solution_real_cost(inst_gen,GA_routes,purchase)   
     if 'CG' in strategies:
         CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=False,verbose=False)       # Column Generation algorithm                  
-        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,CG_routes,purchase)
+        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,env,CG_routes,purchase)
         routing_performance['CG']['Obj'].append(CG_obj)
         routing_performance['CG']['time'].append(CG_time)
         routing_performance['CG']['vehicles'].append(len(CG_routes))
-        routing_performance['CG']['missing'].append(total_missing)
+        routing_performance['CG']['reactive_missing'].append(total_missing)
         routing_performance['CG']['extra_cost'].append(extra_cost)
 
         if verbose: string = verbose_module.routing_progress.print_routing_update(string,CG_time,len(CG_routes),CG_obj)
 
     if 'NN' in strategies:
         nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,nn_routes,purchase)
+        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,env,nn_routes,purchase)
         routing_performance['NN']['Obj'].append(nn_obj)
         routing_performance['NN']['time'].append(nn_time)
         routing_performance['NN']['vehicles'].append(len(nn_routes))
-        routing_performance['NN']['missing'].append(total_missing)
+        routing_performance['NN']['reactive_missing'].append(total_missing)
         routing_performance['NN']['extra_cost'].append(extra_cost)                                         # Nearest Neighbor
         if verbose and show_gap:   string = verbose_module.routing_progress.print_routing_update(string,nn_time,len(nn_routes),nn_obj,CG_obj=CG_obj)
         elif verbose and not show_gap:  string = verbose_module.routing_progress.print_routing_update(string,nn_time,len(nn_routes),nn_obj)
 
     if 'RCL' in strategies:
-        RCL_routes,RCL_obj,RCL_veh,RCL_time = pIRPgym.Routing.evaluate_stochastic_policy(pIRPgym.Routing.RCL_Heuristic,
+        RCL_obj,RCL_veh,RCL_time,RCL_EC,RCL_missing = pIRPgym.Routing.evaluate_stochastic_policy(pIRPgym.Routing.RCL_Heuristic,
                                                                                            purchase,inst_gen,env,n=30,return_average=True)
-        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,RCL_routes,purchase)
         routing_performance['RCL']['Obj'].append(RCL_obj)
         routing_performance['RCL']['time'].append(RCL_time)
-        routing_performance['RCL']['vehicles'].append(len(RCL_routes))
-        routing_performance['RCL']['missing'].append(total_missing)
-        routing_performance['RCL']['extra_cost'].append(extra_cost)
+        routing_performance['RCL']['vehicles'].append(RCL_veh)
+        routing_performance['RCL']['reactive_missing'].append(RCL_missing)
+        routing_performance['RCL']['extra_cost'].append(RCL_EC)
         # RCL_routes,RCL_obj,(RCL_distances,RCL_loads),RCL_time  = pIRPgym.Routing.RCL_Heuristic(purchase,inst_gen,env.t)                                 # RCL based constructive
         if verbose and show_gap: string = verbose_module.routing_progress.print_routing_update(string,RCL_time,RCL_veh,RCL_obj,CG_obj=CG_obj)
         elif verbose and not show_gap: string = verbose_module.routing_progress.print_routing_update(string,RCL_time,RCL_veh,RCL_obj)
 
     if 'GA' in strategies:
         GA_routes,GA_obj,(GA_distances,GA_loads),GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,rd_seed=0,time_limit=40)    # Genetic Algorithm
-        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,GA_routes,purchase)
+        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,env,GA_routes,purchase)
         routing_performance['GA']['Obj'].append(GA_obj)
         routing_performance['GA']['time'].append(GA_time)
         routing_performance['GA']['vehicles'].append(len(GA_routes))
-        routing_performance['GA']['missing'].append(total_missing)
+        routing_performance['GA']['reactive_missing'].append(total_missing)
         routing_performance['GA']['extra_cost'].append(extra_cost)
         if verbose and show_gap:  string = verbose_module.routing_progress.print_routing_update(string,GA_time,len(GA_routes),sum(GA_distances),CG_obj=CG_obj,end=True)
         elif verbose and not show_gap: string = verbose_module.routing_progress.print_routing_update(string,GA_time,len(GA_routes),sum(GA_distances),end=True)
 
     if 'HGS*' in strategies:
         HyGeSe_routes, HyGeSe_distance, HyGeSe_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=5)                                   # Hybrid Genetic Search (CVRP)
-        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,HyGeSe_routes,purchase)
+        extra_cost,total_missing = pIRPgym.Routing_management.evaluate_dynamic_potential(inst_gen,env,HyGeSe_routes,purchase)
         routing_performance['HGS*']['Obj'].append(HyGeSe_distance)
         routing_performance['HGS*']['time'].append(HyGeSe_time)
         routing_performance['HGS*']['vehicles'].append(len(HyGeSe_routes))
-        routing_performance['HGS*']['missing'].append(total_missing)
+        routing_performance['HGS*']['reactive_missing'].append(total_missing)
         routing_performance['HGS*']['extra_cost'].append(extra_cost)
         if verbose and show_gap:  string = verbose_module.routing_progress.print_routing_update(string,HyGeSe_time,len(HyGeSe_routes),HyGeSe_distance,CG_obj=CG_obj)
         elif verbose and not show_gap:  string = verbose_module.routing_progress.print_routing_update(string,HyGeSe_time,len(HyGeSe_routes),HyGeSe_distance)
@@ -169,9 +169,8 @@ while not done:
     real_actions[env.t-1] = real_action
     backorders[env.t-1] = _["backorders"]
     perished[env.t-1] = {k:_["perished"][k] if k in _["perished"] else 0 for k in inst_gen.Products}
-    rewards[env.t] = reward
+    rewards[env.t] = reward 
     la_decisions[env.t-1] = la_dec
-
 
 print('Finished episode!!!')
 

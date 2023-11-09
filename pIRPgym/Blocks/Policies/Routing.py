@@ -9,6 +9,7 @@ import gurobipy as gu
 import hygese as hgs
 
 from ..InstanceGenerator import instance_generator
+from ..BuildingBlocks import Inventory_management, Routing_management
 
 
 class Routing():
@@ -66,12 +67,12 @@ class Routing():
         
         ''' RCL based constructive '''
         @staticmethod
-        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,seed=None) -> tuple:
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,s=None) -> tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
             if seed != None:
-                seed(seed)
+                seed(s)
 
             routes = list()
             FO:float = 0
@@ -796,23 +797,29 @@ class Routing():
 
 
         @staticmethod
-        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env,n=30,averages=True,**kwargs):
+        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env,n=30,averages=True,**kwargs)->tuple:
             times = list()
             vehicles = list()
             objectives = list()
+            extra_costs = list()
+            missings = list()
 
             if router == Routing.RCL_Heuristic:
                 for i in range(n):
                     seed = i
-                    RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.35)
+                    RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.35,s=seed)
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
 
+                    extra_cost,missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase)
+                    extra_costs.append(extra_cost)
+                    missings.append(sum([i for i in missing.values()]))
+
             if averages:
-                return sum(objectives)/len(objectives),round(sum(vehicles)/len(vehicles),2),sum(times)/len(times)
+                return sum(objectives)/n,round(sum(vehicles)/n,2),sum(times)/n,sum(extra_costs)/n,sum(missings)/n
             else:
-                return objectives,vehicles,times
+                return objectives,vehicles,times,extra_costs,missings
 
 
 
