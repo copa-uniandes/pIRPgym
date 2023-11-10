@@ -569,7 +569,7 @@ class Routing():
                     a_star = list(a_star.values())
                     a_star.append(1) #We add the 1 of the number of routes restrictions
 
-                    newCol = gu.Column(a_star, modelMP.getConstrs())
+                    newCol = gu.Column(a_star,modelMP.getConstrs())
                     theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=c_k,lb=0,
                                                 column=newCol,name=f"theta_{card_omega}"))
                     card_omega+=1
@@ -608,10 +608,7 @@ class Routing():
                 def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,name:str='MasterProblem'):
                     modelMP = gu.Model(name)
 
-                    # modelMP.Params.Presolve = 0
-                    # modelMP.Params.Cuts = 0
                     modelMP.Params.OutputFlag = 0
-
                     modelMP.setParam('Presolve', 0)
                     modelMP.setParam('Cuts', 0)
 
@@ -752,7 +749,7 @@ class Routing():
 
         ''' Pricing algorithm '''
         @staticmethod
-        def PriceRoute(inst_gen:instance_generator,solution,route:list,purchase:dict,t):
+        def PriceRoute(inst_gen:instance_generator,solution,new_route:list,purchase:dict,t):
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
             N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
             sup_map = {i:(idx+1) for idx,i in enumerate(N)}
@@ -791,14 +788,26 @@ class Routing():
                         c_trans[i,j] = distances[i,j]
                 
                 reduced_cost = 0  
-                for i,node in enumerate(route[:-2]):
-                    reduced_cost += c_trans[node,route[i+1]]
-                reduced_cost += c_trans[route[-2],inst_gen.M+1]
+                for i,node in enumerate(new_route[:-2]):
+                    reduced_cost += c_trans[node,new_route[i+1]]
+                reduced_cost += c_trans[new_route[-2],inst_gen.M+1]
 
                 return reduced_cost
 
             else:
-                pass
+                modelMP = gu.Model('Pricing_Master')
+
+                modelMP.Params.OutputFlag = 0
+                modelMP.setParam('Presolve', 0)
+                modelMP.setParam('Cuts', 0)
+
+                theta = list()
+                objectives = list()
+                
+                for route in solution:
+                    route_cost = Routing_management.evaluate_routes(route)
+                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{idx}"))
+
 
 
         @staticmethod
