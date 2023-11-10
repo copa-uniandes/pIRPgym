@@ -175,9 +175,17 @@ print('Finished episode!!!')
 ### Storing 
 
 #%%####################################### Testing pricing algorithm  ######################################## 
+# Generate random instance
+inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
+# Reseting the environment
+state = env.reset(inst_gen,return_state=True)
+[purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=False,verbose=False)       # Column Generation algorithm                  
+nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
 
 testing_route = CG_routes[0]
-reduced_cost = pIRPgym.Routing.PriceRoute('canonic',testing_route,inst_gen)
+reduced_cost = pIRPgym.Routing.PriceRoute(inst_gen,'canonic',testing_route,purchase,env.t)
 print(f'The reduced cost is {reduced_cost}')
 
 

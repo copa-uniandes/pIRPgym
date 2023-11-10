@@ -752,14 +752,13 @@ class Routing():
 
         ''' Pricing algorithm '''
         @staticmethod
-        def PriceRoute(solution,route:list,inst_gen:instance_generator):
+        def PriceRoute(inst_gen:instance_generator,solution,route:list,purchase:dict,t):
+            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+            N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
+            sup_map = {i:(idx+1) for idx,i in enumerate(N)}
+            
             if solution == 'canonic':
-                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
-                
                 ### MASTER PROBLEM
-                N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
-                sup_map = {i:(idx+1) for idx,i in enumerate(N)}
-
                 master = Routing.Column_Generation.MasterProblem()
                 modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen, N, distances)
 
@@ -792,8 +791,9 @@ class Routing():
                         c_trans[i,j] = distances[i,j]
                 
                 reduced_cost = 0  
-                for i,node in enumerate(route[:-1]):
+                for i,node in enumerate(route[:-2]):
                     reduced_cost += c_trans[node,route[i+1]]
+                reduced_cost += c_trans[route[-2],inst_gen.M+1]
 
                 return reduced_cost
 
