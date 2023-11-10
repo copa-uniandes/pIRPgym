@@ -752,8 +752,10 @@ class Routing():
 
         ''' Pricing algorithm '''
         @staticmethod
-        def PriceRoute(solution,route,inst_gen:instance_generator):
+        def PriceRoute(solution,route:list,inst_gen:instance_generator):
             if solution == 'canonic':
+                pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+                
                 ### MASTER PROBLEM
                 N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
                 sup_map = {i:(idx+1) for idx,i in enumerate(N)}
@@ -794,6 +796,9 @@ class Routing():
                     reduced_cost += c_trans[node,route[i+1]]
 
                 return reduced_cost
+
+            else:
+                pass
 
 
         @staticmethod

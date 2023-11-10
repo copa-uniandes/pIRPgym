@@ -174,42 +174,13 @@ print('Finished episode!!!')
 
 ### Storing 
 
-#%%####################################### Single Episode Simulation  ######################################## 
-import matplotlib.pyplot as plt
-def plot_indicator_evolution(routing_performance,indicator):
-    """
-    Plot the evolution of a specific indicator for different routing policies.
+#%%####################################### Testing pricing algorithm  ######################################## 
 
-    Parameters:
-    - routing_performance (dict): Dictionary containing routing policies and their indicators.
-    - indicator (str): Indicator to plot ('Obj', 'time', 'vehicles', 'reactive_missing', 'extra_cost').
-    """
-    # Set up figure and axis
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Define a list of colors and markers for better visibility
-    colors = ['blue', 'green', 'orange', 'red', 'purple']
-    markers = ['o', 's', '^', 'D', '*']
-
-    # Plot the evolution for each routing policy
-    for i, (policy, data) in enumerate(routing_performance.items()):
-        if indicator in data:
-            ax.plot(data[indicator], label=f'{policy}', color=colors[i % len(colors)], marker=markers[i % len(markers)], linestyle='-', markersize=8, linewidth=2)
-
-    # Add labels and a legend
-    ax.set_xlabel('Time step', fontsize=12)
-    ax.set_ylabel(indicator, fontsize=12)
-    ax.set_title(f'Routing strategies performance: {indicator}', fontsize=14)
-    ax.legend(fontsize=10, loc='upper right')
-
-    # Add grid for better readability
-    ax.grid(True, linestyle='--', alpha=0.5)
-
-    # Show the plot
-    plt.show()
+testing_route = CG_routes[0]
+reduced_cost = pIRPgym.Routing.PriceRoute('canonic',testing_route,inst_gen)
+print(f'The reduced cost is {reduced_cost}')
 
 
-for indicator in indicators:
-    plot_indicator_evolution(routing_performance,indicator)
+
 
 # %%

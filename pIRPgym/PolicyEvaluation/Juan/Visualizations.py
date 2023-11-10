@@ -21,7 +21,7 @@ from ...Blocks.pIRPenv import steroid_IRP
 class RoutingV():
     # Sumarizes and compares routing solutions
     @staticmethod
-    def compare_routing_strategies(inst_gen:instance_generator,data:dict):
+    def DEP_compare_routing_strategies(inst_gen:instance_generator,data:dict):
         print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tTime \tRealCost')
         for strategy, performance in data.items():
             if strategy in ['MIP','CG'] :
@@ -41,21 +41,7 @@ class RoutingV():
                 avg_ut = round(sum(performance[2])/(len(performance[0]*inst_gen.Q)), 2)
                 avg_eff = round(sum(performance[1])/len(performance[0]*inst_gen.d_max), 2)
                 print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[3],2)} \t{round(performance[4],2)}')
-                
-        # print('Policy \t#Veh \tDist \tAvgUt \tavgEff \tRealCost')
-        # for strategy, performance in data.items():
-        #     if strategy in ['MIP','CG'] :
-        #         num_routes = len([i for i in performance[0] if i != [0,0]])
-        #         avg_ut = round(sum(performance[2])/(num_routes*inst_gen.Q), 2)
-        #         avg_eff = round(sum(performance[1])/(num_routes*inst_gen.d_max), 2)
-        #         print(f'{strategy} \t{len([i for i in performance[0] if i != [0,0]])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[4],2)}')
-        #     elif strategy == 'HyGeSe':
-        #         print(f'{strategy} \t{len(performance[0])} \t{round(performance[1],2)} \t- \t-  \t{round(performance[3],2)}')
-        #     else:
-        #         avg_ut = round(sum(performance[2])/(len(performance[0]*inst_gen.Q)), 2)
-        #         avg_eff = round(sum(performance[1])/len(performance[0]*inst_gen.d_max), 2)
-        #         print(f'{strategy} \t{len(performance[0])} \t{round(sum(performance[1]))} \t{avg_ut} \t{avg_eff} \t{round(performance[4],2)}')
-
+        
 
     # Plot routes
     @staticmethod
@@ -104,6 +90,40 @@ class RoutingV():
                          font_size = 7, node_size = 200)
         if save:
             plt.savefig(inst_gen.path + 'routes.png', dpi = 600)
+        plt.show()
+
+
+    @staticmethod
+    def plot_indicator_evolution(routing_performance,indicator):
+        """
+        Plot the evolution of a specific indicator for different routing policies.
+
+        Parameters:
+        - routing_performance (dict): Dictionary containing routing policies and their indicators.
+        - indicator (str): Indicator to plot ('Obj', 'time', 'vehicles', 'reactive_missing', 'extra_cost').
+        """
+        # Set up figure and axis
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Define a list of colors and markers for better visibility
+        colors = ['blue', 'green', 'orange', 'red', 'purple']
+        markers = ['o', 's', '^', 'D', '*']
+
+        # Plot the evolution for each routing policy
+        for i, (policy, data) in enumerate(routing_performance.items()):
+            if indicator in data:
+                ax.plot(data[indicator], label=f'{policy}', color=colors[i % len(colors)], marker=markers[i % len(markers)], linestyle='-', markersize=8, linewidth=2)
+
+        # Add labels and a legend
+        ax.set_xlabel('Time step', fontsize=12)
+        ax.set_ylabel(indicator, fontsize=12)
+        ax.set_title(f'Routing strategies performance: {indicator}', fontsize=14)
+        ax.legend(fontsize=10, loc='upper right')
+
+        # Add grid for better readability
+        ax.grid(True, linestyle='--', alpha=0.5)
+
+        # Show the plot
         plt.show()
 
 
@@ -343,145 +363,147 @@ class RoutingV():
         # Show the plot
         plt.show()
 
-    # Displays the historic availability of a given route for a given product
-    @staticmethod
-    def route_availability_per_product(route:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
-        series = list()
-        labels = list()
-        for i in route[1:-1]:
-            if include_ceros:   series.append(inst_gen.hist_q[env.t][i,product])
-            else:               series.append([ii for ii in inst_gen.hist_q[env.t][i,product] if ii != 0])
+
+    class availability_display():
+
+        # Displays the historic availability of a given route for a given product
+        @staticmethod
+        def route_availability_per_product(route:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
+            series = list()
+            labels = list()
+            for i in route[1:-1]:
+                if include_ceros:   series.append(inst_gen.hist_q[env.t][i,product])
+                else:               series.append([ii for ii in inst_gen.hist_q[env.t][i,product] if ii != 0])
+                
+                labels.append(str(i))
+
+            avg = RoutingV.return_mean([serie[j] for serie in series for j in range(len(serie))])
+            bracket = RoutingV.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
+
+            plt.hist(series, density = True, histtype = 'bar', label = labels)
             
-            labels.append(str(i))
+            plt.axvline(x = avg, ymin = 0, ymax = 0.9, color = 'black', label = 'Mean')
+            plt.axvline(x = bracket[0], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
+            plt.axvline(x = bracket[1], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
 
-        avg = RoutingV.return_mean([serie[j] for serie in series for j in range(len(serie))])
-        bracket = RoutingV.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
+            plt.legend(title = 'Suppliers', prop={'size':10})
+            plt.title(f'Availability of product {product}')
+            plt.xlabel('Available units per period')
+            plt.ylabel('Frequency')
 
-        plt.hist(series, density = True, histtype = 'bar', label = labels)
+            plt.show()
         
-        plt.axvline(x = avg, ymin = 0, ymax = 0.9, color = 'black', label = 'Mean')
-        plt.axvline(x = bracket[0], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
-        plt.axvline(x = bracket[1], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
 
-        plt.legend(title = 'Suppliers', prop={'size':10})
-        plt.title(f'Availability of product {product}')
-        plt.xlabel('Available units per period')
-        plt.ylabel('Frequency')
-
-        plt.show()
-    
-
-    # Displays the historic total availability of the suppiers of a given route
-    @staticmethod
-    def route_total_availability(route:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool = False):
-        series = list()
-        labels = list()
-        for i in route[1:-1]:
-            vals = list()
-            for k in inst_gen.K_it[i,0]:
-                if include_ceros:
-                    vals.extend(inst_gen.hist_q[0][i,k])    
-                else:
-                    vals.extend([ii for ii in inst_gen.hist_q[0][i,k] if ii != 0])
-
-            series.append(vals)
-            labels.append(str(i))
-        
-        avg = RoutingV.return_mean([serie[j] for serie in series for j in range(len(serie))])
-        bracket = RoutingV.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
-        
-        plt.hist(series, density = True, histtype = 'bar', label = labels)
-
-        plt.axvline(x = avg, ymin = 0, ymax = 0.9, color = 'black', label = 'Mean')
-        plt.axvline(x = bracket[0], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
-        plt.axvline(x = bracket[1], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
-
-        plt.legend(title = 'Suppliers', prop={'size':10})
-        plt.title(f'Total Availability')
-        plt.xlabel('Available units per period')
-        plt.ylabel('Frequency')
-        plt.show()
-    
-
-    # Displays the historic avaiability of different routes for a given product
-    @staticmethod
-    def routes_availability_per_product(routes:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
-        series = list()
-        labels = list()
-        avgs = list()
-        bracks = list()
-        cols = mcolors.TABLEAU_COLORS
-        # colors = [cols[key] for i, key in enumerate(list(cols.keys())) if i < len(routes)]
-        colors = list()
-
-        for i, route in enumerate(routes):
-            if include_ceros:
-                series.append([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]])
-            else:
-                series.append([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product] if j != 0])
-
-            labels.append(str(i))
-            avgs.append(RoutingV.return_mean([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]]))
-            bracks.append(RoutingV.return_brackets([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]],avgs[-1]))
-            colors.append(list(cols.values())[i])
-
-        # bracket = Routing_Visualizations.return_brackets([serie[j] for serie in series for j in range(len(series))], avg)
-        
-        plt.hist(series, density = True, histtype = 'bar', color = colors, label = labels)
-        
-        for i, route in enumerate(routes):
-            plt.axvline(x = avgs[i], ymin = 0, ymax = 0.975, color = colors[i])
-            plt.axvline(x = bracks[i][0], ymin = 0, ymax = 0.9, color = colors[i], linestyle = ':', linewidth = 1.5)
-            plt.axvline(x = bracks[i][1], ymin = 0, ymax = 0.9, color = colors[i], linestyle = ':', linewidth = 1.5)
-
-        plt.legend(title = 'Routes', prop={'size':10})
-        plt.title(f'Availability of product {product}')
-        plt.xlabel('Available units per period')
-        plt.ylabel('Frequency')
-        plt.show()
-    
-
-    # Displays the historic total avaiability of different routes
-    @staticmethod
-    def routes_total_availability(routes:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool=False,title:str=''):
-        series = list()
-        labels = list()
-        avgs = list()
-        bracks = list()
-        cols = mcolors.TABLEAU_COLORS
-        # colors = [cols[key] for i, key in enumerate(list(cols.keys())) if i < len(routes)]
-        cols = ['tab:purple','tab:red','tab:green','tab:brown']
-        colors = list()
-
-        for i, route in enumerate(routes):
-            vals = list()
-            for j in route[1:-1]:
-                for k in inst_gen.Products:
+        # Displays the historic total availability of the suppiers of a given route
+        @staticmethod
+        def route_total_availability(route:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool = False):
+            series = list()
+            labels = list()
+            for i in route[1:-1]:
+                vals = list()
+                for k in inst_gen.K_it[i,0]:
                     if include_ceros:
-                        vals.extend(inst_gen.hist_q[env.t][j,k]) 
+                        vals.extend(inst_gen.hist_q[0][i,k])    
                     else:
-                        vals.extend([ii for ii in inst_gen.hist_q[env.t][j,k] if ii != 0])
+                        vals.extend([ii for ii in inst_gen.hist_q[0][i,k] if ii != 0])
 
-            series.append(vals) 
-            labels.append(str(i))
-            avgs.append(RoutingV.return_mean(vals))
-            bracks.append(RoutingV.return_brackets(vals, avgs[-1]))
-            colors.append(cols[i])
+                series.append(vals)
+                labels.append(str(i))
+            
+            avg = RoutingV.return_mean([serie[j] for serie in series for j in range(len(serie))])
+            bracket = RoutingV.return_brackets([serie[j] for serie in series for j in range(len(serie))], avg)
+            
+            plt.hist(series, density = True, histtype = 'bar', label = labels)
+
+            plt.axvline(x = avg, ymin = 0, ymax = 0.9, color = 'black', label = 'Mean')
+            plt.axvline(x = bracket[0], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
+            plt.axvline(x = bracket[1], ymin = 0, ymax = 0.8, color = 'black', linestyle = ':', linewidth = 0.85)
+
+            plt.legend(title = 'Suppliers', prop={'size':10})
+            plt.title(f'Total Availability')
+            plt.xlabel('Available units per period')
+            plt.ylabel('Frequency')
+            plt.show()
+        
+
+        # Displays the historic avaiability of different routes for a given product
+        @staticmethod
+        def routes_availability_per_product(routes:list, product:int, inst_gen:instance_generator, env:steroid_IRP, include_ceros:bool = False):
+            series = list()
+            labels = list()
+            avgs = list()
+            bracks = list()
+            cols = mcolors.TABLEAU_COLORS
+            # colors = [cols[key] for i, key in enumerate(list(cols.keys())) if i < len(routes)]
+            colors = list()
+
+            for i, route in enumerate(routes):
+                if include_ceros:
+                    series.append([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]])
+                else:
+                    series.append([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product] if j != 0])
+
+                labels.append(str(i))
+                avgs.append(RoutingV.return_mean([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]]))
+                bracks.append(RoutingV.return_brackets([j for i in route[1:-1] for j in inst_gen.hist_q[env.t][i,product]],avgs[-1]))
+                colors.append(list(cols.values())[i])
+
+            # bracket = Routing_Visualizations.return_brackets([serie[j] for serie in series for j in range(len(series))], avg)
+            
+            plt.hist(series, density = True, histtype = 'bar', color = colors, label = labels)
+            
+            for i, route in enumerate(routes):
+                plt.axvline(x = avgs[i], ymin = 0, ymax = 0.975, color = colors[i])
+                plt.axvline(x = bracks[i][0], ymin = 0, ymax = 0.9, color = colors[i], linestyle = ':', linewidth = 1.5)
+                plt.axvline(x = bracks[i][1], ymin = 0, ymax = 0.9, color = colors[i], linestyle = ':', linewidth = 1.5)
+
+            plt.legend(title = 'Routes', prop={'size':10})
+            plt.title(f'Availability of product {product}')
+            plt.xlabel('Available units per period')
+            plt.ylabel('Frequency')
+            plt.show()
+        
+
+        # Displays the historic total avaiability of different routes
+        @staticmethod
+        def routes_total_availability(routes:list,inst_gen:instance_generator,env:steroid_IRP,include_ceros:bool=False,title:str=''):
+            series = list()
+            labels = list()
+            avgs = list()
+            bracks = list()
+            cols = mcolors.TABLEAU_COLORS
+            # colors = [cols[key] for i, key in enumerate(list(cols.keys())) if i < len(routes)]
+            cols = ['tab:purple','tab:red','tab:green','tab:brown']
+            colors = list()
+
+            for i, route in enumerate(routes):
+                vals = list()
+                for j in route[1:-1]:
+                    for k in inst_gen.Products:
+                        if include_ceros:
+                            vals.extend(inst_gen.hist_q[env.t][j,k]) 
+                        else:
+                            vals.extend([ii for ii in inst_gen.hist_q[env.t][j,k] if ii != 0])
+
+                series.append(vals) 
+                labels.append(str(i))
+                avgs.append(RoutingV.return_mean(vals))
+                bracks.append(RoutingV.return_brackets(vals, avgs[-1]))
+                colors.append(cols[i])
 
 
+            plt.hist(series,density=True,histtype='bar',color=colors,label=labels)
 
-        plt.hist(series,density=True,histtype='bar',color=colors,label=labels)
+            for i, route in enumerate(routes):
+                plt.axvline(x=avgs[i],ymin=0,ymax=0.975,color=colors[i])
+                plt.axvline(x=bracks[i][0],ymin=0,ymax=0.9,color=colors[i],linestyle=':',linewidth=1)
+                plt.axvline(x=bracks[i][1],ymin=0,ymax=0.9,color=colors[i],linestyle=':',linewidth=1)
 
-        for i, route in enumerate(routes):
-            plt.axvline(x=avgs[i],ymin=0,ymax=0.975,color=colors[i])
-            plt.axvline(x=bracks[i][0],ymin=0,ymax=0.9,color=colors[i],linestyle=':',linewidth=1)
-            plt.axvline(x=bracks[i][1],ymin=0,ymax=0.9,color=colors[i],linestyle=':',linewidth=1)
-
-        plt.legend(title = 'Routes', prop={'size':10})
-        plt.title(f'Total Availability - {title}')
-        plt.xlabel('Available units per period')
-        plt.ylabel('Frequency')
-        plt.show()
+            plt.legend(title = 'Routes', prop={'size':10})
+            plt.title(f'Total Availability - {title}')
+            plt.xlabel('Available units per period')
+            plt.ylabel('Frequency')
+            plt.show()
 
 
     # Auxiliary function to return mean 
