@@ -157,9 +157,9 @@ class Routing():
             mutation_rate:float = 0.5
 
             if verbose: print('Generating population')
-            Population, FOs, Distances, Loads, incumbent, best_individual, alpha_performance =\
-                            Routing.GA.generate_population(inst_gen, start, requirements, verbose, 
-                                                                            Population_iter, training_time)
+            Population,FOs,Distances,Loads,incumbent,best_individual,alpha_performance = \
+                            Routing.GA.generate_population(inst_gen,start,requirements,verbose, 
+                                                                            Population_iter,training_time)
             
             # Print progress
             if verbose: 
@@ -206,7 +206,7 @@ class Routing():
                     # Updating incumbent
                     if sum(new_distances) < incumbent:
                         incumbent = sum(new_distances)
-                        best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time() - start]
+                        best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time()-start]
                         print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
 
                 # Update population
@@ -258,8 +258,8 @@ class Routing():
 
                 # Calibrating alphas
                 training_ind:int = 0
-                while process_time() - start <= training_time:
-                    alpha_performance = Routing.GA.calibrate_alpha(RCL_alpha_list, alpha_performance, requirements, inst_gen)
+                while process_time() -start<=training_time:
+                    alpha_performance = Routing.GA.calibrate_alpha(RCL_alpha_list,alpha_performance,requirements,inst_gen)
                     training_ind += 1
                 
                 # Generating initial population
@@ -275,7 +275,7 @@ class Routing():
                     # Updating incumbent
                     if FO < incumbent:
                         incumbent = FO
-                        best_individual: list = [individual, FO, (distances, loads), process_time() - start]
+                        best_individual: list = [individual,FO,(distances,loads),process_time() -start]
 
                     # Saving individual
                     Population.append(individual)
@@ -575,12 +575,6 @@ class Routing():
                     card_omega+=1
                     # Update master model
                     modelMP.update()
-
-
-
-            # for v in modelMP.getVars():
-            #     if v.x>0.5:
-            #         print('%s=%g' % (v.varName, v.x))
             
             for v in modelMP.getVars():
                 v.setAttr("Vtype", gu.GRB.INTEGER)
@@ -749,65 +743,54 @@ class Routing():
 
         ''' Pricing algorithm '''
         @staticmethod
-        def PriceRoute(inst_gen:instance_generator,solution,new_route:list,purchase:dict,t):
-            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
-            N, V, A, distances, requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
+        def PriceRoute(inst_gen:instance_generator,new_route:list,purchase:dict,t:int,solution=None):
+            pending_sup,requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+            N,V,A,distances,requirements = Routing.network_aux_methods.generate_complete_graph(inst_gen,pending_sup,requirements)
             sup_map = {i:(idx+1) for idx,i in enumerate(N)}
             
-            if solution == 'canonic':
-                ### MASTER PROBLEM
-                master = Routing.Column_Generation.MasterProblem()
-                modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen, N, distances)
-
-                card_omega = len(theta)    # number of routes
-
-                start = process_time()
-                routes = list()
-                loads = list()
-                for i in N:
-                    routes.append([0,i,0])
-                    loads.append(requirements[i])
-
-                modelMP.optimize()
-                current_objective_value = modelMP.getObjective().getValue()
-                    
-                lambdas = list()
-                lambdas.append(modelMP.getAttr("Pi",RouteLimitCtr)[0])
-                lambdas += modelMP.getAttr("Pi",NodeCtr)
-
-                a_star = dict()
-                a_star.update({i:0 for i in N})
-
-
-                ### ROUTE PRICING
-                c_trans = dict()
-                for (i,j) in A:
-                    if i in N:
-                        c_trans[i,j] = distances[i,j]-lambdas[sup_map[i]]
-                    else:
-                        c_trans[i,j] = distances[i,j]
-                
-                reduced_cost = 0  
-                for i,node in enumerate(new_route[:-2]):
-                    reduced_cost += c_trans[node,new_route[i+1]]
-                reduced_cost += c_trans[new_route[-2],inst_gen.M+1]
-
-                return reduced_cost
-
-            else:
-                modelMP = gu.Model('Pricing_Master')
-
-                modelMP.Params.OutputFlag = 0
-                modelMP.setParam('Presolve', 0)
-                modelMP.setParam('Cuts', 0)
-
-                theta = list()
-                objectives = list()
-                
+            ### MASTER PROBLEM
+            master = Routing.Column_Generation.MasterProblem()
+            modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen,N,distances)
+            card_omega = len(theta)
+            
+            if solution != None:
                 for route in solution:
-                    route_cost = Routing_management.evaluate_routes(route)
-                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{idx}"))
+                    # route.sort()
+                    a_star = [1 if i in route else 0 for i in N]
+                    a_star.append(1) # Add the 1 for the 'Number of vehicles' constraint
 
+                    _,route_cost,_ = Routing_management.evaluate_routes(inst_gen,[route],requirements)
+
+                    newCol = gu.Column(a_star,modelMP.getConstrs())
+                    theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,
+                                                column=newCol,name=f"theta_{card_omega}"))
+                    card_omega+=1
+                    # Update master model
+                    modelMP.update()
+
+            modelMP.optimize()
+                
+            lambdas = list()
+            lambdas.append(modelMP.getAttr("Pi",RouteLimitCtr)[0])
+            lambdas += modelMP.getAttr("Pi",NodeCtr)
+
+            # a_star = dict()
+            # a_star.update({i:0 for i in N})
+
+            ### ROUTE PRICING
+            c_trans = dict()
+            for (i,j) in A:
+                if i in N:
+                    c_trans[i,j] = distances[i,j]-lambdas[sup_map[i]]
+                else:
+                    c_trans[i,j] = distances[i,j]
+            
+            reduced_cost = 0  
+            for i,node in enumerate(new_route[:-2]):
+                reduced_cost += c_trans[node,new_route[i+1]]
+            reduced_cost += c_trans[new_route[-2],inst_gen.M+1]
+
+            return reduced_cost
 
 
         @staticmethod
@@ -869,7 +852,7 @@ class Routing():
 
         ''' Auxiliary method to compute total product to recover from suppliers '''
         @staticmethod
-        def consolidate_purchase(purchase,inst_gen,t)->tuple:
+        def consolidate_purchase(purchase:dict,inst_gen:instance_generator,t:int)->tuple:
             # purchse is given for suppliers and products
             if type(list(purchase.keys())[0]) == tuple:
                 pending_suppliers = list()

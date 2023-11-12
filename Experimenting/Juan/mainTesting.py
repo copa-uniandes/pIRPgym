@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':18,'K':22,'T':7,'F':18,'Q':2000,
+env_config = {'M':25,'K':30,'T':7,'F':18,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
              'back_o_cost':100}
@@ -47,11 +47,10 @@ det_rd_seed = 1
 
 disc = ("strong","conc")
 
+
 inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
                                         p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
 
-
-# pIRPgym.Visualizations.InstanceV.plot_overlapping_distributions(q_params['r_f_params'],d_params['r_f_params'],type='line')
 
 #########################################      Environment      ##########################################
 # Environment
@@ -63,6 +62,31 @@ env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
 # Reseting the environment
 state = env.reset(inst_gen,return_state=True)
+
+#%%####################################### Testing pricing algorithm  ######################################## 
+# Testing pricing algorithm
+# Reseting the environment
+state = env.reset(inst_gen,return_state=True)
+[purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=False,verbose=False)       # Column Generation algorithm                  
+nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+print('CG routes', CG_routes)
+print('NN routes', nn_routes)
+
+xxx = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+
+
+#%%
+testing_route = CG_routes[3]
+reduced_cost = pIRPgym.Routing.PriceRoute(inst_gen,testing_route,purchase,env.t,solution=nn_routes)
+print(f'The reduced cost is {reduced_cost}')
+
+
+
+
+# %%
+
+
 
 
 #%%####################################### Single Episode/Singe Routing Policy Simulation  ########################################
@@ -83,6 +107,9 @@ perished=dict(); actions=dict()
 
 indicators = ['Obj','time','vehicles','reactive_missing','extra_cost']
 routing_performance = {s:{ind:list() for ind in indicators} for s in strategies}
+
+inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
 
 # Reseting the environment
 state = env.reset(inst_gen,return_state=True)
@@ -174,21 +201,3 @@ print('Finished episode!!!')
 
 ### Storing 
 
-#%%####################################### Testing pricing algorithm  ######################################## 
-# Generate random instance
-inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
-                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
-# Reseting the environment
-state = env.reset(inst_gen,return_state=True)
-[purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
-CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=False,verbose=False)       # Column Generation algorithm                  
-nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-
-testing_route = CG_routes[0]
-reduced_cost = pIRPgym.Routing.PriceRoute(inst_gen,'canonic',testing_route,purchase,env.t)
-print(f'The reduced cost is {reduced_cost}')
-
-
-
-
-# %%

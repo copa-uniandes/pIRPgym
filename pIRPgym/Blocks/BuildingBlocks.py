@@ -13,14 +13,14 @@ from .InstanceGenerator import instance_generator
 class Routing_management():
 
     @staticmethod
-    def price_routes(inst_gen,routes):
+    def price_routes(inst_gen:instance_generator,routes:list)->float:
         transport_cost=0
         for route in routes:
             transport_cost += sum(inst_gen.c[route[i],route[i + 1]] for i in range(len(route) - 1))
         return transport_cost
 
     @staticmethod
-    def evaluate_routes(inst_gen,routes,purchase):
+    def evaluate_routes(inst_gen:instance_generator,routes:list,purchase:dict)->tuple:
         feasible = True
         objective = 0
         distances = list()
