@@ -104,29 +104,29 @@ class routing_progress():
         time = round(process_time()-start,2)
         if t+1 < 10:
             if time < 10:
-                string = f'{t+1} {round(process_time()-start,2)}\t|  {num_suppliers}\t|'
+                string = f'{t+1} {round(process_time()-start,2)}\t|   {num_suppliers}\t|'
                 print(string,end='\r')
             elif time < 100:
-                string = f'{t+1} {round(process_time()-start,2):.2f} |  {num_suppliers}\t|' 
+                string = f'{t+1} {round(process_time()-start,2):.2f} |   {num_suppliers}\t|' 
                 print(string,end='\r')
             elif time < 1000:
-                string = f'{t+1} {round(process_time()-start,1):.1f} |  {num_suppliers}\t|'
+                string = f'{t+1} {round(process_time()-start,1):.1f} |   {num_suppliers}\t|'
                 print(string,end='\r')
             else:
-                string = f'{t+1} {round(process_time()-start):.0f} |  {num_suppliers}\t|'
+                string = f'{t+1} {round(process_time()-start):.0f} |   {num_suppliers}\t|'
                 print(string,end='\r')
         else:
             if time < 10:
-                string = f'{t+1} {round(process_time()-start,2)}\t|  {num_suppliers}\t|'
+                string = f'{t+1} {round(process_time()-start,2)}\t|   {num_suppliers}\t|'
                 print(string,end='\r')
             elif time < 100:
-                string = f'{t+1} {round(process_time()-start,2):.2f} |  {num_suppliers}\t|' 
+                string = f'{t+1} {round(process_time()-start,2):.2f} |   {num_suppliers}\t|' 
                 print(string,end='\r')
             elif time < 1000:
-                string = f'{t+1} {round(process_time()-start):.1f} |  {num_suppliers}\t|'
+                string = f'{t+1} {round(process_time()-start):.1f} |   {num_suppliers}\t|'
                 print(string,end='\r')
             else:
-                string = f'{t+1} {round(process_time()-start):.0f} |  {num_suppliers}\t|'
+                string = f'{t+1} {round(process_time()-start):.0f} |   {num_suppliers}\t|'
                 print(string,end='\r')
         
         return string
