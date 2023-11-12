@@ -82,10 +82,10 @@ class routing_progress():
         if show_gap: item = 'gap'
         else:   item = 'Obj'
 
-        print(f'{"*"*num*11}  pIRP environment  {"*"*num*11}',flush = True)
-        print(f'{"-"*num*12} Routing {"-"*num*12}')
-        string1 = '--------|'
-        string2 = 't t(s)\t|'
+        print(f'***{"*"*num*11}  pIRP environment  {"*"*num*11}**',flush = True)
+        print(f'---{"-"*num*12} Routing {"-"*num*12}-----')
+        string1 = '--------|-------|'
+        string2 = 't t(s)\t|   N\t|'
         for strategy in strategies:
             if strategy == 'CG':
                 string1 += f'\t  {strategy} \t \t|'
@@ -96,37 +96,37 @@ class routing_progress():
 
         print(string1)
         print(string2)
-        print(f'---------{"-"*num*24}')
+        print(f'-----------------{"-"*num*24}')
     
     @staticmethod
     def print_step(t,start,purchase):
-        num_suppliers = len(set(key[0] for key in purchase.keys()))
+        num_suppliers = len(set(key[0] for key in purchase.keys() if purchase[key]>0))
         time = round(process_time()-start,2)
         if t+1 < 10:
             if time < 10:
-                string = f'{t+1} {round(process_time()-start,2)}\t|'
+                string = f'{t+1} {round(process_time()-start,2)}\t|  {num_suppliers}\t|'
                 print(string,end='\r')
             elif time < 100:
-                string = f'{t+1} {round(process_time()-start,2):.2f} |' 
+                string = f'{t+1} {round(process_time()-start,2):.2f} |  {num_suppliers}\t|' 
                 print(string,end='\r')
             elif time < 1000:
-                string = f'{t+1} {round(process_time()-start,1):.1f} |'
+                string = f'{t+1} {round(process_time()-start,1):.1f} |  {num_suppliers}\t|'
                 print(string,end='\r')
             else:
-                string = f'{t+1} {round(process_time()-start):.0f} |'
+                string = f'{t+1} {round(process_time()-start):.0f} |  {num_suppliers}\t|'
                 print(string,end='\r')
         else:
             if time < 10:
-                string = f'{t+1} {round(process_time()-start,2)}\t|'
+                string = f'{t+1} {round(process_time()-start,2)}\t|  {num_suppliers}\t|'
                 print(string,end='\r')
             elif time < 100:
-                string = f'{t+1} {round(process_time()-start,2):.2f} |' 
+                string = f'{t+1} {round(process_time()-start,2):.2f} |  {num_suppliers}\t|' 
                 print(string,end='\r')
             elif time < 1000:
-                string = f'{t+1} {round(process_time()-start):.1f} |'
+                string = f'{t+1} {round(process_time()-start):.1f} |  {num_suppliers}\t|'
                 print(string,end='\r')
             else:
-                string = f'{t+1} {round(process_time()-start):.0f} |'
+                string = f'{t+1} {round(process_time()-start):.0f} |  {num_suppliers}\t|'
                 print(string,end='\r')
         
         return string

@@ -564,7 +564,7 @@ class Routing():
                     break
                 else:
                     if verbose:
-                        print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{sum(list(modelMP.getAttr("X", modelMP.getVars())))} \t| {round(minReducedCost,2)} \t{sol[0]}')
+                        print(f'{iter} \t{round(process_time()-start,2)} \t| {round(current_objective_value,2)} \t{round(sum(list(modelMP.getAttr("X", modelMP.getVars()))),2)} \t| {round(minReducedCost,2)} \t{sol[0]}')
                     # print('Minimal reduced cost (via CSP):', minReducedCost, '<0.', flush = True)
                     a_star = list(a_star.values())
                     a_star.append(1) #We add the 1 of the number of routes restrictions
