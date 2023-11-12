@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':15,'K':3,'T':7,'F':15,'Q':2000,
+env_config = {'M':20,'K':30,'T':7,'F':20,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
              'back_o_cost':100}
@@ -63,23 +63,26 @@ env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 # Reseting the environment
 state = env.reset(inst_gen,return_state=True)
 
-# #%%####################################### Testing pricing algorithm  ######################################## 
-# # Testing pricing algorithm
-# # Reseting the environment
-# state = env.reset(inst_gen,return_state=True)
-# [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
-# CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=False,verbose=True)       # Column Generation algorithm                  
-# nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-# print('CG routes', CG_routes)
-# print('NN routes', nn_routes)
+#%%####################################### Testing pricing algorithm  ######################################## 
+# Testing pricing algorithm
+# Reseting the environment
+state = env.reset(inst_gen,return_state=True)
+[purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,heuristic_initialization=True,time_limit=False,verbose=True)       # Column Generation algorithm                  
+nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+print('CG routes', CG_routes)
+print('NN routes', nn_routes)
 
-# xxx = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+xxx = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
 
 
-# #%%
-# testing_route = CG_routes[3]
-# reduced_cost = pIRPgym.Routing.PriceRoute(inst_gen,testing_route,purchase,env.t,solution=nn_routes)
-# print(f'The reduced cost is {reduced_cost}')
+
+
+
+#%%
+testing_route = nn_routes[3]
+reduced_cost = pIRPgym.Routing.PriceRoute(inst_gen,testing_route,purchase,env.t,solution=CG_routes)
+print(f'The reduced cost is {reduced_cost}')
 
 
 

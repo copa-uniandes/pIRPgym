@@ -489,7 +489,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,time_limit=False,verbose:bool=False):
+        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization:bool=False,time_limit=False,verbose:bool=False):
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -497,7 +497,7 @@ class Routing():
             sup_map = {i:(idx+1) for idx,i in enumerate(N)}
 
             master = Routing.Column_Generation.MasterProblem()
-            modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen, N, distances)
+            modelMP,theta,RouteLimitCtr,NodeCtr,objectives,cols,loadss = master.buidModel(inst_gen,N,distances,t,heuristic_initialization,requirements=requirements)
 
             card_omega = len(theta)    # number of routes
             same_objective_count = 0
@@ -512,6 +512,8 @@ class Routing():
             for i in N:
                 routes.append([0,i,0])
                 loads.append(requirements[i])
+            routes+=cols
+            loads+=loadss
 
             if verbose:
                 print("--------- Column Generation Algorithm ---------\n",flush = True)
@@ -599,40 +601,37 @@ class Routing():
                 def __init__(self):
                     pass
 
-                def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,name:str='MasterProblem'):
+                def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,t:int,heuristic_initialization:bool,name:str='MasterProblem',**kwargs):
                     modelMP = gu.Model(name)
 
                     modelMP.Params.OutputFlag = 0
                     modelMP.setParam('Presolve', 0)
                     modelMP.setParam('Cuts', 0)
 
-                    modelMP,theta,objectives = self.generateVariables(inst_gen, modelMP, N, distances)
+                    modelMP,theta,objectives = self.generateVariables(inst_gen,modelMP,N,distances,t)
                     modelMP,RouteLimitCtr,NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
+
+                    if heuristic_initialization:
+                        modelMP,theta,objectives,cols,loadss = self.heuristic_initialization(modelMP,N,kwargs['requirements'],inst_gen,t,theta,objectives)
                     modelMP = self.generateObjective(modelMP)
                     modelMP.update()
 
-                    return modelMP,theta,RouteLimitCtr,NodeCtr,objectives
+                    if not heuristic_initialization:
+                        return modelMP,theta,RouteLimitCtr,NodeCtr,objectives,list(),list()
+                    else:
+                        return modelMP,theta,RouteLimitCtr,NodeCtr,objectives,cols,loadss
             
 
-                def generateVariables(self,inst_gen:instance_generator,modelMP:gu.Model,N:list,distances):
+                def generateVariables(self,inst_gen:instance_generator,modelMP:gu.Model,N:list,distances,t:int):
                     theta = list()
                     objectives = list()
                     
-                    #Initial set-covering model  (DUMMY INITIALIZATION)
-                    def calculateDummyCost():
-                        c_0 = 0
-                        for i in N:
-                            c_0+=distances[i,inst_gen.M+1]
-                        return c_0
-
-                    dummyCost = calculateDummyCost()
-                    # theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=dummyCost,lb=0,name="theta_0"))
-                    # objectives.append(dummyCost)
-
                     for idx,i in enumerate(N):
                         route_cost = distances[0,i] + distances[i,inst_gen.M+1]
                         theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,name=f"theta_{idx}"))
                         objectives.append(route_cost)
+
+                    
 
                     return modelMP,theta,objectives
 
@@ -645,12 +644,50 @@ class Routing():
                     RouteLimitCtr = list()          #Limits the number of routes
                     RouteLimitCtr.append(modelMP.addConstr(gu.quicksum(theta[i] for i in range(len(theta))) <= inst_gen.F, 'Route_Limit_Ctr')) #Routes limit Constraints
 
+                    modelMP.update()
+
                     return modelMP, RouteLimitCtr, NodeCtr
 
 
                 def generateObjective(self,modelMP:gu.Model):
                     modelMP.modelSense = gu.GRB.MINIMIZE
                     return modelMP 
+
+
+                def heuristic_initialization(self,modelMP:gu.Model,N,requirements:dict,inst_gen:instance_generator,t,theta:list,objectives:list):
+                    cols = list()
+                    loadss = list()
+                    HI_start = process_time()
+
+                    card_omega = len(theta)
+
+                    new_req = {key:value for key,value in requirements.items() if key not in [0,inst_gen.M+1]}
+                    while process_time() - HI_start < 5:
+                        routes,FO,info,time = Routing.RCL_Heuristic(new_req,inst_gen,t)
+
+                        for i,route in enumerate(routes):
+                            if route not in cols:
+                                card_omega += 1
+                                route_cost = info[0][i]
+
+                                a_star = [1 if j in route else 0 for j in N]
+                                a_star.append(1) # Add the 1 for the 'Number of vehicles' constraint
+
+                                newCol = gu.Column(a_star,modelMP.getConstrs())
+                                theta.append(modelMP.addVar(vtype=gu.GRB.CONTINUOUS,obj=route_cost,lb=0,
+                                                            column=newCol,name=f"theta_{card_omega}"))
+                                
+                                objectives.append(route_cost)
+
+                                cols.append(route)
+                                loadss.append(info[1][i])
+                    
+                    modelMP.update()
+
+                    return modelMP,theta,objectives,cols,loadss
+
+
+                    
 
             # Auxiliary problem
             class SubProblem:
@@ -817,10 +854,6 @@ class Routing():
                 return sum(objectives)/n,round(sum(vehicles)/n,2),sum(times)/n,sum(extra_costs)/n,sum(missings)/n
             else:
                 return objectives,vehicles,times,extra_costs,missings
-
-
-
-
 
 
 
