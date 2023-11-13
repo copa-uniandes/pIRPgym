@@ -102,7 +102,7 @@ class Inventory():
                 for i in inst_gen.M_kt[k,env.t]:
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
             
-            ####### TRY IF ERROR
+            ###### TRY IF ERROR
             for i in M:
                 m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
 
