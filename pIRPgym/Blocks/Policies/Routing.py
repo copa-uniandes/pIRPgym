@@ -787,7 +787,7 @@ class Routing():
             
             ### MASTER PROBLEM
             master = Routing.Column_Generation.MasterProblem()
-            modelMP,theta,RouteLimitCtr,NodeCtr,objectives = master.buidModel(inst_gen,N,distances)
+            modelMP,theta,RouteLimitCtr,NodeCtr,objectives,_,_ = master.buidModel(inst_gen,N,distances,t,False)
             card_omega = len(theta)
             
             if solution != None:

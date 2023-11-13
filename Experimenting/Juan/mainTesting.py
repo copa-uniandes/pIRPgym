@@ -87,7 +87,16 @@ print(f'The reduced cost is {reduced_cost}')
 
 
 
-# %%
+#%% Comparing 
+
+
+
+
+
+
+
+
+
 
 
 

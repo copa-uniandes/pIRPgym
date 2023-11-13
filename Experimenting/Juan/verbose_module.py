@@ -170,8 +170,10 @@ class routing_instances():
     def print_inst(set,instance,bks,k):
         if set == 'Li':
             string = f'Li {instance[-6:-4]} \t| {k} \t{round(bks)} \t|'
-        else:
+        elif set == 'Golden':
             string = f'Go {instance[-5:-4]} \t| {k} \t{round(bks)} \t|'
+        else:
+            string = f'Go {instance[-5:-4]} \t| {k} \t{round(bks)} \t|' 
         print(string,end='\r')
         return string
     
@@ -182,9 +184,9 @@ class routing_instances():
         else: tt = round(t)
         if not show_gap:
             if tt <100: 
-                string += f' {tt:2f} \t   {veh}\t {round(obj,1)} \t|'
+                string += f' {tt:.2f} \t   {veh}\t {round(obj,1)} \t|'
             else:
-                string += f' {tt:1f}\t   {veh}\t {round(obj,1)} \t|'
+                string += f' {tt:.1f}\t   {veh}\t {round(obj,1)} \t|'
         else:
             gap = round((obj-benchmark[0])/benchmark[0],4) * 100
             gap = round(gap,2)
