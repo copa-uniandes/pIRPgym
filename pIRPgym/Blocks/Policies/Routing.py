@@ -831,7 +831,7 @@ class Routing():
 
 
         @staticmethod
-        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env,n=30,averages=True,**kwargs)->tuple:
+        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env,n=30,averages=True,dynamic_p=False)->tuple:
             times = list()
             vehicles = list()
             objectives = list()
@@ -846,14 +846,21 @@ class Routing():
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
 
-                    extra_cost,missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase,discriminate_missing=False)
-                    extra_costs.append(extra_cost)
-                    missings.append(missing)
+                    if dynamic_p:
+                        extra_cost,missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase,discriminate_missing=False)
+                        extra_costs.append(extra_cost)
+                        missings.append(missing)
 
-            if averages:
-                return sum(objectives)/n,round(sum(vehicles)/n,2),sum(times)/n,sum(extra_costs)/n,sum(missings)/n
+            if dynamic_p:
+                if averages:
+                    return sum(objectives)/n,round(sum(vehicles)/n,2),sum(times)/n,sum(extra_costs)/n,sum(missings)/n
+                else:
+                    return objectives,vehicles,times,extra_costs,missings
             else:
-                return objectives,vehicles,times,extra_costs,missings
+                if averages:
+                    return sum(objectives)/n,round(sum(vehicles)/n,2),sum(times)/n
+                else:
+                    return objectives,vehicles,times
 
 
 

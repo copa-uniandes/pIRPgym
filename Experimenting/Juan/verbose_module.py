@@ -173,7 +173,7 @@ class routing_instances():
         elif set == 'Golden':
             string = f'Go {instance[-5:-4]} \t| {k} \t{round(bks)} \t|'
         else:
-            string = f'Go {instance[-5:-4]} \t| {k} \t{round(bks)} \t|' 
+            string = f'{instance[2:-4]}| {k} \t{round(bks)} \t|' 
         print(string,end='\r')
         return string
     
@@ -184,16 +184,16 @@ class routing_instances():
         else: tt = round(t)
         if not show_gap:
             if tt <100: 
-                string += f' {tt:.2f} \t   {veh}\t {round(obj,1)} \t|'
+                string += f' {tt:.2f}\t   {veh}\t {round(obj,1)} \t|'
             else:
                 string += f' {tt:.1f}\t   {veh}\t {round(obj,1)} \t|'
         else:
             gap = round((obj-benchmark[0])/benchmark[0],4) * 100
             gap = round(gap,2)
             if tt < 100:
-                string += f' {tt:2f} \t  {veh}\t {gap} \t|'
+                string += f' {tt:.2f}\t  {veh}\t {gap}\t|'
             else:
-                string += f' {tt}\t  {veh}\t {gap} \t|'
+                string += f' {tt:.1f}\t  {veh}\t {gap}\t|'
             
         
         

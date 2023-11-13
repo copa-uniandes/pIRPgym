@@ -78,7 +78,7 @@ class locations():
 
         script_path = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(script_path, f'../../Instances/CVRP Instances/{CVRPtype}/{set}/{instance}')
-        file = open(path, mode = 'r');     file = file.readlines()
+        file = open(path,mode='r');     file = file.readlines()
 
         line =  int(file[3][13:17]) - 1
 
