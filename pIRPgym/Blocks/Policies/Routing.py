@@ -1,3 +1,4 @@
+from functools import reduce
 import pandas as np
 import numpy as np
 from numpy import count_nonzero,array_equal
@@ -18,7 +19,7 @@ class Routing():
         ''' Nearest Neighbor (NN) heuristic '''
         # Generate routes
         @staticmethod
-        def NearestNeighbor(purchase:dict,inst_gen:instance_generator,t:int) -> tuple:
+        def NearestNeighbor(purchase:dict,inst_gen:instance_generator,t:int,price_routes:bool=False) -> tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -26,6 +27,9 @@ class Routing():
             loads = list()
             FO:float = 0
             distances = list()
+
+            if price_routes:
+                reduced_costs = list()
 
             while len(pending_sup) > 0:
                 node:int = 0
@@ -42,19 +46,27 @@ class Routing():
                         node = target
                         route.append(node)
                         pending_sup.remove(node)
+                route += [0]
 
-                routes.append(route + [0])
+                if price_routes:
+                    reduced_cost = Routing.PriceRoute(inst_gen,route,purchase,t,routes)
+                    reduced_costs.append(reduced_cost)
+
+                routes.append(route)
                 distance += inst_gen.c[node,0]
                 loads.append(load)
                 FO += distance
                 distances.append(distance)
-            
-            return routes,FO,(distances,loads),process_time() - start
+
+            if not price_routes:
+                return routes,FO,(distances,loads),process_time()-start
+            else:
+                return routes,FO,(distances,loads),process_time()-start,reduced_costs
 
         class Nearest_Neighbor():      
             # Find nearest feasible (by capacity) node
             @staticmethod
-            def find_nearest_feasible_node(node:int,load:float,distance:float,pending_sup:int,requirements:dict,inst_gen:instance_generator):
+            def find_nearest_feasible_node(node:int,load:float,distance:float,pending_sup:list,requirements:dict,inst_gen:instance_generator):
                 target, dist = False, 1e6
                 for candidate in pending_sup:
                     if (inst_gen.c[node,candidate] < dist) and (load + requirements[candidate] <= inst_gen.Q) \
@@ -67,7 +79,7 @@ class Routing():
         
         ''' RCL based constructive '''
         @staticmethod
-        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,s=None) -> tuple:
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,s=None,price_routes:bool=False) -> tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
@@ -79,16 +91,26 @@ class Routing():
             distances = list()
             loads = list()
 
+            if price_routes:
+                reduced_costs = list()
+
             while len(pending_sup) > 0:
                 route,distance,load,pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha,pending_sup,requirements,inst_gen)
+
+                if price_routes:
+                    reduced_cost = Routing.PriceRoute(inst_gen,route,purchase,t,routes)
+                    reduced_costs.append(reduced_cost)
 
                 routes.append(route)
                 FO += distance
                 distances.append(distance)
                 loads.append(load)
             
-            return routes,FO,(distances,loads),process_time() - start
-        
+            if not price_routes:
+                return routes,FO,(distances,loads),process_time()-start
+            else:
+                return routes,FO,(distances,loads),process_time()-start,reduced_costs
+                 
         class RCL_constructive():
             # Generate candidate from RCL
             @staticmethod

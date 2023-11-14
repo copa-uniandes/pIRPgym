@@ -24,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':20,'K':30,'T':7,'F':20,'Q':2000,
+env_config = {'M':30,'K':25,'T':10,'F':20,'Q':2000,
               'S':6,'LA_horizon':4,
              'd_max':2000,'hist_window':60,
              'back_o_cost':100}
@@ -63,17 +63,36 @@ env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 # Reseting the environment
 state = env.reset(inst_gen,return_state=True)
 
+
+
+
+
+
 #%%####################################### Testing pricing algorithm  ######################################## 
 # Testing pricing algorithm
 # Reseting the environment
 state = env.reset(inst_gen,return_state=True)
-[purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
-CG_routes,CG_obj,CG_info,CG_time = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,heuristic_initialization=True,time_limit=False,verbose=True)       # Column Generation algorithm                  
-nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-print('CG routes', CG_routes)
-print('NN routes', nn_routes)
+done = False
 
-xxx = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+res = {'nn':[0 for i in range(6)],'RCL':[0 for i in range(6)]}
+
+while not done:
+    print(f'step {env.t}')
+    [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
+    
+    nn_routes,nn_obj,nn_info,nn_time,nn_r = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t,price_routes=True)
+    for i in range(len(nn_routes)):
+        res['nn'][i] += nn_r[i]; print(len(nn_routes))
+
+    RCL_routes,RCL_obj,RCL_info,RCL_time,RCL_r = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t,price_routes=True)
+    for i in range(len(RCL_routes)):
+        res['RCL'][i] += RCL_r[i]; print(len(RCL_routes))
+
+    ''' Compound action'''        
+    action = {'routing':nn_routes,'purchase':purchase,'demand_compliance':demand_compliance}
+
+    state, reward, done, real_action, _,  = env.step(action,inst_gen)
+    
 
 
 
