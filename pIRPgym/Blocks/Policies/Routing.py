@@ -253,7 +253,7 @@ class Routing():
                 
                 # Adaptative-Reactive Constructive
                 # RCL_alpha_list:list = [0,0.001,0.005]
-                RCL_alpha_list:list = [0.01, 0.05, 0.15, 0.3]
+                RCL_alpha_list:list = [0.01, 0.05, 0.15, 0.25, 0.4]
                 alpha_performance:dict = {alpha:0 for alpha in RCL_alpha_list}
 
                 # Calibrating alphas
