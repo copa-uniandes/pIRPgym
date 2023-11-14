@@ -489,7 +489,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization:bool=False,time_limit=False,verbose:bool=False):
+        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization:bool=False,time_limit=False,verbose:bool=False,return_num_cols:bool=False)->tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -591,8 +591,11 @@ class Routing():
                 print('Normal termination. -o-')
             
             routes,distances,loads = Routing.Column_Generation.decode_CG_routes(inst_gen,modelMP,routes,objectives,loads)
-
-            return routes,sum(distances),(distances,loads,opt_flag),process_time() - start
+            
+            if not return_num_cols:
+                return routes,sum(distances),(distances,loads,opt_flag),process_time()-start
+            else:
+                return routes,sum(distances),(distances,loads,opt_flag),process_time()-start,len(theta)
         
         class Column_Generation():
             # Master problem

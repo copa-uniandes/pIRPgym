@@ -203,3 +203,30 @@ class routing_instances():
             print(string)
         
         return string
+    
+
+class CG_initialization():
+    @staticmethod
+    def print_head():
+        print('*'*12 + "  Evaluation of Heuristic Initialization on CG  "+'*'*11,flush = True)
+        print(f'{"-"*8}|\t  \tCG \t \t|\t    CG w/ Init\t \t|')
+        print(f't    M\t| t(s)\t cols\t #Veh \t Obj \t| t(s)\t cols\t #Veh \t Obj \t|')
+        print('-'*73)
+
+    @staticmethod
+    def print_step(t,purchase):
+        num_suppliers = len(set(key[0] for key in purchase.keys() if purchase[key]>0))
+        string = f'{t}    {num_suppliers}\t|'
+        print(string,end='\r')
+        return string
+    
+    @staticmethod
+    def print_update(string,t,cols,veh,obj,end=False):
+        string += f' {t:.2f}\t {cols} \t{veh} \t{round(obj,1)} \t|'
+        if end:
+            print(string)
+            return string
+        else:
+            print(string,end='\r')
+            return string
+        
