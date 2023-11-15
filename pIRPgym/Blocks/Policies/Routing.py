@@ -15,7 +15,7 @@ from ..BuildingBlocks import Inventory_management, Routing_management
 
 class Routing():
         options = ['NN, RCL, HGA, CG']
-        
+
         ''' Nearest Neighbor (NN) heuristic '''
         # Generate routes
         @staticmethod
@@ -367,7 +367,7 @@ class Routing():
             def HyGeSe_routing(purchase:dict,inst_gen:instance_generator,t:int,time_limit:int=30):    
                 start = process_time()
                 # Solver initialization
-                ap = hgs.AlgorithmParameters(timeLimit=time_limit,)  # seconds
+                ap = hgs.AlgorithmParameters(timeLimit=time_limit)  # seconds
                 hgs_solver = hgs.Solver(parameters=ap,verbose=False)
 
                 pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
@@ -377,9 +377,9 @@ class Routing():
 
                 # Save the original stdout
                 result = hgs_solver.solve_cvrp(data)
-                time = result.time+loading_time
+                time = result.time
 
-                routes = Routing.HyGeSe.translate_routes(inst_gen, requirements,result.routes)
+                routes = Routing.HyGeSe.translate_routes(inst_gen,requirements,result.routes)
 
                 return routes,result.cost,time
 
