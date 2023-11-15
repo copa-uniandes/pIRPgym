@@ -371,15 +371,17 @@ class Routing():
                 hgs_solver = hgs.Solver(parameters=ap,verbose=False)
 
                 pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+                loading_time = process_time()-start
 
                 data = Routing.HyGeSe.generate_HyGeSe_data(inst_gen, requirements)
 
                 # Save the original stdout
                 result = hgs_solver.solve_cvrp(data)
+                time = result.time+loading_time
 
                 routes = Routing.HyGeSe.translate_routes(inst_gen, requirements,result.routes)
 
-                return routes, result.cost, process_time() - start
+                return routes,result.cost,time
 
 
             # Generate data dict for HyGeSe algorithm

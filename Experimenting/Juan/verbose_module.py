@@ -182,6 +182,9 @@ class routing_instances():
         if t < 10: tt = round(t,2)
         elif t < 100: tt = round(t,1)
         else: tt = round(t)
+
+        if type(veh) != int:
+            veh = round(veh,1)
         if not show_gap:
             if tt <100: 
                 string += f' {tt:.2f}\t   {veh}\t {round(obj,1)} \t|'
