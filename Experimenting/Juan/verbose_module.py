@@ -211,10 +211,10 @@ class routing_instances():
 class CG_initialization():
     @staticmethod
     def print_head():
-        print('*'*12 + "  Evaluation of Heuristic Initialization on CG  "+'*'*11,flush = True)
-        print(f'{"-"*8}|\t  \tCG \t \t|\t    CG w/ Init\t \t|')
-        print(f't    M\t| t(s)\t cols\t #Veh \t Obj \t| t(s)\t cols\t #Veh \t Obj \t|')
-        print('-'*73)
+        print('*'*16 + "  Evaluation of Heuristic Initialization on CG  "+'*'*15,flush = True)
+        print(f'{"-"*8}|\t  \tCG \t \t|\t   \t CG w/ Init\t \t|')
+        print(f't    M\t| t(s)\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t|')
+        print('-'*80)
 
     @staticmethod
     def print_step(t,purchase):
@@ -225,11 +225,30 @@ class CG_initialization():
     
     @staticmethod
     def print_update(string,t,cols,veh,obj,end=False):
-        string += f' {t:.2f}\t {cols} \t{veh} \t{round(obj,1)} \t|'
-        if end:
-            print(string)
-            return string
+        if type(cols) == int:
+            if t < 100:
+                string += f' {t:.2f}\t  {cols} \t   {veh} \t{round(obj,1)} \t|'
+            elif t < 1000:
+                string += f' {t:.1f}\t  {cols} \t   {veh} \t{round(obj,1)} \t|'
+            else:
+                string += f' {t:.0f}\t  {cols} \t   {veh} \t{round(obj,1)} \t|'
+            if end:
+                print(string)
+                return string
+            else:
+                print(string,end='\r')
+                return string
         else:
-            print(string,end='\r')
-            return string
+            if t < 100:
+                string += f' {t:.2f}\t   {cols[0]} \t  {cols[1]} \t   {veh} \t{round(obj,1)} \t|'
+            elif t < 1000:
+                string += f' {t:.1f}\t   {cols[0]} \t  {cols[1]} \t   {veh} \t{round(obj,1)} \t|'
+            else:
+                string += f' {t:.0f}\t   {cols[0]} \t  {cols[1]} \t   {veh} \t{round(obj,1)} \t|'
+            if end:
+                print(string)
+                return string
+            else:
+                print(string,end='\r')
+                return string
         

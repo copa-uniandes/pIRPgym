@@ -48,8 +48,8 @@ det_rd_seed = 1
 disc = ("strong","conc")
 
 
-inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
-                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
+# inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+#                                         p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
 
 
 #########################################      Environment      ##########################################
@@ -60,8 +60,33 @@ inventory = True
 perishability = 'ages'
 env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
-# Reseting the environment
-state = env.reset(inst_gen,return_state=True)
+# # Reseting the environment
+# state = env.reset(inst_gen,return_state=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

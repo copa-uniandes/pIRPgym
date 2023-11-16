@@ -38,7 +38,7 @@ class Routing_management():
                 feasible = False
 
         return feasible,objective,(distances,loads)
-
+        
     ''' Compute route's dynamic purchasing delta'''
     @staticmethod
     def evaluate_dynamic_potential(inst_gen:instance_generator,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
