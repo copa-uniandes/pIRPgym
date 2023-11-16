@@ -640,7 +640,7 @@ class Routing():
                     modelMP,RouteLimitCtr,NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
 
                     if heuristic_initialization:
-                        modelMP,theta,objectives,cols,loadss = self.heuristic_initialization(modelMP,N,kwargs['requirements'],inst_gen,t,theta,objectives,kwargs['RCL alpha'])
+                        modelMP,theta,objectives,cols,loadss = self.heuristic_initialization(modelMP,N,kwargs['requirements'],inst_gen,t,theta,objectives,kwargs['RCL_alpha'])
                     modelMP = self.generateObjective(modelMP)
                     modelMP.update()
 

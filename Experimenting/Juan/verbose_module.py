@@ -211,10 +211,10 @@ class routing_instances():
 class CG_initialization():
     @staticmethod
     def print_head():
-        print('*'*16 + "  Evaluation of Heuristic Initialization on CG  "+'*'*15,flush = True)
-        print(f'{"-"*8}|\t  \tCG \t \t|\t   \t CG w/ Init\t \t|')
-        print(f't    M\t| t(s)\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t|')
-        print('-'*80)
+        print('*'*77 + "  Evaluation of Heuristic Initialization on CG  "+'*'*76,flush = True)
+        print(f'{"-"*8}|\t  \tCG \t \t|\t  CG w/ Init (alpha = 0.1) \t|\t  CG w/ Init (alpha = 0.2) \t|\t  CG w/ Init (alpha = 0.4) \t|\t  CG w/ Init (alpha = 0.6) \t|')
+        print(f't    M\t| t(s)\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t|')
+        print('-'*201)
 
     @staticmethod
     def print_step(t,purchase):
