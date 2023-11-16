@@ -2,8 +2,11 @@
 # MODULES
 import sys
 from time import process_time
+import os
+import pickle
 
-import verbose_module
+import verbose_module as verb
+
 sys.path.append('../../.')
 import pIRPgym
 
@@ -50,6 +53,111 @@ disc = ("strong","conc")
 
 # inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
 #                                         p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
+
+
+
+
+
+
+########################     Instance generator and Environment     #########################
+path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
+# path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+
+# Creating instance generator object
+inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
+                              historical_data, backorders, env_config = env_config)
+
+instances = dict()
+instances = [i for i in os.listdir(path+'pIRPgym/Instances/CVRP Instances/CVRP/Uchoa') if i[-3:]=='vrp']
+instances.sort()
+instances = instances[1:] + [instances[0]]
+
+### Environment 
+# Creating environment object
+routing = True
+inventory = False    
+perishability = False
+env = pIRPgym.steroid_IRP(routing,inventory,perishability)
+env.reset(inst_gen)
+
+
+
+
+
+
+################################## Policy Evaluation ##################################
+''' Parameters '''
+verbose = False
+show_gap = True
+
+# ranges = [i for i in range(1,11)]
+# performance = {'nn':{i:{'Gap':list(),'Time':list()} for i in ranges},
+#                'RCL':{i:{'Gap':list(),'Time':list()} for i in ranges},
+#                'GA':{i:{'Gap':list(),'Time':list()} for i in ranges},
+#                'HGS':{i:{'Gap':list(),'Time':list()} for i in ranges}}
+
+
+if verbose: verb.routing_instances.print_head(show_gap)
+
+for instance in instances[60:]:
+    # Upload dCVRP instance
+    purchase,benchmark = inst_gen.upload_CVRP_instance('Uchoa',instance)
+
+    if verbose: string = verb.routing_instances.print_inst('Uchoa',instance,benchmark[0],benchmark[1])
+
+    nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)                                         # Nearest Neighbor
+    if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                nn_obj,len(nn_routes),nn_time,show_gap,benchmark)
+    # performance['nn'][len(purchase)//100]['Gap'].append((nn_obj-benchmark[0])/benchmark[0])
+    # performance['nn'][len(purchase)//100]['Time'].append(nn_time)
+
+
+    RCL_obj,RCL_veh,RCL_time = pIRPgym.Routing.evaluate_stochastic_policy(pIRPgym.Routing.RCL_Heuristic,
+                                                                          purchase,inst_gen,env,n=30,averages=True,dynamic_p=False)
+    if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                RCL_obj,RCL_veh,RCL_time,show_gap,benchmark)
+    # performance['RCL'][len(purchase)//100]['Gap'].append((RCL_obj-benchmark[0])/benchmark[0])
+    # performance['RCL'][len(purchase)//100]['Time'].append(RCL_time)
+
+    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,
+                                                                               inst_gen,env.t,return_top=False,rd_seed=0,time_limit=30)    # Genetic Algorithm
+    if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                GA_obj,len(GA_routes),GA_time,show_gap,benchmark)
+    # performance['GA'][len(purchase)//100]['Gap'].append((GA_obj-benchmark[0])/benchmark[0])
+    # performance['GA'][len(purchase)//100]['Time'].append(GA_time)
+
+    HGS_routes,HGS_obj,HGS_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=30)                                  # Hybrid Genetic Search (CVRP)
+    if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                    HGS_obj,len(HGS_routes),HGS_time,show_gap,benchmark,end=True)                                    # Column Generation algorithm
+    # performance['HGS'][len(purchase)//100]['Gap'].append((HGS_distance-benchmark[0])/benchmark[0])
+    # performance['HGS'][len(purchase)//100]['Time'].append(HGS_time)
+
+    performance = { 'nn':{'Gap':(nn_obj-benchmark[0])/benchmark[0],'Time':nn_time},
+                    'RCL':{'Gap':(RCL_obj-benchmark[0])/benchmark[0],'Time':RCL_time},
+                    'GA':{'Gap':(GA_obj-benchmark[0])/benchmark[0],'Time':GA_time},
+                    'HGS':{'Gap':(HGS_obj-benchmark[0])/benchmark[0],'Time':HGS_time}}
+    
+    # Open the file in binary write mode
+    # a_file = open(path+f'Experimenting/Juan/Classic Instances/CVRP Results/{instance[:-4]}.pkl', 'wb')
+    # pickle.dump(performance,a_file)
+    # a_file.close()
+
+
+    with open(path+f'Experimenting/Juan/Classic Instances/CVRP Results/{instance[:-4]}.pkl', 'wb') as file:
+        # Use pickle.dump to serialize and save the dictionary to the file
+        pickle.dump(performance, file)
+    
+
+
+#%%
+
+
+
+
+
+
+
+
 
 
 #########################################      Environment      ##########################################

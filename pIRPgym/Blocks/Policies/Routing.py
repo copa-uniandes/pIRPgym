@@ -169,7 +169,7 @@ class Routing():
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             # Parameters
-            verbose = False
+            verbose = True
             Population_size:int = 1000
             Population_iter:range = range(Population_size)
             training_time:float = 0.3*time_limit
@@ -193,6 +193,7 @@ class Routing():
             # Genetic process
             generation = 0
             while time()-start < time_limit:
+                print(f'generation {generation}')
                 ### Elitism
                 Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
 
@@ -280,7 +281,7 @@ class Routing():
 
                 # Calibrating alphas
                 training_ind:int = 0
-                while process_time() -start<=training_time:
+                while process_time()-start<=training_time:
                     alpha_performance = Routing.GA.calibrate_alpha(RCL_alpha_list,alpha_performance,requirements,inst_gen)
                     training_ind += 1
                 
@@ -293,7 +294,9 @@ class Routing():
                 
                     # Generating individual
                     individual, FO, (distances, loads), _ = Routing.RCL_Heuristic(requirements2,inst_gen,0,RCL_alpha)
-
+                    
+                    if verbose: 
+                        print(f'Generated individual {ind}')
                     # Updating incumbent
                     if FO < incumbent:
                         incumbent = FO
