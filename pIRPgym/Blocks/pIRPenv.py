@@ -77,9 +77,8 @@ class steroid_IRP():
 
         self.strong_rate = strong_rate
 
-        if self.config['inventory']:
-            if self.config['perishability'] == 'ages':
-                self.state = Inventory_management.perish_per_age_inv.reset(inst_gen)
+        if self.config['inventory'] and self.config['perishability'] == 'ages':
+            self.state = Inventory_management.perish_per_age_inv.reset(inst_gen)
                 
         if return_state:
             return self.state
@@ -104,16 +103,15 @@ class steroid_IRP():
                 real_purchase = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
 
             if self.config['inventory']:
-                if not self.config['routing']:
-                    real_purchase = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
-
+                real_purchase = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
+             
                 if self.config['perishability'] == 'ages' and not self.config['routing']:
                     if inst_gen.other_params["demand_type"] == "aggregated":
                         real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
                     else:
                         real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
 
-                elif  self.config['perishability'] == 'ages':
+                elif self.config['perishability'] == 'ages':
                     if inst_gen.other_params["demand_type"] == "aggregated":
                         real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
                     else:
@@ -157,7 +155,7 @@ class steroid_IRP():
         self.t += 1
         done = self.check_termination(inst_gen)
         if self.config['inventory']:
-            _ = {'backorders': back_orders, 'perished': perished}
+            _ = {'backorders': back_orders,'perished': perished}
         else:
             _ = {}
 

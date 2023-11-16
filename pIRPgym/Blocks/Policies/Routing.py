@@ -513,7 +513,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization:bool=False,time_limit=False,verbose:bool=False,return_num_cols:bool=False)->tuple:
+        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization:bool=False,time_limit=False,verbose:bool=False,return_num_cols:bool=False,RCL_alpha:float=0.35)->tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -521,9 +521,10 @@ class Routing():
             sup_map = {i:(idx+1) for idx,i in enumerate(N)}
 
             master = Routing.Column_Generation.MasterProblem()
-            modelMP,theta,RouteLimitCtr,NodeCtr,objectives,cols,loadss = master.buidModel(inst_gen,N,distances,t,heuristic_initialization,requirements=requirements)
+            modelMP,theta,RouteLimitCtr,NodeCtr,objectives,cols,loadss = master.buidModel(inst_gen,N,distances,t,heuristic_initialization,requirements=requirements,RCL_alpha=RCL_alpha)
 
             card_omega = len(theta)    # number of routes
+            init_cols = max(deepcopy(card_omega)-len(N),0)
             same_objective_count = 0
             last_objective_value = None
 
@@ -563,10 +564,10 @@ class Routing():
                 else:
                     same_objective_count = 0
 
-                # if same_objective_count >= 5:
-                #     if verbose:
-                #         print("\nStoping criterion: Number of iterations without change", flush=True)
-                #     break
+                if same_objective_count >= 100:
+                    if verbose:
+                        print("\nStoping criterion: Number of iterations without change", flush=True)
+                    break
 
                 last_objective_value = current_objective_value
 
@@ -619,7 +620,7 @@ class Routing():
             if not return_num_cols:
                 return routes,sum(distances),(distances,loads,opt_flag),process_time()-start
             else:
-                return routes,sum(distances),(distances,loads,opt_flag),process_time()-start,len(theta)
+                return routes,sum(distances),(distances,loads,opt_flag),process_time()-start,(init_cols,len(theta)-len(N)-init_cols)
         
         class Column_Generation():
             # Master problem
@@ -639,7 +640,7 @@ class Routing():
                     modelMP,RouteLimitCtr,NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
 
                     if heuristic_initialization:
-                        modelMP,theta,objectives,cols,loadss = self.heuristic_initialization(modelMP,N,kwargs['requirements'],inst_gen,t,theta,objectives)
+                        modelMP,theta,objectives,cols,loadss = self.heuristic_initialization(modelMP,N,kwargs['requirements'],inst_gen,t,theta,objectives,kwargs['RCL alpha'])
                     modelMP = self.generateObjective(modelMP)
                     modelMP.update()
 
@@ -681,7 +682,7 @@ class Routing():
                     return modelMP 
 
 
-                def heuristic_initialization(self,modelMP:gu.Model,N,requirements:dict,inst_gen:instance_generator,t,theta:list,objectives:list):
+                def heuristic_initialization(self,modelMP:gu.Model,N,requirements:dict,inst_gen:instance_generator,t,theta:list,objectives:list,RCL_alpha:float):
                     cols = list()
                     loadss = list()
                     HI_start = process_time()
