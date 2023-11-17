@@ -163,13 +163,13 @@ class Routing():
 
         ''' Genetic Algorithm '''
         @staticmethod
-        def HybridGenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,rd_seed:int=0,time_limit:float=30):
+        def HybridGenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,
+                                  rd_seed:int=0,time_limit:float=30,verbose:bool=False):
             start = process_time()
             seed(rd_seed)
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             # Parameters
-            verbose = True
             Population_size:int = 1000
             Population_iter:range = range(Population_size)
             training_time:float = 0.3*time_limit
