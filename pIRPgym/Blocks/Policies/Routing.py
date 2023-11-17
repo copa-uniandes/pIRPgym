@@ -191,53 +191,53 @@ class Routing():
                 print(f'{round(best_individual[3],2)} \t{round(incumbent,2)} \t{len(best_individual[0])} \t-1')
 
             # Genetic process
-            generation = 0
-            while time()-start < time_limit:
-                print(f'generation {generation}')
-                ### Elitism
-                Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
+            # generation = 0
+            # while time()-start < time_limit:
+            #     print(f'generation {generation}')
+            #     ### Elitism
+            #     Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
 
-                ### Selection: From a population, which parents are able to reproduce
-                # Intermediate population: Sample of the initial population 
-                inter_population = Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
-                inter_population = Elite + list(inter_population)
+            #     ### Selection: From a population, which parents are able to reproduce
+            #     # Intermediate population: Sample of the initial population 
+            #     inter_population = Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
+            #     inter_population = Elite + list(inter_population)
 
-                ### Tournament: Select two individuals and leave the best to reproduce
-                Parents = Routing.GA.tournament(inter_population, FOs, Population_iter)
+            #     ### Tournament: Select two individuals and leave the best to reproduce
+            #     Parents = Routing.GA.tournament(inter_population, FOs, Population_iter)
 
-                ### Evolution
-                New_Population:list = list();   New_FOs:list = list(); 
-                New_Distances:list = list();   New_Loads:list = list()
+            #     ### Evolution
+            #     New_Population:list = list();   New_FOs:list = list(); 
+            #     New_Distances:list = list();   New_Loads:list = list()
 
-                for i in Population_iter:
-                    individual_i = Parents[i][randint(0,2)]
-                    mutated = False
+            #     for i in Population_iter:
+            #         individual_i = Parents[i][randint(0,2)]
+            #         mutated = False
 
-                    ###################
-                    # TODO: Operators
-                    ###################
+            #         ###################
+            #         # TODO: Operators
+            #         ###################
 
-                    # No operator is performed
-                    if not mutated: 
-                        new_individual = Population[individual_i];new_FO = FOs[individual_i] 
-                        new_distances = Distances[individual_i];new_loads = Loads[individual_i]
+            #         # No operator is performed
+            #         if not mutated: 
+            #             new_individual = Population[individual_i];new_FO = FOs[individual_i] 
+            #             new_distances = Distances[individual_i];new_loads = Loads[individual_i]
 
-                    # Store new individual
-                    New_Population.append(new_individual);New_FOs.append(new_FO); 
-                    New_Distances.append(new_distances);New_Loads.append(new_loads)
+            #         # Store new individual
+            #         New_Population.append(new_individual);New_FOs.append(new_FO); 
+            #         New_Distances.append(new_distances);New_Loads.append(new_loads)
 
-                    # Updating incumbent
-                    if sum(new_distances) < incumbent:
-                        incumbent = sum(new_distances)
-                        best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time()-start]
-                        print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
+            #         # Updating incumbent
+            #         if sum(new_distances) < incumbent:
+            #             incumbent = sum(new_distances)
+            #             best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time()-start]
+            #             print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
 
-                # Update population
-                Population = New_Population
-                FOs = New_FOs
-                Distances = New_Distances
-                Loads = New_Loads
-                generation += 1
+            #     # Update population
+            #     Population = New_Population
+            #     FOs = New_FOs
+            #     Distances = New_Distances
+            #     Loads = New_Loads
+            #     generation += 1
             
             if verbose:
                 print('\n')

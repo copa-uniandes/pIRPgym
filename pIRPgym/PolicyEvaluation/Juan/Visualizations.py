@@ -94,7 +94,7 @@ class RoutingV():
 
 
     @staticmethod
-    def plot_indicator_evolution(routing_performance,indicator):
+    def plot_indicator_evolution(routing_performance,indicator,x_axis:str='Time step'):
         """
         Plot the evolution of a specific indicator for different routing policies.
 
@@ -106,7 +106,7 @@ class RoutingV():
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Define a list of colors and markers for better visibility
-        colors = ['blue', 'green', 'orange', 'red', 'purple']
+        colors = ['purple','red','blue','green','orange']
         markers = ['o', 's', '^', 'D', '*']
 
         # Plot the evolution for each routing policy
@@ -115,7 +115,7 @@ class RoutingV():
                 ax.plot(data[indicator], label=f'{policy}', color=colors[i % len(colors)], marker=markers[i % len(markers)], linestyle='-', markersize=8, linewidth=2)
 
         # Add labels and a legend
-        ax.set_xlabel('Time step', fontsize=12)
+        ax.set_xlabel(x_axis, fontsize=12)
         ax.set_ylabel(indicator, fontsize=12)
         ax.set_title(f'Routing strategies performance: {indicator}', fontsize=14)
         ax.legend(fontsize=10, loc='upper right')
