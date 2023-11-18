@@ -16,7 +16,7 @@ if computer_name == '':
     experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/Classic Instances/'
 else: 
     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/Classic Instances/'
+    experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/Classic Instances/'
 
 policies1 = ['NN','RCL','HGS']
 policies=dict()
