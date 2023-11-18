@@ -115,9 +115,42 @@ class Routing():
                 return target
             
         
+        @staticmethod
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha=0.25,rd_seed=None,
+                          price_routes:bool=False,time_limit:float=15):
+            start = process_time()
+            pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
+
+            best_sol = list()
+            best_obj = 1e9
+            best_info = ()
+            best_time = float
+
+            while process_time()-start < time_limit:
+                if not price_routes:
+                    routes,FO,(distances,loads),generation_time = Routing.RCL_Solution(purchase,inst_gen,t,
+                                                                                        RCL_alpha,rd_seed,price_routes)
+                else:
+                    routes,FO,(distances,loads),generation_time,reduced_costs = Routing.RCL_Solution(purchase,inst_gen,t,
+                                                                                                RCL_alpha,rd_seed,price_routes)
+
+                if FO < best_obj:
+                    best_sol = routes
+                    best_obj = FO
+                    best_info = (distances,loads)
+                    best_time = process_time()-start
+
+                    if price_routes:    best_r = reduced_costs
+
+
+            if not price_routes: 
+                return best_sol,best_obj,best_info,best_time
+            else:
+                return best_sol,best_obj,best_info,best_time,best_r
+
         ''' RCL based constructive '''
         @staticmethod
-        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,s=None,price_routes:bool=False) -> tuple:
+        def RCL_Solution(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,rd_seed=None,price_routes:bool=False) -> tuple:
             """
             Generates a solution using the RCL (Restricted Candidate List) based constructive heuristic for the dCVRP.
 
@@ -142,7 +175,7 @@ class Routing():
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
             if seed != None:
-                seed(s)
+                seed(rd_seed)
 
             routes = list()
             FO:float = 0
@@ -920,9 +953,6 @@ class Routing():
 
                     return modelMP,theta,objectives,cols,loadss
 
-
-                    
-
             # Auxiliary problem
             class SubProblem:
                 
@@ -1074,8 +1104,8 @@ class Routing():
 
             if router == Routing.RCL_Heuristic:
                 for i in range(n):
-                    seed = i
-                    RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.35,s=seed)
+                    seed = i*2
+                    RCL_routes,RCL_obj,RCL_info,RCL_time  = router(purchase,inst_gen,env.t,RCL_alpha=0.25,rd_seed=seed,time_limit=10)
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
@@ -1144,6 +1174,35 @@ class Routing():
 
 
 
+        class RoutingAgent():
+
+            def __init__(self):
+                pass
+
+            def train(self,n_episodes):
+                pass
+
+            def policy_routing(self,policy,purchase,inst_gen,t,**kwargs):
+                price_routes = False
+                if 'price_routes' in kwargs.keys(): price_routes = kwargs['price_routes']
+
+                time_limit = 30
+                if 'time_limit' in kwargs.keys(): time_limit = kwargs['time_limit']
+
+                if policy == 'NN':
+                    return Routing.NearestNeighbor(purchase,inst_gen,t,price_routes=price_routes)
+                elif policy == 'RCL':
+                    return Routing.RCL_Heuristic(purchase,inst_gen,t,time_limit=time_limit,price_routes=price_routes)
+                elif policy == 'GA':
+                    return Routing.GenticAlgorithm(purchase,inst_gen,t,time_limit=time_limit)
+                elif policy == 'HGS':
+                    return Routing.HyGeSe(purchase,inst_gen,t,time_limit=time_limit)
+
+
+            def random_policy(purchase:dict,inst_gen:instance_generator,t:int):
+                routing_policy = choice([Routing.NearestNeighbor,Routing.RCL_Heuristic,Routing.GenticAlgorithm],size=1)
+
+                return routing_policy(purchase,inst_gen,t)
 
 
         class RouteMemoryAgent():
@@ -1176,18 +1235,3 @@ class Routing():
                 
 
 
-        class RoutingAgent():
-
-            def __init__(self):
-                pass
-
-            def train(self,n_episodes):
-                pass
-
-            def route(self):
-                pass
-
-            def random_policy(purchase:dict,inst_gen:instance_generator,t:int):
-                routing_policy = choice([Routing.NearestNeighbor,Routing.RCL_Heuristic,Routing.GenticAlgorithm],size=1)
-
-                return routing_policy(purchase,inst_gen,t)

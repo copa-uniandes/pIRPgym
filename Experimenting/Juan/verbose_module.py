@@ -76,9 +76,9 @@ class complete_progress():
 class routing_progress():
 
     @staticmethod
-    def print_iteration_head(strategies,show_gap=False):
-        assert not ('CG' not in strategies and show_gap), 'Gap can only be computed with exact solution'
-        num = len(strategies)
+    def print_iteration_head(policies:list,show_gap=False):
+        assert not ('CG' not in policies and show_gap), 'Gap can only be computed with exact solution'
+        num = len(policies)
         if show_gap: item = 'gap'
         else:   item = 'Obj'
 
@@ -86,7 +86,7 @@ class routing_progress():
         print(f'---{"-"*num*12} Routing {"-"*num*12}-----')
         string1 = '--------|-------|'
         string2 = 't t(s)\t|   N\t|'
-        for strategy in strategies:
+        for strategy in policies:
             if strategy == 'CG':
                 string1 += f'\t  {strategy} \t \t|'
                 string2 += f' t(s)\t #Veh \t obj \t|'
@@ -155,25 +155,34 @@ class routing_progress():
 class routing_instances():
 
     @staticmethod
-    def print_head(show_gap):
-        if show_gap: 
-            item = 'gap'
-        else:
-            item = 'Obj'
+    def print_head(policies:list,inst_set:str,show_gap:bool):
+        if show_gap: item = 'gap'
+        else: item = 'Obj' 
+        num = len(policies)
 
-        print('*'*37 + "  Routing Strategies on Classic Instances  "+'*'*37,flush = True)
-        print(f'{"-"*8}|\tBKS \t|\t   NN \t \t|\t   RCL \t \t|\t   HGA \t \t|\t  HGS*')# \t \t|\t   CG \t \t')
-        print(f'Inst\t| #Veh \t Obj \t| t(s)\t #Veh \t {item} \t| t(s) \t #Veh \t{item} \t| t(s) \t #Veh \t {item} \t| t(s) \t #Veh \t {item} \t|')# \t| t(s) \t #Veh \t{ item}')
-        print('-'*118)
+        print(f'****{"*"*num*13}  {inst_set} set Instances  {"*"*num*13}***',flush = True)
+        string1 = f'--------|{"-"*23}|'
+        string2 = 'Inst\t|   M \t  Veh\t Obj\t|'
+        for strategy in policies:
+            string1 += f'\t  {strategy} \t \t|'
+            string2 += f' t(s)\t #Veh \t {item} \t|'
+        print(string1)
+        print(string2)
+        print(f'------------------------{"-"*num*28}')
+
+
+        # print(f'{"-"*8}|\tBKS \t|\t   NN \t \t|\t   RCL \t \t|\t   HGA \t \t|\t  HGS*')# \t \t|\t   CG \t \t')
+        # print(f'Inst\t| #Veh \t Obj \t| t(s)\t #Veh \t {item} \t| t(s) \t #Veh \t{item} \t| t(s) \t #Veh \t {item} \t| t(s) \t #Veh \t {item} \t|')# \t| t(s) \t #Veh \t{ item}')
+        # print('-'*118)
 
     @staticmethod
-    def print_inst(set,instance,bks,k):
+    def print_inst(set,instance,M,k,bks):
         if set == 'Li':
-            string = f'Li {instance[-6:-4]} \t| {k} \t{round(bks)} \t|'
+            string = f'Li {instance[-6:-4]} \t|  {M}\t  {k} \t{round(bks)} \t|'
         elif set == 'Golden':
-            string = f'Go {instance[-5:-4]} \t| {k} \t{round(bks)} \t|'
+            string = f'Go {instance[-5:-4]} \t|  {M}\t  {k} \t{round(bks)} \t|'
         else:
-            string = f'{instance[2:-4]}| {k} \t{round(bks)} \t|' 
+            string = f'{instance[2:-4]}|  {M}\t  {k} \t{round(bks)} \t|' 
         print(string,end='\r')
         return string
     

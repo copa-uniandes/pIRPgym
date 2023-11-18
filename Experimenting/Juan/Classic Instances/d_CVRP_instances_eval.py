@@ -4,16 +4,30 @@ from time import process_time
 import os
 import pickle
 
+sys.path.append('../.')
 import verbose_module as verb
-sys.path.append('../../.')
+sys.path.append('../../../.')
 import pIRPgym
 
 
 computer_name = input("Running experiment on mac? [Y/n]")
-if computer_name == '': path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
-else: path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+if computer_name == '': 
+    path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
+    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/Classic Instances/'
+else: 
+    path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/Classic Instances/'
 
-policies = ['nn','RCL','GA','HGS','']
+policies1 = ['NN','RCL','HGS']
+policies=dict()
+policies['Li'] = policies1[:-1]
+policies['Golden'] = policies1[:-1]
+policies['Uchoa'] = policies1
+
+def save_pickle(inst_set,policy,instance,performance):
+    with open(experiments_path+f'{inst_set}/{policy}/{instance[:-4]}.pkl', 'wb') as file:
+        # Use pickle.dump to serialize and save the dictionary to the file
+        pickle.dump(performance, file)
 
 
 ########################     Instance generator and Environment     #########################
@@ -32,9 +46,7 @@ historical_data = False
 backorders = False
 
 env_config = {  'M':13,'K':15,'T':12,'F':13,'Q':2000,
-                'S':6,'LA_horizon':4,
-                'd_max':2000,'hist_window':60,
-                'back_o_cost':10000
+                'd_max':2000,
             }
 
 # Creating instance generator object
@@ -63,7 +75,45 @@ instances['Uchoa'].sort();instances['Uchoa'] = instances['Uchoa'][1:] + [instanc
 verbose = True
 show_gap = True
 
+time_limit = 30
+
 for inst_set,inst_list in instances.items():
+    if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
+
     for instance in inst_list:
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
+
+        if verbose: string = verb.routing_instances.print_inst(inst_set,instance,inst_gen.M,benchmark[1],benchmark[0])
+
+        ''' Nearest Neighbor'''
+        if 'NN' in policies[inst_set]:
+            nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+            save_pickle(inst_set,'NN',instance,[nn_routes,nn_obj,nn_info,nn_time])                                     # Nearest Neighbor
+            if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                        nn_obj,len(nn_routes),nn_time,show_gap,benchmark)
+
+        ''' RCL Heuristic'''
+        if 'RCL' in policies[inst_set]:
+            RCL_obj,RCL_veh,RCL_time = pIRPgym.Routing.evaluate_stochastic_policy(pIRPgym.Routing.RCL_Heuristic,
+                                                                                purchase,inst_gen,env,n=30,averages=True,dynamic_p=False)
+            save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time])                                     # Nearest Neighbor
+            if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                    RCL_obj,RCL_veh,RCL_time,show_gap,benchmark)
+
+        ''' Genetic Algorithm '''
+        if 'GA' in policies[inst_set]:
+            GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,
+                                                                                    inst_gen,env.t,return_top=False,rd_seed=0,time_limit=30)    # Genetic Algorithm
+            save_pickle(inst_set,'GA',instance,[GA_routes,GA_obj,GA_info,GA_time])                                     # Nearest Neighbor
+            if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                        GA_obj,len(GA_routes),GA_time,show_gap,benchmark)
+
+        ''' Hybrid Genetic Search'''
+        if 'HGS' in policies[inst_set]:
+            HGS_routes,HGS_obj,HGS_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=30)                                  # Hybrid Genetic Search (CVRP)
+            save_pickle(inst_set,'HGS',instance,[GA_routes,GA_obj,GA_info,GA_time]) 
+            if verbose: string = verb.routing_instances.print_routing_update(string,
+                                                                            HGS_obj,len(HGS_routes),HGS_time,show_gap,benchmark,end=True)  
+    
+    print('\n')
