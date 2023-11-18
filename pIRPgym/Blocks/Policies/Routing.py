@@ -2,7 +2,7 @@ from functools import reduce
 import pandas as np
 import numpy as np
 from numpy import count_nonzero,array_equal
-from numpy.random import seed,choice,randint
+from numpy.random import seed,random,choice,randint
 from time import time,process_time
 from copy import deepcopy
 
@@ -20,6 +20,24 @@ class Routing():
         # Generate routes
         @staticmethod
         def NearestNeighbor(purchase:dict,inst_gen:instance_generator,t:int,price_routes:bool=False) -> tuple:
+            """
+            Generates a solution using the Nearest Neighbor heuristic for the dCVRP.
+
+            Parameters:
+            - purchase (dict): A dictionary representing the purchase order.
+            - inst_gen (instance_generator): An instance generator object.
+            - t (int): Time parameter.
+            - price_routes (bool): If True, calculates and returns reduced costs for routes.
+
+            Returns:
+            tuple: A tuple containing routes, total objective function value, route details, and execution time.
+                If price_routes is True, also includes reduced costs for each route.
+
+            Example:
+            ```python
+            routes, FO, details, execution_time = Routing.NearestNeighbor(purchase, inst_gen, t)
+            ```
+            """
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -67,6 +85,26 @@ class Routing():
             # Find nearest feasible (by capacity) node
             @staticmethod
             def find_nearest_feasible_node(node:int,load:float,distance:float,pending_sup:list,requirements:dict,inst_gen:instance_generator):
+                """
+                Finds the nearest feasible node (by capacity and distance) for the Nearest Neighbor heuristic.
+
+                Parameters:
+                - node (int): Current node.
+                - load (float): Current load.
+                - distance (float): Current distance.
+                - pending_sup (list): List of pending suppliers.
+                - requirements (dict): Dictionary of supplier requirements.
+                - inst_gen (instance_generator): An instance generator object.
+
+                Returns:
+                int or False: The nearest feasible node if found, False otherwise.
+
+                Example:
+                ```python
+                target = Routing.Nearest_Neighbor.find_nearest_feasible_node(node, load, distance, pending_sup,
+                                                                            requirements, inst_gen)
+                ```
+                """
                 target, dist = False, 1e6
                 for candidate in pending_sup:
                     if (inst_gen.c[node,candidate] < dist) and (load + requirements[candidate] <= inst_gen.Q) \
@@ -80,6 +118,26 @@ class Routing():
         ''' RCL based constructive '''
         @staticmethod
         def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,s=None,price_routes:bool=False) -> tuple:
+            """
+            Generates a solution using the RCL (Restricted Candidate List) based constructive heuristic for the dCVRP.
+
+            Parameters:
+            - purchase (dict): A dictionary representing the purchase order.
+            - inst_gen (instance_generator): An instance generator object.
+            - t (int): Time parameter.
+            - RCL_alpha (float): Parameter controlling the size of the restricted candidate list.
+            - s: Seed for random number generation.
+            - price_routes (bool): If True, calculates and returns reduced costs for routes.
+
+            Returns:
+            tuple: A tuple containing routes, total objective function value, route details, and execution time.
+                If price_routes is True, also includes reduced costs for each route.
+
+            Example:
+            ```python
+            routes, FO, details, execution_time = Routing.RCL_Heuristic(purchase, inst_gen, t, RCL_alpha=0.35, s=42)
+            ```
+            """
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
@@ -115,6 +173,27 @@ class Routing():
             # Generate candidate from RCL
             @staticmethod
             def generate_RCL_candidate(RCL_alpha,node,load,distance,pending_sup,requirements,inst_gen):
+                """
+                Generates a candidate from the Restricted Candidate List (RCL).
+
+                Parameters:
+                - RCL_alpha (float): Parameter controlling the size of the restricted candidate list.
+                - node (int): Current node.
+                - load (float): Current load.
+                - distance (float): Current distance.
+                - pending_sup (list): List of pending suppliers.
+                - requirements (dict): Dictionary of supplier requirements.
+                - inst_gen (instance_generator): An instance generator object.
+
+                Returns:
+                int or False: The selected candidate if found, False otherwise.
+
+                Example:
+                ```python
+                target = Routing.RCL_constructive.generate_RCL_candidate(0.35, node, load, distance, pending_sup,
+                                                                        requirements, inst_gen)
+                ```
+                """
                 feasible_candidates:list = list()
                 max_crit:float = -1e9
                 min_crit:float = 1e9
@@ -139,6 +218,24 @@ class Routing():
             # Generate route from RCL
             @staticmethod
             def generate_RCL_route(RCL_alpha,pending_sup,requirements,inst_gen):
+                """
+                Generates a route using the RCL (Restricted Candidate List) based constructive heuristic.
+
+                Parameters:
+                - RCL_alpha (float): Parameter controlling the size of the restricted candidate list.
+                - pending_sup (list): List of pending suppliers.
+                - requirements (dict): Dictionary of supplier requirements.
+                - inst_gen (instance_generator): An instance generator object.
+
+                Returns:
+                tuple: A tuple containing the generated route, total distance, total load, and updated list of pending suppliers.
+
+                Example:
+                ```python
+                route, distance, load, pending_sup = Routing.RCL_constructive.generate_RCL_route(0.35, pending_sup,
+                                                                                                requirements, inst_gen)
+                ```
+                """
                 node:int = 0
                 load:int = 0
                 route:list = [node]
@@ -163,25 +260,26 @@ class Routing():
 
         ''' Genetic Algorithm '''
         @staticmethod
-        def HybridGenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,
-                                  rd_seed:int=0,time_limit:float=30,verbose:bool=False):
+        def GenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,
+                                  rd_seed:int=0,time_limit:float=30,verbose:bool=False):            
             start = process_time()
             seed(rd_seed)
-            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+            pending_sup,requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             # Parameters
             Population_size:int = 1000
             Population_iter:range = range(Population_size)
-            training_time:float = 0.3*time_limit
+            training_time:float = 10
             Elite_size:int = int(Population_size*0.25)
 
-            crossover_rate:float = 0.5
-            mutation_rate:float = 0.5
+            mutation_rate:float = 1
+            crossover_rate:float = 1 - mutation_rate
+            
 
             if verbose: print('Generating population')
             Population,FOs,Distances,Loads,incumbent,best_individual,alpha_performance = \
-                            Routing.GA.generate_population(inst_gen,start,requirements,verbose, 
-                                                                            Population_iter,training_time)
+                            Routing.GA.generate_population(inst_gen,start,requirements,Population_iter,
+                                                           training_time,verbose=False)
             
             # Print progress
             if verbose: 
@@ -191,53 +289,63 @@ class Routing():
                 print(f'{round(best_individual[3],2)} \t{round(incumbent,2)} \t{len(best_individual[0])} \t-1')
 
             # Genetic process
-            # generation = 0
-            # while time()-start < time_limit:
-            #     print(f'generation {generation}')
-            #     ### Elitism
-            #     Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
+            generation = 0
+            while process_time()-start <= time_limit:
+                # print(f'generation {generation}')
+                ### Elitism
+                Elite = Routing.GA.elite_class(FOs, Population_iter, Elite_size)
 
-            #     ### Selection: From a population, which parents are able to reproduce
-            #     # Intermediate population: Sample of the initial population 
-            #     inter_population = Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
-            #     inter_population = Elite + list(inter_population)
+                ### Selection: From a population, which parents are able to reproduce
+                # Intermediate population: Sample of the initial population 
+                inter_population = Routing.GA.intermediate_population(FOs, Population_size, Population_iter, Elite_size)            
+                inter_population = Elite + list(inter_population)
 
-            #     ### Tournament: Select two individuals and leave the best to reproduce
-            #     Parents = Routing.GA.tournament(inter_population, FOs, Population_iter)
+                ### Tournament: Select two individuals and leave the best to reproduce
+                Parents = Routing.GA.tournament(inter_population, FOs, Population_iter)
 
-            #     ### Evolution
-            #     New_Population:list = list();   New_FOs:list = list(); 
-            #     New_Distances:list = list();   New_Loads:list = list()
+                ### Evolution
+                New_Population:list = list();   New_FOs:list = list(); 
+                New_Distances:list = list();   New_Loads:list = list()
 
-            #     for i in Population_iter:
-            #         individual_i = Parents[i][randint(0,2)]
-            #         mutated = False
+                for i in Population_iter:
+                    individual_i = Parents[i][randint(0,2)]
+                    mutated = False
 
-            #         ###################
-            #         # TODO: Operators
-            #         ###################
+                    ###################
+                    # TODO: Operators
+                    ###################
+                    if random() <= mutation_rate:
+                        if random() <= 1:
+                            new_individual,new_distances = Routing.GA.mutation(Population[individual_i],
+                                                                               Distances[individual_i],inst_gen)
+                            new_FO = sum(new_distances) 
+                            new_loads = Loads[individual_i]
+                            mutated = True
+                            
+                        else:
+                            pass
+                    
+                    # No operator is performed
+                    if not mutated: 
+                        new_individual = Population[individual_i];new_FO = FOs[individual_i] 
+                        new_distances = Distances[individual_i];new_loads = Loads[individual_i]
 
-            #         # No operator is performed
-            #         if not mutated: 
-            #             new_individual = Population[individual_i];new_FO = FOs[individual_i] 
-            #             new_distances = Distances[individual_i];new_loads = Loads[individual_i]
+                    # Store new individual
+                    New_Population.append(new_individual);New_FOs.append(new_FO); 
+                    New_Distances.append(new_distances);New_Loads.append(new_loads)
 
-            #         # Store new individual
-            #         New_Population.append(new_individual);New_FOs.append(new_FO); 
-            #         New_Distances.append(new_distances);New_Loads.append(new_loads)
+                    # Updating incumbent
+                    if sum(new_distances) < incumbent:
+                        incumbent = sum(new_distances)
+                        best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time()-start]
+                        print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
 
-            #         # Updating incumbent
-            #         if sum(new_distances) < incumbent:
-            #             incumbent = sum(new_distances)
-            #             best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time()-start]
-            #             print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
-
-            #     # Update population
-            #     Population = New_Population
-            #     FOs = New_FOs
-            #     Distances = New_Distances
-            #     Loads = New_Loads
-            #     generation += 1
+                # Update population
+                Population = New_Population
+                FOs = New_FOs
+                Distances = New_Distances
+                Loads = New_Loads
+                generation += 1
             
             if verbose:
                 print('\n')
@@ -263,8 +371,8 @@ class Routing():
         class GA():
             ''' Generate initial population '''
             @staticmethod
-            def generate_population(inst_gen:instance_generator,start:float,requirements:dict,verbose:bool,Population_iter:range,
-                                    training_time: float):
+            def generate_population(inst_gen:instance_generator,start:float,requirements:dict,Population_iter:range,
+                                    training_time:float,verbose:bool):
                 # Initalizing data storage
                 Population = list()
                 FOs = list()
@@ -361,6 +469,101 @@ class Routing():
                     Parents.append(parents)
 
                 return Parents
+
+
+            @staticmethod
+            def mutation(individual:list,distances:float,inst_gen:instance_generator)->list:
+                pos = randint(0,len(individual))
+                if random() <= 0.5:
+                    individual[pos],distances[pos] = Routing.GA.swap_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
+                else:
+                    individual[pos],distances[pos] = Routing.GA.two_opt_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
+                return individual,distances
+
+
+            @staticmethod
+            def swap_mutation(route:list,current_obj:float,c:dict,**kwargs)->tuple:
+                """
+                Performs a SWAP mutation on a route. Two positions are randomly selected
+                and their values are swapped. Returns the mutated route and its new distance.
+
+                Parameters:
+                route (list): The route to mutate.
+                distance_matrix (dict): Distance matrix with distances between nodes.
+
+                Returns:
+                tuple: The mutated route and its new distance.
+                """
+                size = len(route)
+                idx1, idx2 = sorted(np.random.choice(range(1,size-1), 2, replace=False))
+                
+                # Swap the nodes
+                route[idx1], route[idx2] = route[idx2], route[idx1]
+
+                # Recompute the affected distances
+                delta_distance = 0
+                if idx1 > 0:
+                    delta_distance += (c[route[idx1 - 1],route[idx1]] 
+                                    - c[route[idx1 - 1],route[idx2]])
+                if idx1 < size - 1:
+                    delta_distance += (c[route[idx1],route[idx1 + 1]]
+                                    - c[route[idx2],route[idx1 + 1]])
+                if idx2 < size - 1:
+                    delta_distance += (c[route[idx2],route[idx2 + 1]] 
+                                    - c[route[idx1],route[idx2 + 1]])
+                if idx2 > 0 and idx2 - 1 != idx1:
+                    delta_distance += (c[route[idx2 - 1],route[idx2]] 
+                                    - c[route[idx2 - 1],route[idx1]])
+
+                new_distance = current_obj+delta_distance
+
+                # Evaluate route's feasibility
+                if new_distance > kwargs['d_max']:
+                    return route,current_obj
+                
+                return route,new_distance
+        
+
+            @staticmethod
+            def two_opt_mutation(route, current_obj, c, **kwargs):
+                """
+                Applies a 2-opt mutation on a route's segment. The segment is reversed, which might lead to a shorter path.
+                Returns the mutated route and its new distance. Ensures the route starts and ends with the depot (0).
+
+                Parameters:
+                route (list): The route to mutate.
+                c (dict): Distance matrix with distances between nodes.
+                current_obj (float): The current total distance of the route.
+
+                Returns:
+                tuple: The mutated route and its new distance.
+                """
+                size = len(route)
+                
+                # Ensure that the depot is not included in the reversed segment
+                idx1, idx2 = sorted(np.random.choice(range(1, size - 1), 2, replace=False))
+
+                # Reverse the segment
+                new_route = route[:idx1] + route[idx1:idx2][::-1] + route[idx2:]
+
+                # Recompute the affected distances
+                delta_distance = 0
+                if idx1 > 0:
+                    delta_distance += (c[new_route[idx1 - 1], new_route[idx1]] 
+                                    - c[route[idx1 - 1], route[idx1]])
+                if idx2 < size - 1:
+                    delta_distance += (c[new_route[idx2 - 1], new_route[idx2]] 
+                                    - c[route[idx2 - 1], route[idx2]])
+
+                new_distance = current_obj + delta_distance
+                
+                # Evaluate route's feasibility
+                if 'd_max' in kwargs and new_distance > kwargs['d_max']:
+                    return route, current_obj
+
+                return new_route, new_distance
+
+
 
 
         ''' Hybrid Genetic Search (CVRP) '''
@@ -940,6 +1143,9 @@ class Routing():
                 return list(purchase.keys()), purchase
 
 
+
+
+
         class RouteMemoryAgent():
 
             def __init__(self,sol_num:int=100)->None:
@@ -980,3 +1186,8 @@ class Routing():
 
             def route(self):
                 pass
+
+            def random_policy(purchase:dict,inst_gen:instance_generator,t:int):
+                routing_policy = choice([Routing.NearestNeighbor,Routing.RCL_Heuristic,Routing.GenticAlgorithm],size=1)
+
+                return routing_policy(purchase,inst_gen,t)

@@ -94,7 +94,7 @@ class Inventory():
                         
             for t in T:
                 for i in M:
-                    m.addConstr(gu.quicksum( z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i}{t}{s}')
+                    m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i}{t}{s}')
         
             '''' NON-ANTICIPATIVITY CONSTRAINTS '''
             for k in K:
@@ -103,8 +103,8 @@ class Inventory():
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
             
             ###### TRY IF ERROR
-            for i in M:
-                m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
+            # for i in M:
+            #     m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
 
         ''' Backorders control restriction '''        
         m.addConstr(gu.quicksum(bo[k,t,s] for t in T for k in K for s in S) <= theta*sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S) + gu.quicksum(boo[k,t,s] for t in T for k in K for s in S))
