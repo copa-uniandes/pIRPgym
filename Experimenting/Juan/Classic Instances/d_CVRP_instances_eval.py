@@ -78,8 +78,8 @@ show_gap = True
 time_limit = 30
 
 for inst_set,inst_list in instances.items():
+    # if inst_set=='Li':continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
-
     for instance in inst_list:
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
@@ -88,32 +88,42 @@ for inst_set,inst_list in instances.items():
 
         ''' Nearest Neighbor'''
         if 'NN' in policies[inst_set]:
+            if 'NN'== policies[inst_set][-1]:end=True
+            else:end=False
             nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-            save_pickle(inst_set,'NN',instance,[nn_routes,nn_obj,nn_info,nn_time])                                     # Nearest Neighbor
-            if verbose: string = verb.routing_instances.print_routing_update(string,
-                                                                        nn_obj,len(nn_routes),nn_time,show_gap,benchmark)
+            save_pickle(inst_set,'NN',instance,[nn_routes,nn_obj,nn_info,nn_time])          # Nearest Neighbor
+            if verbose: string = verb.routing_instances.print_routing_update(string,nn_obj,len(nn_routes),
+                                                                             nn_time,show_gap,benchmark,
+                                                                             end=end)
 
         ''' RCL Heuristic'''
         if 'RCL' in policies[inst_set]:
-            RCL_obj,RCL_veh,RCL_time = pIRPgym.Routing.evaluate_stochastic_policy(pIRPgym.Routing.RCL_Heuristic,
-                                                                                purchase,inst_gen,env,n=30,averages=True,dynamic_p=False)
-            save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time])                                     # Nearest Neighbor
-            if verbose: string = verb.routing_instances.print_routing_update(string,
-                                                                    RCL_obj,RCL_veh,RCL_time,show_gap,benchmark)
+            if 'RCL'== policies[inst_set][-1]:end=True
+            else:end=False
+            RCL_obj,RCL_veh,RCL_time,RCL_std,RCL_min,RCL_max = pIRPgym.Routing.\
+                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
+                                                                                        purchase,inst_gen,env,n=30,
+                                                                                        averages=True,dynamic_p=False)
+            save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,RCL_std,RCL_min,RCL_max])                 
+            if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
+                                                                             show_gap,benchmark,end=end)
 
         ''' Genetic Algorithm '''
         if 'GA' in policies[inst_set]:
-            GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,
-                                                                                    inst_gen,env.t,return_top=False,rd_seed=0,time_limit=30)    # Genetic Algorithm
-            save_pickle(inst_set,'GA',instance,[GA_routes,GA_obj,GA_info,GA_time])                                     # Nearest Neighbor
-            if verbose: string = verb.routing_instances.print_routing_update(string,
-                                                                        GA_obj,len(GA_routes),GA_time,show_gap,benchmark)
+            if 'GA'== policies[inst_set][-1]:end=True
+            else:end=False
+            GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,
+                                                                                       return_top=False,
+                                                                                       rd_seed=0,time_limit=30)   
+            save_pickle(inst_set,'GA',instance,[GA_routes,GA_obj,GA_info,GA_time])
+            if verbose: string = verb.routing_instances.print_routing_update(string,GA_obj,len(GA_routes),GA_time,
+                                                                             show_gap,benchmark,end=end)
 
         ''' Hybrid Genetic Search'''
         if 'HGS' in policies[inst_set]:
-            HGS_routes,HGS_obj,HGS_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=30)                                  # Hybrid Genetic Search (CVRP)
-            save_pickle(inst_set,'HGS',instance,[GA_routes,GA_obj,GA_info,GA_time]) 
-            if verbose: string = verb.routing_instances.print_routing_update(string,
-                                                                            HGS_obj,len(HGS_routes),HGS_time,show_gap,benchmark,end=True)  
+            HGS_routes,HGS_obj,HGS_time  = pIRPgym.Routing.HyGeSe.HyGeSe_routing(purchase,inst_gen,env.t,time_limit=30)
+            save_pickle(inst_set,'HGS',instance,[HGS_routes,HGS_obj,HGS_time]) 
+            if verbose: string = verb.routing_instances.print_routing_update(string,HGS_obj,len(HGS_routes),HGS_time,
+                                                                             show_gap,benchmark,end=True)  
     
     print('\n')
