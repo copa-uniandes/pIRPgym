@@ -1188,38 +1188,6 @@ class Routing():
                 return list(purchase.keys()), purchase
 
 
-
-        class RoutingAgent():
-
-            def __init__(self):
-                pass
-
-            def train(self,n_episodes):
-                pass
-
-            def policy_routing(self,policy,purchase,inst_gen,t,**kwargs):
-                price_routes = False
-                if 'price_routes' in kwargs.keys(): price_routes = kwargs['price_routes']
-
-                time_limit = 30
-                if 'time_limit' in kwargs.keys(): time_limit = kwargs['time_limit']
-
-                if policy == 'NN':
-                    return Routing.NearestNeighbor(purchase,inst_gen,t,price_routes=price_routes)
-                elif policy == 'RCL':
-                    return Routing.RCL_Heuristic(purchase,inst_gen,t,time_limit=time_limit,price_routes=price_routes)
-                elif policy == 'GA':
-                    return Routing.GenticAlgorithm(purchase,inst_gen,t,time_limit=time_limit)
-                elif policy == 'HGS':
-                    return Routing.HyGeSe(purchase,inst_gen,t,time_limit=time_limit)
-
-
-            def random_policy(purchase:dict,inst_gen:instance_generator,t:int):
-                routing_policy = choice([Routing.NearestNeighbor,Routing.RCL_Heuristic,Routing.GenticAlgorithm],size=1)
-
-                return routing_policy(purchase,inst_gen,t)
-
-
         class RouteMemoryAgent():
 
             def __init__(self,sol_num:int=100)->None:
@@ -1249,4 +1217,37 @@ class Routing():
                     return False
                 
 
+class RoutingAgent(Routing):
+
+    def __init__(self):
+        self.policies = ['NN','RCL','GA','HGS','CG','MIP']
+
+
+    def train(self):
+        pass
+
+
+    def policy_routing(self,policy,purchase,inst_gen,t,**kwargs)->tuple:
+        price_routes = False
+        if 'price_routes' in kwargs.keys(): price_routes = kwargs['price_routes']
+
+        time_limit = 30
+        if 'time_limit' in kwargs.keys(): time_limit = kwargs['time_limit']
+
+        if policy == 'NN':
+            return self.NearestNeighbor(purchase,inst_gen,t,price_routes=price_routes,**kwargs)
+        elif policy == 'RCL':
+            return self.RCL_Heuristic(purchase,inst_gen,t,time_limit=time_limit,price_routes=price_routes,**kwargs)
+        elif policy == 'GA':
+            return self.GenticAlgorithm(purchase,inst_gen,t,time_limit=time_limit,**kwargs)
+        elif policy == 'HGS':
+            return self.HyGeSe(purchase,inst_gen,t,time_limit=time_limit,**kwargs)
+
+
+    def random_policy(self,purchase:dict,inst_gen:instance_generator,t:int,**kwargs)->tuple:
+        policy = choice(self.policies)
+
+        return self.policy_routing(policy,purchase,inst_gen,t,**kwargs)
+
+        return routing_policy(purchase,inst_gen,t)
 

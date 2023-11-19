@@ -103,12 +103,12 @@ for inst_set,inst_list in instances.items():
         if 'RCL' in policies[inst_set]:
             if 'RCL'== policies[inst_set][-1]:end=True
             else:end=False
-            RCL_obj,RCL_veh,RCL_time,RCL_std,RCL_min,RCL_max = pIRPgym.Routing.\
+            RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
                                                                                         purchase,inst_gen,env,n=30,
                                                                                         averages=True,dynamic_p=False,
                                                                                         RCL_alphas=RCL_alphas)
-            save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,RCL_std,RCL_min,RCL_max])                 
+            save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max)])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
                                                                              show_gap,benchmark,end=end)
 
