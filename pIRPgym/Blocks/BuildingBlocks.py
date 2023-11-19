@@ -84,9 +84,6 @@ class Inventory_management():
             ## State ##
 
             state = {(k,o):inst_gen.i00[k,o]  for k in inst_gen.Products for o in range(1, inst_gen.O_k[k] + 1)}
-            if inst_gen.other_params['backorders'] == 'backlogs':
-                for k in inst_gen.Products:
-                    state[k,'B'] = 0
             
             return state
     
@@ -139,8 +136,9 @@ class Inventory_management():
 
 
         @staticmethod
-        def update_inventory(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
-            inventory = deepcopy(env.state)
+        def update_inventory(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = {}):
+
+            inventory = dict()
             back_orders = {}
             perished = {}
 
@@ -161,8 +159,7 @@ class Inventory_management():
                     inventory[k,'B'] = round(env.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),2)
                 
                 if env.state[k, max_age] - demand_compliance[k,max_age] > 0:
-                        perished[k] = env.state[k, max_age] - demand_compliance[k,max_age]
-        
+                    perished[k] = env.state[k, max_age] - demand_compliance[k,max_age]
 
                 # Factibility checks         
                 if warnings:
@@ -178,7 +175,7 @@ class Inventory_management():
 
 
         @staticmethod
-        def update_inventory_age(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
+        def update_inventory_age(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = {}):
             inventory = deepcopy(env.state)
             back_orders = {}
             perished = {}
@@ -200,7 +197,7 @@ class Inventory_management():
                             back_orders[k,o] = 0
 
                 if inst_gen.other_params['backorders'] == 'backlogs':
-                    new_backlogs = round(max(inst_gen.W_d[k,o] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),0),2)
+                    new_backlogs = round(max(sum(inst_gen.W_d[k,o]-demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),0),2)
                     inventory[k,'B'] = round(env.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),2)
                 
                 if env.state[k, max_age] - demand_compliance[k,max_age] > 0:
@@ -253,3 +250,27 @@ class Inventory_management():
                 backorders_cost = sum(s_tprime[k,'B'] for k in inst_gen.Products) * inst_gen.back_l_cost
 
             return purchase_cost, holding_cost, backorders_cost
+
+
+class Environmental_Assessment():
+
+    @staticmethod
+    def compute_environmental_impact(inst_gen,purchase,routing,inventory):
+        
+        impact = dict(); K = inst_gen.Products[:7]
+        for e in inst_gen.E:
+            impact[e] = dict()
+            for k in K:
+
+                transport = 0
+                for r in routing:
+                    for i in range(1,len(r)-1):
+                        if purchase[r[i],k] > 0:
+                            transport += sum(inst_gen.c_LCA[e][k][r[j],r[j+1]] for j in range(i,len(r)-2))*purchase[r[i],k]
+                
+                storage = sum(inst_gen.h_LCA[e][k]*inventory[k,o] for o in range(1, inst_gen.O_k[k] + 1))
+                
+                impact[e][k] = transport + storage
+
+        return impact
+

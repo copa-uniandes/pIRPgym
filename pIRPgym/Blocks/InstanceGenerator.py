@@ -16,7 +16,7 @@ from .InstanceGeneration.selling_prices import selling_prices
 from .InstanceGeneration.offer import offer
 from .InstanceGeneration.locations import locations
 from .InstanceGeneration.CundiBoy import CundiBoy
-
+from .InstanceGeneration.environmental_indicators import indicators
 
 class instance_generator():
     ''' Main Instance Generator instance. Generate one of the following instances:
@@ -31,7 +31,7 @@ class instance_generator():
     # Initalization method for an instange_generator object
     def __init__(self,look_ahead=['d'],stochastic_params:Union[list[str],bool]=False,
                  historical_data:Union[list[str],bool]=['*'],backorders = 'backorders', 
-                 demand_type = "aggregated", **kwargs):
+                 demand_type = "aggregated",sustainability=False, **kwargs):
         '''
         Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance
         INITIALIZATION
@@ -89,13 +89,12 @@ class instance_generator():
         self.F = 15                                     # Fleet
         self.Q = 40                                     # Vehicles capacity
         self.d_max = 500                                # Max distance per route
-                
+        self.E = ["climate","water","land","fossil"]
 
         ### Look-ahead parameters ###
         if look_ahead:    
             self.S = 4              # Number of sample paths
             self.LA_horizon = 5     # Look-ahead time window's size (includes current period)
-            
         
         ### historical log parameters ###
         if historical_data:        
@@ -110,6 +109,7 @@ class instance_generator():
         ### Extra information ###
         self.other_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders, "demand_type" : demand_type}
         self.s_params = stochastic_params
+        self.sustainability = sustainability
 
         ### Custom configurations ###
         assign_env_config(self,kwargs)
@@ -156,13 +156,15 @@ class instance_generator():
         self.salv_price = selling_prices.gen_salvage_price(self)
         self.opt_price = selling_prices.gen_optimal_price(self)
 
-        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        if "discount" in kwargs:
+            self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        if self.sustainability: self.c_LCA, self.h_LCA = indicators.get_environmental_indicators(self)
 
     
     # Generates a basic, completely random instance with a given random seed
@@ -198,13 +200,15 @@ class instance_generator():
         self.salv_price = selling_prices.gen_salvage_price(self)
         self.opt_price = selling_prices.gen_optimal_price(self)
 
-        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        if "discount" in kwargs:
+            self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        if self.sustainability: self.c_LCA, self.h_LCA = indicators.get_environmental_indicators(self)
 
 
     # Generates a (dummy) instance of CundiBoy
@@ -258,6 +262,7 @@ class instance_generator():
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V,self.d_rd_seed)
+        if self.sustainability: self.c_LCA, self.h_LCA = indicators.get_environmental_indicators(self)
 
 
     # Generates an CVRPTW instance of the literature
@@ -280,7 +285,7 @@ class instance_generator():
     # Auxiliary method: Generate iterables of sets
     def gen_sets(self):
         self.Suppliers:list = list(range(1,self.M + 1));  self.V = [0]+self.Suppliers
-        self.Products:list = list(range(self.K))
+        self.Products:list = list(range(1,self.K+1))
         self.Vehicles: range = range(self.F)
         self.Horizon: range = range(self.T)
 

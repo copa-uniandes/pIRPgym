@@ -13,8 +13,7 @@ import numpy as np
 
 #%%
 
-def Policy_evaluation(inst_gen):  
-    
+def Policy_evaluation(inst_gen): 
 
     # Episode's and performance storage
     rewards = {};   states = {};   real_actions = {};   backorders = {};   la_decisions = {}
