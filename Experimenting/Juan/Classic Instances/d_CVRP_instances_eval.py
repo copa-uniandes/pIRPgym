@@ -3,6 +3,7 @@ import sys
 from time import process_time
 import os
 import pickle
+from numpy.random import seed
 
 sys.path.append('../.')
 import verbose_module as verb
@@ -80,12 +81,13 @@ time_limit = 30
 for inst_set,inst_list in instances.items():
     # if inst_set=='Li':continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
+    RCL_alphas = [0.01,0.05,0.1]
+    if inst_set == 'Uchoa':
+        RCL_alphas = [0.1,0.2,0.4,0.6]
     for instance in inst_list:
-        RCL_alphas = [0.01,0.05,0.1]
-        if inst_set == 'Uchoa':
-            RCL_alphas = [0.1,0.2,0.4,0.6]
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
+        seed(inst_gen.M*2)
 
         if verbose: string = verb.routing_instances.print_inst(inst_set,instance,inst_gen.M,benchmark[1],benchmark[0])
 
