@@ -81,6 +81,9 @@ for inst_set,inst_list in instances.items():
     # if inst_set=='Li':continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
     for instance in inst_list:
+        RCL_alphas = [0.01,0.05,0.01]
+        if inst_set == 'Uchoa':
+            RCL_alphas = [0.1,0.2,0.4,0.6]
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
 
@@ -103,7 +106,8 @@ for inst_set,inst_list in instances.items():
             RCL_obj,RCL_veh,RCL_time,RCL_std,RCL_min,RCL_max = pIRPgym.Routing.\
                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
                                                                                         purchase,inst_gen,env,n=30,
-                                                                                        averages=True,dynamic_p=False)
+                                                                                        averages=True,dynamic_p=False,
+                                                                                        RCL_alpha=RCL_alphas)
             save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,RCL_std,RCL_min,RCL_max])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
                                                                              show_gap,benchmark,end=end)

@@ -1114,7 +1114,7 @@ class Routing():
             if router == Routing.RCL_Heuristic:
                 for i in range(n):
                     seed = i * 2
-                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alpha=0.05,rd_seed=seed,time_limit=7)
+                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alpha=kwargs['RCL_alpha'],rd_seed=seed,time_limit=7)
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
