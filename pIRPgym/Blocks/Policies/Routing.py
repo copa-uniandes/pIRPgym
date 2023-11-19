@@ -116,7 +116,7 @@ class Routing():
             
         
         @staticmethod
-        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alpha=0.25,rd_seed=None,
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alphas:list=[0.25],rd_seed=None,
                           price_routes:bool=False,time_limit:float=15):
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
@@ -126,22 +126,21 @@ class Routing():
             best_info = ()
             best_time = float
 
-            if type(RCL_alpha)==list:
-                alpha_performance:dict = {alpha:0 for alpha in RCL_alpha}
-                while process_time()-start<0.3*time_limit:
-                    alpha_performance = Routing.GA.calibrate_alpha(RCL_alpha,alpha_performance,requirements,inst_gen)
+            alpha_performance:dict = {alpha:0 for alpha in RCL_alphas}
+            while process_time()-start<0.3*time_limit:
+                alpha_performance = Routing.GA.calibrate_alpha(RCL_alphas,alpha_performance,requirements,inst_gen)
             
 
             while process_time()-start < time_limit:
                 # Choosing alpha
-                alpha = choice(RCL_alpha,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alpha])    
+                RCL_alpha = choice(RCL_alphas,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alphas])    
 
                 if not price_routes:
                     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
-                                                                                        alpha,rd_seed,price_routes)
+                                                                                        RCL_alpha,rd_seed,price_routes)
                 else:
                     routes,FO,(distances,loads),_,reduced_costs = Routing.RCL_Solution(purchase,inst_gen,t,
-                                                                                                alpha,rd_seed,price_routes)
+                                                                                                RCL_alpha,rd_seed,price_routes)
 
                 if FO < best_obj:
                     best_sol = routes
@@ -467,7 +466,7 @@ class Routing():
                 requirements2 = deepcopy(requirements)
                 tr_distance:float = 0
                 RCL_alpha:float = choice(RCL_alpha_list)
-                routes, FO, (distances, loads), _ = Routing.RCL_Heuristic(requirements2,inst_gen,0,RCL_alpha)
+                routes, FO, (distances, loads), _ = Routing.RCL_Solution(requirements2,inst_gen,0,RCL_alpha)
                 tr_distance += FO
                 alpha_performance[RCL_alpha] += 1/tr_distance
 
@@ -1104,7 +1103,7 @@ class Routing():
 
 
         @staticmethod
-        def evaluate_stochastic_policy(router,purchase,inst_gen: instance_generator,env, n=30,averages=True,dynamic_p=False,**kwargs) -> tuple:
+        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,dynamic_p=False,**kwargs) -> tuple:
             times = list()
             vehicles = list()
             objectives = list()
@@ -1114,7 +1113,7 @@ class Routing():
             if router == Routing.RCL_Heuristic:
                 for i in range(n):
                     seed = i * 2
-                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alpha=kwargs['RCL_alpha'],rd_seed=seed,time_limit=7)
+                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],rd_seed=seed,time_limit=15)
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)

@@ -1,4 +1,4 @@
-######################################     Modules     #######################################
+#%%#####################################     Modules     #######################################
 import sys
 from time import process_time
 import os
@@ -81,7 +81,7 @@ for inst_set,inst_list in instances.items():
     # if inst_set=='Li':continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
     for instance in inst_list:
-        RCL_alphas = [0.01,0.05,0.01]
+        RCL_alphas = [0.01,0.05,0.1]
         if inst_set == 'Uchoa':
             RCL_alphas = [0.1,0.2,0.4,0.6]
         # Upload dCVRP instance
@@ -107,7 +107,7 @@ for inst_set,inst_list in instances.items():
                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
                                                                                         purchase,inst_gen,env,n=30,
                                                                                         averages=True,dynamic_p=False,
-                                                                                        RCL_alpha=RCL_alphas)
+                                                                                        RCL_alphas=RCL_alphas)
             save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,RCL_std,RCL_min,RCL_max])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
                                                                              show_gap,benchmark,end=end)
@@ -131,3 +131,5 @@ for inst_set,inst_list in instances.items():
                                                                              show_gap,benchmark,end=True)  
     
     print('\n')
+
+# %%
