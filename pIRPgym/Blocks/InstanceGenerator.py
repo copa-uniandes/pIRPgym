@@ -196,7 +196,7 @@ class instance_generator():
 
         # Selling prices
         self.salv_price = selling_prices.gen_salvage_price(self)
-        self.opt_price = selling_prices.gen_optximal_price(self)
+        self.opt_price = selling_prices.gen_optimal_price(self)
 
         self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         

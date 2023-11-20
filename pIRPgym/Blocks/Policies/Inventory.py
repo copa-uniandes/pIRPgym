@@ -8,7 +8,7 @@ from ..pIRPenv import steroid_IRP
 
 class Inventory():
     @staticmethod
-    def det_FIFO(state:dict,purchase:dict,inst_gen:instance_generator,env: steroid_IRP) -> dict[float]:
+    def det_FIFO(purchase:dict,inst_gen:instance_generator,env:steroid_IRP)->dict[float]:
         demand_compliance = {}
         for k in inst_gen.Products:
             left_to_comply = inst_gen.W_d[env.t][k]
