@@ -32,6 +32,7 @@ sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6]
 
+init_times = {1:0.5,2:1,3:2,4:2,5:5,6:10}
 
 
 
@@ -136,7 +137,7 @@ for experiment in experiments:
                 if alpha == alphas[-1]:
                     end = True
                 CGinit_routes,CGinit_obj,CGinit_info,CGinit_time,CGinit_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=False,
-                                                                                                                verbose=False,heuristic_initialization=True,
+                                                                                                                verbose=False,heuristic_initialization=init_times[experiment],
                                                                                                                    return_num_cols=True,RCL_alpha=alpha)
                 results_information[f'CG_{alpha}'].append((CGinit_routes,CGinit_obj,CGinit_info,CGinit_time,CGinit_cols))
                 

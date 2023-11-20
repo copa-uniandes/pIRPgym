@@ -758,7 +758,7 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization:bool=False,time_limit=False,verbose:bool=False,return_num_cols:bool=False,RCL_alpha:float=0.35)->tuple:
+        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization=False,time_limit=False,verbose:bool=False,return_num_cols:bool=False,RCL_alpha:float=0.35)->tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -874,7 +874,7 @@ class Routing():
                 def __init__(self):
                     pass
 
-                def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,t:int,heuristic_initialization:bool,name:str='MasterProblem',**kwargs):
+                def buidModel(self,inst_gen:instance_generator,N:list,distances:dict,t:int,heuristic_initialization,name:str='MasterProblem',**kwargs):
                     modelMP = gu.Model(name)
 
                     modelMP.Params.OutputFlag = 0
@@ -884,8 +884,9 @@ class Routing():
                     modelMP,theta,objectives = self.generateVariables(inst_gen,modelMP,N,distances,t)
                     modelMP,RouteLimitCtr,NodeCtr = self.generateConstraints(inst_gen, modelMP, N, theta)
 
-                    if heuristic_initialization:
-                        modelMP,theta,objectives,cols,loadss = self.heuristic_initialization(modelMP,N,kwargs['requirements'],inst_gen,t,theta,objectives,kwargs['RCL_alpha'])
+                    if heuristic_initialization != False:
+                        modelMP,theta,objectives,cols,loadss = self.heuristic_initialization(modelMP,N,kwargs['requirements'],inst_gen,t,
+                                                                                             theta,objectives,kwargs['RCL_alpha'],init_time=heuristic_initialization)
                     modelMP = self.generateObjective(modelMP)
                     modelMP.update()
 
@@ -927,7 +928,7 @@ class Routing():
                     return modelMP 
 
 
-                def heuristic_initialization(self,modelMP:gu.Model,N,requirements:dict,inst_gen:instance_generator,t,theta:list,objectives:list,RCL_alpha:float):
+                def heuristic_initialization(self,modelMP:gu.Model,N,requirements:dict,inst_gen:instance_generator,t,theta:list,objectives:list,RCL_alpha:float,init_time:float=5):
                     cols = list()
                     loadss = list()
                     HI_start = process_time()
