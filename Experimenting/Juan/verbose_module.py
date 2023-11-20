@@ -250,11 +250,11 @@ class CG_initialization():
     def print_update(string,t,cols,veh,obj,end=False):
         if type(cols) == int:
             if t < 100:
-                string += f' {t:.2f}\t  {cols} \t   {veh} \t{round(obj,1)} \t|'
+                string += f' {t:.2f}\t  {cols}\t {veh}\t{round(obj,1)}\t|'
             elif t < 1000:
-                string += f' {t:.1f}\t  {cols} \t   {veh} \t{round(obj,1)} \t|'
+                string += f' {t:.1f}\t  {cols}\t {veh}\t{round(obj,1)}\t|'
             else:
-                string += f' {t:.0f}\t  {cols} \t   {veh} \t{round(obj,1)} \t|'
+                string += f' {t:.0f}\t  {cols}\t {veh}\t{round(obj,1)}\t|'
             if end:
                 print(string)
                 return string
@@ -263,11 +263,11 @@ class CG_initialization():
                 return string
         else:
             if t < 100:
-                string += f' {t:.2f}\t  {cols[0]}\t  {cols[1]}\t   {veh} \t{round(obj,1)}\t|'
+                string += f' {t:.2f}\t  {cols[0]}\t  {cols[1]}\t {veh}\t{round(obj,1)}\t|'
             elif t < 1000:
-                string += f' {t:.1f}\t  {cols[0]}\t  {cols[1]}\t   {veh} \t{round(obj,1)}\t|'
+                string += f' {t:.1f}\t  {cols[0]}\t  {cols[1]}\t {veh}\t{round(obj,1)}\t|'
             else:
-                string += f' {t:.0f}\t  {cols[0]}\t  {cols[1]}\t   {veh} \t{round(obj,1)}\t|'
+                string += f' {t:.0f}\t  {cols[0]}\t  {cols[1]}\t {veh}\t{round(obj,1)}\t|'
             if end:
                 print(string)
                 return string
