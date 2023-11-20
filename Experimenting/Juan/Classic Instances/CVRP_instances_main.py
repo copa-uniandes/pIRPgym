@@ -100,7 +100,7 @@ for inst_set,inst_list in instances.items():
             if verbose: string = verb.routing_instances.print_routing_update(string,nn_obj,len(nn_routes),
                                                                              nn_time,show_gap,benchmark,
                                                                              end=end)
-            assert nn_obj==pIRPgym.Routing_management.price_route(inst_gen,nn_routes),"Computed distance doesn't match route cost"
+            assert nn_obj==pIRPgym.Routing_management.price_routes(inst_gen,nn_routes),"Computed distance doesn't match route cost"
 
         ''' RCL Heuristic'''
         if 'RCL' in policies[inst_set]:
