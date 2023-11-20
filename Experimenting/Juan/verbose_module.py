@@ -236,13 +236,16 @@ class CG_initialization():
     def print_head(experiment,replica):
         print('*'*89 + f"  Heuristic Init on CG - Exp{experiment}/Replica{replica} "+'*'*88,flush = True)
         print(f'{"-"*8}|\tNN\t|\t  \tCG \t \t|\t  CG w/ Init (alpha = 0.1) \t|\t  CG w/ Init (alpha = 0.2) \t|\t  CG w/ Init (alpha = 0.4) \t|\t  CG w/ Init (alpha = 0.6) \t|')
-        print(f't    M\t| #Veh\t  Obj\t| t(s)\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t|')
+        print(f't   M\t| #Veh\t  Obj\t| t(s)\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t| t(s)\tRCLcols\t cols\t #Veh \t Obj \t|')
         print('-'*216)
 
     @staticmethod
     def print_step(t,purchase,nn_veh,nn_obj,):
         num_suppliers = len(set(key[0] for key in purchase.keys() if purchase[key]>0))
-        string = f'{t}  {num_suppliers}\t| {nn_veh}\t {nn_obj}\t|'
+        if t < 10:
+            string = f'{t}   {num_suppliers}\t| {nn_veh}\t {nn_obj}\t|'
+        else:
+            string = f'{t}  {num_suppliers}\t| {nn_veh}\t {nn_obj}\t|'
         print(string,end='\r')
         return string
     
