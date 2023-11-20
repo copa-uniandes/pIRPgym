@@ -605,8 +605,6 @@ class Routing():
                 return new_route, new_distance
 
 
-
-
         ''' Hybrid Genetic Search (CVRP) '''
         class HyGeSe(): 
             # Generate routes
@@ -1114,6 +1112,7 @@ class Routing():
                 for i in range(n):
                     seed = i * 2
                     RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],rd_seed=seed,time_limit=15)
+                    assert RCL_obj==Routing_management.price_route(inst_gen,RCL_routes),"Computed distance doesn't match route cost"
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)

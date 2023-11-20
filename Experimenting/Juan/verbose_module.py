@@ -160,15 +160,20 @@ class routing_instances():
         else: item = 'Obj' 
         num = len(policies)
 
-        print(f'****{"*"*num*13}  {inst_set} set Instances  {"*"*num*13}***',flush = True)
+        print(f'**************{"*"*num*13}  {inst_set} set Instances  {"*"*num*13}**************',flush = True)
         string1 = f'--------|{"-"*23}|'
         string2 = 'Inst\t|   M \t  Veh\t Obj\t|'
         for strategy in policies:
-            string1 += f'\t  {strategy} \t \t|'
-            string2 += f' t(s)\t #Veh \t {item} \t|'
+            if strategy not in  ['RCL']:
+                string1 += f'\t  {strategy} \t \t|'
+                string2 += f' t(s)\t #Veh \t {item} \t|'
+            else:
+                string1 += f'\t  \t  \t{strategy} \t \t \t|'
+                string2 += f' t(s)\t #Veh \t {item} \t stdev\t min\t max\t|'
+                
         print(string1)
         print(string2)
-        print(f'------------------------{"-"*num*28}')
+        print(f'------------------------------------------------{"-"*num*28}')
 
 
         # print(f'{"-"*8}|\tBKS \t|\t   NN \t \t|\t   RCL \t \t|\t   HGA \t \t|\t  HGS*')# \t \t|\t   CG \t \t')
@@ -187,7 +192,7 @@ class routing_instances():
         return string
     
     @staticmethod
-    def print_routing_update(string,obj,veh,t,show_gap,benchmark,end=False):
+    def print_routing_update(string,obj,veh,t,show_gap,benchmark,intervals=False,end=False):
         if t < 10: tt = round(t,2)
         elif t < 100: tt = round(t,1)
         else: tt = round(t)
@@ -195,17 +200,26 @@ class routing_instances():
         if type(veh) != int:
             veh = round(veh,1)
         if not show_gap:
-            if tt <100: 
-                string += f' {tt:.2f}\t   {veh}\t {round(obj,1)} \t|'
+            if tt <10: 
+                string += f' {tt:.2f}\t   {veh}\t {round(obj,1)}\t|'
             else:
-                string += f' {tt:.1f}\t   {veh}\t {round(obj,1)} \t|'
+                string += f' {tt:.1f}\t   {veh}\t {round(obj,1)}\t|'
         else:
-            gap = round((obj-benchmark[0])/benchmark[0],4) * 100
-            gap = round(gap,2)
-            if tt < 100:
-                string += f' {tt:.2f}\t  {veh}\t {gap}\t|'
+            gap = round((obj-benchmark[0])/benchmark[0],4) * 100; gap = round(gap,2)
+
+            if intervals == False:
+                if tt < 10:
+                    string += f' {tt:.2f}\t  {veh}\t {gap}\t|'
+                else:
+                    string += f' {tt:.1f}\t  {veh}\t {gap}\t|'
             else:
-                string += f' {tt:.1f}\t  {veh}\t {gap}\t|'
+                stdev = round(intervals[0]/benchmark[0],4) * 100; stdev = round(stdev,2)
+                min_gap = round((intervals[1]-benchmark[0])/benchmark[0],4) * 100; min_gap = round(min_gap,2)
+                max_gap = round((intervals[2]-benchmark[0])/benchmark[0],4) * 100; max_gap = round(max_gap,2)
+                if tt < 10:
+                    string += f' {tt:.2f}\t  {veh}\t {gap}\t {stdev}\t  {min_gap}\t {max_gap}\t|'
+                else:
+                    string += f' {tt:.1f}\t  {veh}\t {gap}\t {stdev}\t  {min_gap}\t {max_gap}\t|'
             
         
         

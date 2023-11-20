@@ -26,9 +26,9 @@ policies['Golden'] = policies1[:-1]
 policies['Uchoa'] = policies1
 
 def save_pickle(inst_set,policy,instance,performance):
-    with open(experiments_path+f'{inst_set}/{policy}/{instance[:-4]}.pkl', 'wb') as file:
+    with open(experiments_path+f'{inst_set}/{policy}/{instance[:-4]}.pkl','wb') as file:
         # Use pickle.dump to serialize and save the dictionary to the file
-        pickle.dump(performance, file)
+        pickle.dump(performance,file)
 
 
 ########################     Instance generator and Environment     #########################
@@ -81,9 +81,9 @@ time_limit = 30
 for inst_set,inst_list in instances.items():
     # if inst_set=='Li':continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
-    RCL_alphas = [0.01,0.05,0.1]
+    RCL_alphas = [0.05,0.15,0.25,0.4,0.6]
     if inst_set == 'Uchoa':
-        RCL_alphas = [0.1,0.2,0.4,0.6]
+        RCL_alphas = [0.005,0.01,0.05,0.1]
     for instance in inst_list:
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
@@ -100,6 +100,7 @@ for inst_set,inst_list in instances.items():
             if verbose: string = verb.routing_instances.print_routing_update(string,nn_obj,len(nn_routes),
                                                                              nn_time,show_gap,benchmark,
                                                                              end=end)
+            assert nn_obj==pIRPgym.Routing_management.price_route(inst_gen,nn_routes),"Computed distance doesn't match route cost"
 
         ''' RCL Heuristic'''
         if 'RCL' in policies[inst_set]:
@@ -107,7 +108,7 @@ for inst_set,inst_list in instances.items():
             else:end=False
             RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                        purchase,inst_gen,env,n=30,
+                                                                                        purchase,inst_gen,env,n=10,
                                                                                         averages=True,dynamic_p=False,
                                                                                         RCL_alphas=RCL_alphas)
             save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max)])                 
