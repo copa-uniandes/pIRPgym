@@ -113,7 +113,8 @@ for inst_set,inst_list in instances.items():
                                                                                         RCL_alphas=RCL_alphas)
             save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max)])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
-                                                                             show_gap,benchmark,end=end)
+                                                                             show_gap,benchmark,end=end,
+                                                                             intervals=(RCL_std,RCL_min,RCL_max))
 
         ''' Genetic Algorithm '''
         if 'GA' in policies[inst_set]:
