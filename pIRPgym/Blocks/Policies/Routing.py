@@ -936,7 +936,7 @@ class Routing():
                     card_omega = len(theta)
 
                     new_req = {key:value for key,value in requirements.items() if key not in [0,inst_gen.M+1]}
-                    while process_time()-HI_start < 5:
+                    while process_time()-HI_start < init_time:
                         routes,FO,info,time = Routing.RCL_Solution(new_req,inst_gen,t,RCL_alpha=RCL_alpha)
 
                         for i,route in enumerate(routes):
