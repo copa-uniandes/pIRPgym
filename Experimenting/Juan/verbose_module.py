@@ -242,7 +242,7 @@ class CG_initialization():
     @staticmethod
     def print_step(t,purchase,nn_veh,nn_obj,):
         num_suppliers = len(set(key[0] for key in purchase.keys() if purchase[key]>0))
-        string = f'{t}    {num_suppliers}\t| {nn_veh}\t {nn_obj}\t|'
+        string = f'{t}  {num_suppliers}\t| {nn_veh}\t {nn_obj}\t|'
         print(string,end='\r')
         return string
     
