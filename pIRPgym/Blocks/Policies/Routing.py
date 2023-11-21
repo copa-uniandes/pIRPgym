@@ -1223,11 +1223,11 @@ class Routing():
 
 class RoutingAgent(Routing):
 
-    def __init__(self):
-        self.policies = ['NN','RCL','GA','HGS','CG','MIP']
+    def __init__(self,policies=['NN','RCL','GA','HGS','CG','MIP']):
+        self.policies = policies
 
 
-    def train(self):
+    def tune_policy(self,policy,grid:dict):
         pass
 
 
@@ -1235,7 +1235,7 @@ class RoutingAgent(Routing):
         price_routes = False
         if 'price_routes' in kwargs.keys(): price_routes = kwargs['price_routes']
 
-        time_limit = 30
+        time_limit = 120
         if 'time_limit' in kwargs.keys(): time_limit = kwargs['time_limit']
 
         if policy == 'NN':
@@ -1251,7 +1251,17 @@ class RoutingAgent(Routing):
     def random_policy(self,purchase:dict,inst_gen:instance_generator,t:int,**kwargs)->tuple:
         policy = choice(self.policies)
 
-        return self.policy_routing(policy,purchase,inst_gen,t,**kwargs)
+        return *self.policy_routing(policy,purchase,inst_gen,t,**kwargs),policy
 
-        return routing_policy(purchase,inst_gen,t)
 
+    def get_best_action(self,state,q_table):
+        state_t = tuple(state)
+        dict_act = q_table[state_t]
+        min_value = np.argmin(list(dict_act.values()))
+        min_action = list(dict_act.keys())[min_value]
+        action = list(min_action)
+        return(action)
+    
+
+    def direct_shipping_cost(self,requirements:dict,inst_gen:instance_generator,)->float:
+        return sum(inst_gen.c[0,i]*2 for i in requirements.keys())

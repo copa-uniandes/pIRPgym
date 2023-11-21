@@ -27,7 +27,7 @@ def save_pickle(experiment,replica,policy,performance):
 
 
 
-experiments = [1,2,3,4,5,60]
+experiments = [4,5,60]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6]
@@ -80,7 +80,7 @@ string = str()
 
 time_limit = 30
 
-cont = 100
+cont = 200
 for experiment in experiments:
     env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000
@@ -136,7 +136,7 @@ for experiment in experiments:
                 end = False
                 if alpha == alphas[-1]:
                     end = True
-                CGinit_routes,CGinit_obj,CGinit_info,CGinit_time,CGinit_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=False,
+                CGinit_routes,CGinit_obj,CGinit_info,CGinit_time,CGinit_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=1800,
                                                                                                                 verbose=False,heuristic_initialization=init_times[experiment],
                                                                                                                    return_num_cols=True,RCL_alpha=alpha)
                 results_information[f'CG_{alpha}'].append((CGinit_routes,CGinit_obj,CGinit_info,CGinit_time,CGinit_cols))
@@ -146,7 +146,7 @@ for experiment in experiments:
             ''' Compound action'''        
             action = {'routing':nn_routes,'purchase':purchase,'demand_compliance':demand_compliance}
 
-            state, reward, done, real_action, _,  = env.step(action,inst_gen)
+            state,  reward, done, real_action, _,  = env.step(action,inst_gen)
         
         save_pickle(experiment,replica,'instance_information',instance_information)
         save_pickle(experiment,replica,f'CG',results_information[f'CG'])
