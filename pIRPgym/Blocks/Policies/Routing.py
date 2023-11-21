@@ -55,7 +55,7 @@ class Routing():
                 route:list = [node]
                 distance:float = 0
                 while load < inst_gen.Q:
-                    target = Routing.Nearest_Neighbor.find_nearest_feasible_node(node, load, distance, pending_sup, requirements, inst_gen)
+                    target = Routing.Nearest_Neighbor.find_nearest_feasible_node(node,load,distance,pending_sup,requirements,inst_gen)
                     if target == False:
                         break
                     else:
