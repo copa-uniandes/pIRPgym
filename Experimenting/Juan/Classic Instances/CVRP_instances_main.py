@@ -19,14 +19,14 @@ else:
     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
     experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/Classic Instances/'
 
-policies1 = ['NN','RCL','HGS']
+policies1 = ['RCL']
 policies=dict()
 policies['Li'] = policies1[:-1]
 policies['Golden'] = policies1[:-1]
 policies['Uchoa'] = policies1
 
 def save_pickle(inst_set,policy,instance,performance):
-    with open(experiments_path+f'{inst_set}/{policy}/{instance[:-4]}.pkl','wb') as file:
+    with open(experiments_path+f'{inst_set}/{policy}/Random/{instance[:-4]}.pkl','wb') as file:
         # Use pickle.dump to serialize and save the dictionary to the file
         pickle.dump(performance,file)
 
@@ -64,10 +64,10 @@ env.reset(inst_gen)
 
 
 instances = dict()
-instances['Li'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Li') if i[-3:]=='vrp']
-instances['Golden'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Golden') if i[-3:]=='vrp']
+# instances['Li'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Li') if i[-3:]=='vrp']
+# instances['Golden'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Golden') if i[-3:]=='vrp']
 instances['Uchoa'] = [i for i in os.listdir(path+'pIRPgym/Instances/CVRP Instances/CVRP/Uchoa') if i[-3:]=='vrp']
-instances['Li'].sort();instances['Golden'].sort()
+# instances['Li'].sort();instances['Golden'].sort()
 instances['Uchoa'].sort();instances['Uchoa'] = instances['Uchoa'][1:] + [instances['Uchoa'][0]]
 
 
@@ -110,7 +110,7 @@ for inst_set,inst_list in instances.items():
                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
                                                                                         purchase,inst_gen,env,n=10,
                                                                                         averages=True,dynamic_p=False,
-                                                                                        RCL_alphas=RCL_alphas)
+                                                                                        RCL_alphas=RCL_alphas,adaptative=False)
             save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max)])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
                                                                              show_gap,benchmark,end=end,

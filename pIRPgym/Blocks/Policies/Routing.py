@@ -116,7 +116,7 @@ class Routing():
             
         
         @staticmethod
-        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alphas:list=[0.25],rd_seed=None,
+        def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alphas:list=[0.25],adaptative=True,rd_seed=None,
                           price_routes:bool=False,time_limit:float=15):
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
@@ -126,14 +126,17 @@ class Routing():
             best_info = ()
             best_time = float
 
-            alpha_performance:dict = {alpha:0 for alpha in RCL_alphas}
-            while process_time()-start<0.3*time_limit:
-                alpha_performance = Routing.GA.calibrate_alpha(RCL_alphas,alpha_performance,requirements,inst_gen)
-            
+            if adaptative:
+                alpha_performance:dict = {alpha:0 for alpha in RCL_alphas}
+                while process_time()-start<0.3*time_limit:
+                    alpha_performance = Routing.GA.calibrate_alpha(RCL_alphas,alpha_performance,requirements,inst_gen)    
 
             while process_time()-start < time_limit:
-                # Choosing alpha
-                RCL_alpha = choice(RCL_alphas,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alphas])    
+                if adaptative:
+                    # Choosing alpha
+                    RCL_alpha = choice(RCL_alphas,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alphas])    
+                else: 
+                    RCL_alpha = choice(RCL_alphas,size=1)
 
                 if not price_routes:
                     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
@@ -1112,14 +1115,15 @@ class Routing():
             if router == Routing.RCL_Heuristic:
                 for i in range(n):
                     seed = i * 2
-                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],rd_seed=seed,time_limit=15)
+                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
+                                                                  adaptative=kwargs['adaptative'],rd_seed=seed,time_limit=15)
                     assert RCL_obj==Routing_management.price_routes(inst_gen,RCL_routes),"Computed distance doesn't match route cost"
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
 
                     if dynamic_p:
-                        extra_cost, missing = Routing_management.evaluate_dynamic_potential(inst_gen, env, RCL_routes, purchase,
+                        extra_cost, missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase,
                                                                                             discriminate_missing=False)
                         extra_costs.append(extra_cost)
                         missings.append(missing)
