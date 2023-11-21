@@ -27,7 +27,7 @@ def save_pickle(experiment,replica,policy,performance):
 
 
 
-experiments = [4,5,60]
+experiments = [4,5,6]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6]
