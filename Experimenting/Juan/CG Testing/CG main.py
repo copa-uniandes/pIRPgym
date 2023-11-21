@@ -27,7 +27,7 @@ def save_pickle(experiment,replica,policy,performance):
 
 
 
-experiments = [1,2,3,4,5,60]
+experiments = [3,4,5,60]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6]
@@ -80,7 +80,7 @@ string = str()
 
 time_limit = 30
 
-cont = 0
+cont = 100
 for experiment in experiments:
     env_config = {'T':12,'Q':1500,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000
