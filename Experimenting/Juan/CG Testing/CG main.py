@@ -82,7 +82,7 @@ time_limit = 30
 
 cont = 100
 for experiment in experiments:
-    env_config = {'T':12,'Q':1500,'S':2,'LA_horizon':2,
+    env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000
                  }
     env_config['M'] = sizes[experiment]
