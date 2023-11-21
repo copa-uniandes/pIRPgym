@@ -1246,6 +1246,8 @@ class RoutingAgent(Routing):
             return self.GenticAlgorithm(purchase,inst_gen,t,time_limit=time_limit,**kwargs)
         elif policy == 'HGS':
             return self.HyGeSe(purchase,inst_gen,t,time_limit=time_limit,**kwargs)
+        elif policy == 'CG':
+            return self.ColumnGeneration(purchase,inst_gen,t,RCL_alpha=0.4,heuristic_initialization=5,time_limit=120)
 
 
     def random_policy(self,purchase:dict,inst_gen:instance_generator,t:int,**kwargs)->tuple:

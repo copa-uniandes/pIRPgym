@@ -54,10 +54,10 @@ h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
 disc = ("strong","conc")
 
-env_config = {'T':12,'Q':750,'S':6,'LA_horizon':3,
-                  'd_max':2000,'hist_window':60,'back_o_cost':5000
+env_config = {'T':8,'Q':750,'S':3,'LA_horizon':3,
+                  'd_max':2000,'hist_window':30,'back_o_cost':5000
              }
-env_config['M'] = 30
+env_config['M'] = 20
 env_config['K'] = env_config['M']
 env_config['F'] = env_config['M']
 
@@ -76,6 +76,7 @@ perishability = 'ages'
 env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
 
+
 #%%################################# Policy Evaluation ##################################
 ''' Parameters '''
 verbose = True
@@ -83,7 +84,7 @@ start = process_time()
 show_gap = True
 string = str()
 
-num_episodes = 1000
+num_episodes = 500
 
 routing_agent = pIRPgym.RoutingAgent(policies=['NN','RCL','CG'])
 
@@ -98,14 +99,14 @@ from numpy.random import random
 # Parameter
 learning_rate = 0.1
 discount_factor = 0.9
-epsilon = 0.7
+epsilon = 0.8
 
 start_epsilon_decaying = 1                  # First episode at which decay epsilon
 end_epsilon_decaying = num_episodes - num_episodes // 4    # Last episode at which decay epsilon
 epsilon_decay_value = epsilon / (end_epsilon_decaying - start_epsilon_decaying)     # Amount of decayment of epsilon         
 
 
-
+print('----- Started -----')
 cont = 0
 for episode in range(num_episodes):
     if episode%20==0:
@@ -120,14 +121,14 @@ for episode in range(num_episodes):
     ep_upper_bound = 0
     log = {'baseline':0,'random':0,'Agent':0}
 
-    while done: 
+    while not done: 
         try:
             [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
         except:
             purchase = pIRPgym.Purchasing.avg_purchase_all(inst_gen,env)
             demand_compliance = pIRPgym.Inventory.det_FIFO(purchase,inst_gen,env)
 
-        requirements,_ = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+        _,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
         DirShip_cost = routing_agent.direct_shipping_cost(requirements,inst_gen)
         ep_upper_bound+=DirShip_cost
 
@@ -137,20 +138,20 @@ for episode in range(num_episodes):
 
         # Select policy
         if random() < epsilon:
-            best_router = routing_agent.get_best_action(Q_table)
+            best_router = min(Q_table,key=Q_table.get)
             best_action = routing_agent.policy_routing(best_router,purchase,inst_gen,env.t)
         else:
-            best_policy = random_action
+            best_action = random_action
             best_router = random_action[-1]
         
         # Update
-        ratio = best_policy[1]/DirShip_cost
-        Q_table[best_router] += Q_table[best_router] + 1/N_table[best_router] * (ratio-Q_table[best_router])
+        ratio = best_action[1]/DirShip_cost
+        Q_table[best_router] = Q_table[best_router] + (1/N_table[best_router]) * (ratio-Q_table[best_router])
         N_table[best_router] += 1
 
         log['baseline'] += baseline[1]
         log['random'] += random_action[1]
-        log['Agent'] += best_policy[1]
+        log['Agent'] += best_action[1]
 
         ''' Compound action'''       
         action = {'routing':baseline[0],'purchase':purchase,'demand_compliance':demand_compliance}
@@ -172,7 +173,43 @@ for episode in range(num_episodes):
 
 
 
+# %%
 
 
+import matplotlib.pyplot as plt
+
+def plot_rewards(rewards_dict):
+    # Extract policies and rewards
+    policies = list(rewards_dict.keys())
+    rewards = list(rewards_dict.values())
+
+    # Set up figure and axis
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Bar chart
+    bar_width = 0.35
+    bar_positions = range(len(policies))
+    
+    for i, (policy, reward_list) in enumerate(rewards_dict.items()):
+        ax.bar([pos + i * bar_width for pos in bar_positions], reward_list, bar_width, label=policy)
+
+    # Add labels and title
+    ax.set_xlabel('Routing Policies', fontsize=12)
+    ax.set_ylabel('Rewards', fontsize=12)
+    ax.set_title('Rewards for Different Routing Policies', fontsize=14)
+    ax.set_xticks([pos + bar_width * (len(policies) - 1) / 2 for pos in bar_positions])
+    ax.set_xticklabels(policies)
+    
+    # Add legend
+    ax.legend(fontsize=10, loc='upper right')
+
+    # Add grid for better readability
+    ax.grid(True, linestyle='--', alpha=0.5)
+
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+
+plot_rewards(res)
 
 # %%

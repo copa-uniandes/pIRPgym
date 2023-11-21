@@ -186,8 +186,10 @@ class routing_instances():
             string = f'Li {instance[-6:-4]} \t|  {M}\t  {k} \t{round(bks)} \t|'
         elif set == 'Golden':
             string = f'Go {instance[-5:-4]} \t|  {M}\t  {k} \t{round(bks)} \t|'
-        else:
+        elif set == 'Uchoa':
             string = f'{instance[2:-4]}|  {M}\t  {k} \t{round(bks)} \t|' 
+        else:
+            string = f'{instance}|  {M}\t  {k} \t{round(bks)} \t|' 
         print(string,end='\r')
         return string
     
@@ -230,6 +232,66 @@ class routing_instances():
         
         return string
     
+    @staticmethod
+    def print_comparison_head(policies:list,inst_set:str,show_gap:bool):
+        if show_gap: item = 'gap'
+        else: item = 'Obj' 
+        num = len(policies)
+
+        print(f'**************{"*"*num*13}  {inst_set} set Instances  {"*"*num*13}**************',flush = True)
+        string1 = f'--------|'
+        string2 = 'Sizes\t|'
+        for strategy in policies:
+            if strategy not in ['RCL']:
+                string1 += f'\t  {strategy} \t \t|'
+                string2 += f' t(s) \t {item} \t|'
+            else:
+                string1 += f'\t  \t  \t{strategy} \t \t \t|'
+                string2 += f' t(s)\t {item}\t min\t max\t|'
+                
+        print(string1)
+        print(string2)
+        print(f'-------------------------------{"-"*num*28}')
+
+
+    @staticmethod
+    def print_routing_comparison_update(string,t,obj,benchmark,intervals):
+        if t < 10: tt = round(t,2)
+        elif t < 100: tt = round(t,1)
+        else: tt = round(t)
+
+        if type(veh) != int:
+            veh = round(veh,1)
+        if not show_gap:
+            if tt <10: 
+                string += f' {tt:.2f}\t   {veh}\t {round(obj,1)}\t|'
+            else:
+                string += f' {tt:.1f}\t   {veh}\t {round(obj,1)}\t|'
+        else:
+            gap = round((obj-benchmark[0])/benchmark[0],4) * 100; gap = round(gap,2)
+
+            if intervals == False:
+                if tt < 10:
+                    string += f' {tt:.2f}\t  {veh}\t {gap}\t|'
+                else:
+                    string += f' {tt:.1f}\t  {veh}\t {gap}\t|'
+            else:
+                stdev = round(intervals[0]/benchmark[0],4) * 100; stdev = round(stdev,2)
+                min_gap = round((intervals[1]-benchmark[0])/benchmark[0],4) * 100; min_gap = round(min_gap,2)
+                max_gap = round((intervals[2]-benchmark[0])/benchmark[0],4) * 100; max_gap = round(max_gap,2)
+                if tt < 10:
+                    string += f' {tt:.2f}\t  {veh}\t {gap}\t {stdev}\t  {min_gap}\t {max_gap}\t|'
+                else:
+                    string += f' {tt:.1f}\t  {veh}\t {gap}\t {stdev}\t  {min_gap}\t {max_gap}\t|'
+            
+        
+        
+        if not end:
+            print(string,end='\r')
+        else:
+            print(string)
+        
+        return string
 
 class CG_initialization():
     @staticmethod
