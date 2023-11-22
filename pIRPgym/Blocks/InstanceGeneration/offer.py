@@ -6,21 +6,23 @@ class offer():
     @staticmethod
     def gen_availabilities(inst_gen) -> tuple:
         '''
-        M_kt: (dict) subset of suppliers that offer k \in K on t \in T
-        K_it: (dict) subset of products offered by i \in M on t \in T
+        M_kt: (dict) subset of suppliers that offer k in K on t in T
+        K_it: (dict) subset of products offered by i in M on t in T
         '''
         seed(inst_gen.d_rd_seed + 3)
         M_kt = dict()
         # In each time period, for each product
         for k in inst_gen.Products:
+
+            sup = randint(3, inst_gen.M+1)
+            suppliers = list(inst_gen.Suppliers)
+            # Random suppliers are removed from subset, regarding {sup}
+            for ss in range(inst_gen.M - sup):
+                a = int(randint(0, len(suppliers)))
+                del suppliers[a]
+
             for t in inst_gen.TW:
-                # Random number of suppliers that offer k in t
-                sup = randint(3, inst_gen.M+1)
-                M_kt[k,t] = list(inst_gen.Suppliers)
-                # Random suppliers are removed from subset, regarding {sup}
-                for ss in range(inst_gen.M - sup):
-                    a = int(randint(0, len(M_kt[k,t])))
-                    del M_kt[k,t][a]
+                M_kt[k,t] = suppliers
         
         # Products offered by each supplier on each time period, based on M_kt
         K_it = {(i,t):[k for k in inst_gen.Products if i in M_kt[k,t]] for i in inst_gen.Suppliers for t in inst_gen.TW}
@@ -61,7 +63,7 @@ class offer():
     @staticmethod
     def gen_W_q(inst_gen,rd_function,hist_q,**kwargs) -> tuple:
         '''
-        W_q: (dict) quantity of k \in K offered by supplier i \in M on t \in T
+        W_q: (dict) quantity of k in K offered by supplier i in M on t in T
         '''
         W_q = dict()
         for t in inst_gen.Horizon:
@@ -99,6 +101,7 @@ class offer():
     ### Prices of products on suppliers
     @staticmethod
     def gen_prices(inst_gen, **kwargs) -> tuple:
+
         seed(inst_gen.d_rd_seed + 5)
         if kwargs['dist'] == 'd_uniform':   rd_function = randint
         hist_p = offer.gen_hist_p(inst_gen, rd_function, **kwargs)
@@ -129,7 +132,7 @@ class offer():
     @staticmethod
     def gen_W_p(inst_gen, rd_function, hist_p, **kwargs) -> tuple:
         '''
-        W_p: (dict) quantity of k \in K offered by supplier i \in M on t \in T
+        W_p: (dict) quantity of k in K offered by supplier i in M on t in T
         '''
         W_p = dict()
         for t in inst_gen.Horizon:
@@ -149,6 +152,7 @@ class offer():
     # Prices's sample paths
     @staticmethod
     def gen_empiric_p_sp(inst_gen, hist_p, W_p) -> dict[dict]:
+        
         s_paths_p = dict()
         for t in inst_gen.Horizon: 
             s_paths_p[t] = dict()

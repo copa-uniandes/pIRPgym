@@ -11,7 +11,7 @@ from typing import Union
 from .InstanceGenerator import instance_generator
 
 ### Building blocks
-from .BuildingBlocks import Routing_management, Inventory_management, Environmental_Assessment
+from .BuildingBlocks import Routing_management, Inventory_management, Environmental_management
 
 ################################ Description ################################
 '''
@@ -78,13 +78,19 @@ class steroid_IRP():
 
         if self.config['inventory']:
             self.state = Inventory_management.perish_per_age_inv.reset(inst_gen)
-                
+        
+        if inst_gen.sustainability:
+            self.payoff_matrix = {e:dict() for e in inst_gen.E+["costs"]}
+            self.norm_matrix = {e:dict() for e in inst_gen.E+["costs"]}
+
         if return_state:
             return self.state
+        
+        
 
 
     # Step 
-    def step(self,action:dict,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False):
+    def step(self,action:dict,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False, aggregated:bool = True):
         '''
         
         '''
@@ -133,11 +139,11 @@ class steroid_IRP():
         
         reward = dict()
         if self.config['routing']:
-            reward['transport cost'] = Routing_management.price_routes(inst_gen,real_action["routing"])
+            reward['transport cost'] = Routing_management.price_routes(inst_gen,real_action["routing"],real_action["purchase"],aggregated = aggregated)
         if self.config['inventory']:
-            reward['purchase cost'], reward['holding cost'], reward['backorders cost'] = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_action["purchase"], real_action["demand_compliance"], s_tprime, perished)
+            reward['purchase cost'], reward['holding cost'], reward['backorders cost'] = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_action["purchase"], real_action["demand_compliance"], s_tprime, perished, aggregated = aggregated)
             if inst_gen.sustainability:
-                reward.update(Environmental_Assessment.compute_environmental_impact(inst_gen, real_action["purchase"], real_action["routing"], s_tprime))
+                reward.update(Environmental_management.compute_environmental_impact(inst_gen, real_action["purchase"], real_action["routing"], s_tprime, aggregated = aggregated))
 
         # -----------------------------
         # Time step

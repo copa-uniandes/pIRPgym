@@ -41,4 +41,27 @@ class costs():
                 if t < inst_gen.T - 1:
                     hist_h[t+1][k] = hist_h[t][k] + [W_h[t][k]]
 
-        return W_h, hist_h  
+        return W_h, hist_h 
+    
+    @staticmethod
+    def gen_profit_margin(inst_gen, **kwargs):
+
+        profit = dict()
+        seed(inst_gen.d_rd_seed + 10)
+        for k in inst_gen.Products:
+            profit[k] = 0.1+0.9*random()
+        
+        return profit
+
+    @staticmethod
+    def gen_backo_cost(inst_gen,**kwargs):
+
+        back_o_cost = dict()
+        for k in inst_gen.Products:
+            historic_avg = {i:sum(inst_gen.hist_p[0][i,k][t+inst_gen.hist_window] for t in inst_gen.historical)/inst_gen.hist_window for i in inst_gen.M_kt[k,0]}
+            back_o_cost[k] = (1+inst_gen.prof_margin[k])*sum(historic_avg.values())/len(historic_avg)
+        
+        return back_o_cost
+            
+
+

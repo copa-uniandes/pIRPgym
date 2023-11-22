@@ -101,9 +101,7 @@ class instance_generator():
             self.hist_window = 40       # historical window
 
         ### Backorders parameters ###
-        if backorders == 'backorders':
-            self.back_o_cost = 600
-        elif backorders == 'backlogs':
+        if backorders == 'backlogs':
             self.back_l_cost = 600
 
         ### Extra information ###
@@ -146,19 +144,13 @@ class instance_generator():
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
-        if self.other_params["demand_type"] == "aggregated":
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
-        else:
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self,**kwargs['d_params'])
+        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
-
-        # Selling prices
-        self.salv_price = selling_prices.gen_salvage_price(self)
-        self.opt_price = selling_prices.gen_optimal_price(self)
-
-        if "discount" in kwargs:
-            self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
+        # Backorders
+        self.prof_margin = costs.gen_profit_margin(self)
+        self.back_o_cost = costs.gen_backo_cost(self)
+
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
@@ -196,12 +188,9 @@ class instance_generator():
         self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
 
-        # Selling prices
-        self.salv_price = selling_prices.gen_salvage_price(self)
-        self.opt_price = selling_prices.gen_optimal_price(self)
-
-        if "discount" in kwargs:
-            self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        # Backorders
+        self.prof_margin = costs.gen_profit_margin(self)
+        self.back_o_cost = costs.gen_backo_cost(self)
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
@@ -245,17 +234,8 @@ class instance_generator():
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
-        if self.other_params["demand_type"] == "aggregated":
-            self.hist_d, self.W_d, self.s_paths_d = CundiBoy.demand.gen_demand(self,ex_d,hist_demand,**kwargs['d_params'])
-        else:
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self,**kwargs['d_params'])
+        self.hist_d, self.W_d, self.s_paths_d = CundiBoy.demand.gen_demand(self,ex_d,hist_demand,**kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
-
-        # Selling prices
-        self.salv_price = selling_prices.gen_salvage_price(self)
-        self.opt_price = selling_prices.gen_optimal_price(self)
-
-        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self,**kwargs['h_params'])
