@@ -54,10 +54,10 @@ h_params = {'dist': 'd_uniform', 'r_f_params': [20,61]}         # Holding costs
 
 disc = ("strong","conc")
 
-env_config = {'T':8,'Q':750,'S':3,'LA_horizon':3,
+env_config = {'T':5,'Q':750,'S':2,'LA_horizon':3,
                   'd_max':2000,'hist_window':30,'back_o_cost':5000
              }
-env_config['M'] = 20
+env_config['M'] = 12
 env_config['K'] = env_config['M']
 env_config['F'] = env_config['M']
 
@@ -84,7 +84,7 @@ start = process_time()
 show_gap = True
 string = str()
 
-num_episodes = 500
+num_episodes = 50
 
 routing_agent = pIRPgym.RoutingAgent(policies=['NN','RCL','CG'])
 
@@ -107,10 +107,11 @@ epsilon_decay_value = epsilon / (end_epsilon_decaying - start_epsilon_decaying) 
 
 
 print('----- Started -----')
-cont = 0
+cont = 100
 for episode in range(num_episodes):
-    if episode%20==0:
-        print(f'Episode {episode}')
+    seed(episode)
+    print(f'Episode {episode}')
+
     cont += 2
     inst_gen.generate_basic_random_instance(cont,cont+1,q_params=q_params,
                     p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
@@ -137,13 +138,13 @@ for episode in range(num_episodes):
         random_action = routing_agent.random_policy(purchase,inst_gen,env.t)
 
         # Select policy
-        if random() < epsilon:
+        if random() > epsilon:
             best_router = min(Q_table,key=Q_table.get)
             best_action = routing_agent.policy_routing(best_router,purchase,inst_gen,env.t)
         else:
             best_action = random_action
             best_router = random_action[-1]
-        
+
         # Update
         ratio = best_action[1]/DirShip_cost
         Q_table[best_router] = Q_table[best_router] + (1/N_table[best_router]) * (ratio-Q_table[best_router])
@@ -163,11 +164,17 @@ for episode in range(num_episodes):
     res['Agent'].append(log['Agent'])
 
     if end_epsilon_decaying >= episode >= start_epsilon_decaying:       # Decay epsilon
-            epsilon -= epsilon_decay_value
+        epsilon -= epsilon_decay_value
 
 
 
 
+#%%
+results = {key:{'Cost':value} for key,value in res.items()}
+pIRPgym.Visualizations.RoutingV.plot_indicator_evolution(results,'Cost',xlabel='Episode')
+
+
+# %%
 
 
 
@@ -176,40 +183,45 @@ for episode in range(num_episodes):
 # %%
 
 
-import matplotlib.pyplot as plt
 
-def plot_rewards(rewards_dict):
-    # Extract policies and rewards
-    policies = list(rewards_dict.keys())
-    rewards = list(rewards_dict.values())
+results = {key:{'Cost':value} for key,value in res.items()}
 
-    # Set up figure and axis
-    fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Bar chart
-    bar_width = 0.35
-    bar_positions = range(len(policies))
-    
-    for i, (policy, reward_list) in enumerate(rewards_dict.items()):
-        ax.bar([pos + i * bar_width for pos in bar_positions], reward_list, bar_width, label=policy)
+results = {'baseline': [39527,
+  49884,
+  55767,
+  33854,
+  31737,
+  34550,
+  31657,
+  46227,
+  33711,
+  31309],
+ 'random': [35244.459400944135,
+  41626.609547484964,
+  43252.35894816159,
+  29093.236836211046,
+  27244.653500723507,
+  33477,
+  29866.555417379575,
+  38015.70443759949,
+  31028.36212378181,
+  27078.944267260915],
+ 'Agent': [33966.82135308815,
+  40175.42654355082,
+  43017.3185920902,
+  24704.7752956001,
+  26088.93398017377,
+  32140.549278172006,
+  29622.77022927929,
+  33811.403314651485,
+  30863.709044118314,
+  25398.21328770426]}
+pIRPgym.Visualizations.RoutingV.plot_indicator_evolution(results,'Cost',xlabel='Episode')
 
-    # Add labels and title
-    ax.set_xlabel('Routing Policies', fontsize=12)
-    ax.set_ylabel('Rewards', fontsize=12)
-    ax.set_title('Rewards for Different Routing Policies', fontsize=14)
-    ax.set_xticks([pos + bar_width * (len(policies) - 1) / 2 for pos in bar_positions])
-    ax.set_xticklabels(policies)
-    
-    # Add legend
-    ax.legend(fontsize=10, loc='upper right')
 
-    # Add grid for better readability
-    ax.grid(True, linestyle='--', alpha=0.5)
 
-    # Show the plot
-    plt.tight_layout()
-    plt.show()
 
-plot_rewards(res)
+
 
 # %%

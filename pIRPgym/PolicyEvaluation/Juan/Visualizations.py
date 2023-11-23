@@ -112,7 +112,8 @@ class RoutingV():
         # Plot the evolution for each routing policy
         for i, (policy, data) in enumerate(routing_performance.items()):
             if indicator in data:
-                ax.plot(data[indicator], label=f'{policy}', color=colors[i % len(colors)], marker=markers[i % len(markers)], linestyle='-', markersize=8, linewidth=2)
+                ax.plot(data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
+                        linestyle='-',markersize=8,linewidth=2)
 
         # Add labels and a legend
         ax.set_xlabel(x_axis, fontsize=12)

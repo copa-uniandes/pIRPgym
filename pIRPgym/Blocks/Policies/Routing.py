@@ -316,7 +316,7 @@ class Routing():
             training_time:float = 10
             Elite_size:int = int(Population_size*0.25)
 
-            mutation_rate:float = 1
+            mutation_rate:float = 0
             crossover_rate:float = 1 - mutation_rate
             
 
@@ -428,7 +428,7 @@ class Routing():
                 
                 # Adaptative-Reactive Constructive
                 # RCL_alpha_list:list = [0,0.001,0.005]
-                RCL_alpha_list:list = [0.01, 0.05, 0.15, 0.25, 0.4]
+                RCL_alpha_list:list = [0.05, 0.15, 0.25, 0.4]
                 alpha_performance:dict = {alpha:0 for alpha in RCL_alpha_list}
 
                 # Calibrating alphas
@@ -445,14 +445,14 @@ class Routing():
                     RCL_alpha = choice(RCL_alpha_list, p = [alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alpha_list])    
                 
                     # Generating individual
-                    individual, FO, (distances, loads), _ = Routing.RCL_Heuristic(requirements2,inst_gen,0,RCL_alpha)
+                    individual,FO,(distances,loads), _ = Routing.RCL_Solution(requirements2,inst_gen,0,RCL_alpha)
                     
                     if verbose: 
                         print(f'Generated individual {ind}')
                     # Updating incumbent
                     if FO < incumbent:
                         incumbent = FO
-                        best_individual: list = [individual,FO,(distances,loads),process_time() -start]
+                        best_individual: list = [individual,FO,(distances,loads),process_time()-start]
 
                     # Saving individual
                     Population.append(individual)
@@ -761,7 +761,8 @@ class Routing():
 
         ''' Column generation algorithm '''
         @staticmethod
-        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization=False,time_limit=False,verbose:bool=False,return_num_cols:bool=False,RCL_alpha:float=0.35)->tuple:
+        def ColumnGeneration(purchase:dict,inst_gen:instance_generator,t:int,heuristic_initialization=False,
+                             time_limit=False,verbose:bool=False,return_num_cols:bool=False,RCL_alpha:float=0.35)->tuple:
             start = process_time()
             pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
@@ -1105,7 +1106,8 @@ class Routing():
 
 
         @staticmethod
-        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,dynamic_p=False,**kwargs) -> tuple:
+        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
+                                       dynamic_p=False,**kwargs) -> tuple:
             times = list()
             vehicles = list()
             objectives = list()
@@ -1116,7 +1118,7 @@ class Routing():
                 for i in range(n):
                     seed = i * 2
                     RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
-                                                                  adaptative=kwargs['adaptative'],rd_seed=seed,time_limit=15)
+                                                                  adaptative=kwargs['adaptative'],rd_seed=seed,time_limit=kwargs['time_limit'])
                     assert RCL_obj==Routing_management.price_routes(inst_gen,RCL_routes),"Computed distance doesn't match route cost"
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
