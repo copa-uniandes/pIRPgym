@@ -70,7 +70,7 @@ class locations():
     # Uploading 
     @staticmethod
     def upload_cvrp_instance(set,instance) -> tuple:
-        assert set in ['Li','Golden','Uchoa'], 'The dCVRP instance set is not available for the pIRPenv'
+        assert set in ['Li','Golden','Uchoa'], 'The dCVRP instance set is not available for the pIRPgym'
 
         if set in ['Li','Golden']: CVRPtype = 'dCVRP'; sep = ' '
         elif set == 'Uchoa': CVRPtype = 'CVRP'; sep = '\t'

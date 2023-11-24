@@ -244,10 +244,10 @@ class routing_instances():
         for strategy in policies:
             if strategy not in ['RCL']:
                 string1 += f'\t{strategy} \t|'
-                string2 += f' t(s) \t {item} \t|'
+                string2 += f' t(s) \t   {item} \t|'
             else:
                 string1 += f'\t     {strategy} \t \t|'
-                string2 += f' t(s)\t {item}\t min\t max\t|'
+                string2 += f' t(s)\t   {item}\t   min\t   max\t|'
                 
         print(string1)
         print(string2)
@@ -257,13 +257,16 @@ class routing_instances():
     @staticmethod
     def print_comparison_inst(sizes,num_instances):
 
-        string = f'{sizes[0]}-{sizes[1]}\t {num_instances}\t|' 
+        if num_instances>1:
+            string = f'{sizes[0]}-{sizes[1]}\t    {num_instances}\t|' 
+        else:
+            string = f'> {sizes[0]}\t    {num_instances}\t|' 
         print(string,end='\r')
         return string
     
     @staticmethod
     def print_routing_comparison_update(string,nn_gap,nn_time,RCL_gap,RCL_time,RCL_min,RCL_max):
-        string += f' {nn_time:.2f}\t  {round(nn_gap*100,2)}\t| {round(RCL_gap*100,2)}\t {RCL_time:.2f}\t  {round(RCL_min*100,2)}\t {round(RCL_max*100,2)}\t|'        
+        string += f' {nn_time:.2f}\t  {round(nn_gap*100,2)}\t| {RCL_time:.2f}\t  {round(RCL_gap*100,2)}\t  {round(RCL_min*100,2)}\t {round(RCL_max*100,2)}\t|'        
         print(string)
         
         return string
