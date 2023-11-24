@@ -110,7 +110,8 @@ for inst_set,inst_list in instances.items():
                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
                                                                                         purchase,inst_gen,env,n=10,
                                                                                         averages=True,dynamic_p=False,
-                                                                                        RCL_alphas=RCL_alphas,adaptative=False)
+                                                                                        time_limit=30,RCL_alphas=RCL_alphas,
+                                                                                        adaptative=False)
             save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max)])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
                                                                              show_gap,benchmark,end=end,
