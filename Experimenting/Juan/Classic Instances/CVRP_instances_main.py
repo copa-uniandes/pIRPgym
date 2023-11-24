@@ -12,7 +12,7 @@ import pIRPgym
 
 
 computer_name = input("Running experiment on mac? [Y/n]")
-if computer_name == '': 
+if computer_name in ['','Mac','mac']: 
     path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
     experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/Classic Instances/'
 else: 
