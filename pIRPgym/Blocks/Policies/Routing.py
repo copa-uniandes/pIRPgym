@@ -1229,8 +1229,13 @@ class RoutingAgent(Routing):
         self.policies = policies
 
 
-    def tune_policy(self,policy,grid:dict):
-        pass
+    def tune_policy(self,policy,grid:dict,inst_gen,num_episodes):
+        if policy == 'RCL':
+            for RCL_alpha in grid['RCL alpha']:
+                for adaptative in grid['adaptative']:
+                    pass
+
+
 
 
     def policy_routing(self,policy,purchase,inst_gen,t,**kwargs)->tuple:
