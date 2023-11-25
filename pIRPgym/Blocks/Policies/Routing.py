@@ -316,7 +316,7 @@ class Routing():
             training_time:float = 10
             Elite_size:int = int(Population_size*0.25)
 
-            mutation_rate:float = 0
+            mutation_rate:float = 1
             crossover_rate:float = 1 - mutation_rate
             
 
@@ -359,15 +359,14 @@ class Routing():
                     # TODO: Operators
                     ###################
                     if random() <= mutation_rate:
-                        if random() <= 1:
-                            new_individual,new_distances = Routing.GA.mutation(Population[individual_i],
-                                                                               Distances[individual_i],inst_gen)
-                            new_FO = sum(new_distances) 
-                            new_loads = Loads[individual_i]
-                            mutated = True
+                        new_individual,new_distances = Routing.GA.mutation(Population[individual_i],
+                                                                            Distances[individual_i],inst_gen)
+                        new_FO = sum(new_distances) 
+                        new_loads = Loads[individual_i]
+                        mutated = True
                             
-                        else:
-                            pass
+                    else:
+                        pass
                     
                     # No operator is performed
                     if not mutated: 
@@ -518,10 +517,14 @@ class Routing():
             @staticmethod
             def mutation(individual:list,distances:float,inst_gen:instance_generator)->list:
                 pos = randint(0,len(individual))
+                if len(individual[pos])<=3: 
+                    return individual,distances
+                
                 if random() <= 0.5:
                     individual[pos],distances[pos] = Routing.GA.swap_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
                 else:
                     individual[pos],distances[pos] = Routing.GA.two_opt_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
+                
                 return individual,distances
 
 
@@ -539,25 +542,43 @@ class Routing():
                 tuple: The mutated route and its new distance.
                 """
                 size = len(route)
-                idx1, idx2 = sorted(np.random.choice(range(1,size-1), 2, replace=False))
+                idx1, idx2 = sorted(np.random.choice(range(1,size-1),2,replace=False))
                 
+                if idx2 == idx1+1: return route,current_obj
                 # Swap the nodes
-                route[idx1], route[idx2] = route[idx2], route[idx1]
+                old_route = deepcopy(route)
+                route[idx1],route[idx2] = route[idx2],route[idx1]
 
                 # Recompute the affected distances
                 delta_distance = 0
-                if idx1 > 0:
-                    delta_distance += (c[route[idx1 - 1],route[idx1]] 
-                                    - c[route[idx1 - 1],route[idx2]])
-                if idx1 < size - 1:
-                    delta_distance += (c[route[idx1],route[idx1 + 1]]
-                                    - c[route[idx2],route[idx1 + 1]])
-                if idx2 < size - 1:
-                    delta_distance += (c[route[idx2],route[idx2 + 1]] 
-                                    - c[route[idx1],route[idx2 + 1]])
-                if idx2 > 0 and idx2 - 1 != idx1:
-                    delta_distance += (c[route[idx2 - 1],route[idx2]] 
-                                    - c[route[idx2 - 1],route[idx1]])
+
+                # delta_distance += (c[route[idx1 - 1],route[idx1]] 
+                #                 - c[route[idx1 - 1],route[idx2]])
+
+                # delta_distance += (c[route[idx1],route[idx1 + 1]]
+                #                 - c[route[idx2],route[idx1 + 1]])
+
+                # delta_distance += (c[route[idx2],route[idx2 + 1]] 
+                #                 - c[route[idx1],route[idx2 + 1]])
+                
+                # delta_distance += (c[route[idx2 - 1],route[idx2]] 
+                #                 - c[route[idx2 - 1],route[idx1]])
+                
+                delta_distance += (c[route[idx1 - 1], route[idx1]]
+                  - c[route[idx1 - 1], route[idx2]])
+
+                delta_distance += (c[route[idx1], route[idx1 + 1]]
+                                - c[route[idx2], route[idx1 + 1]])
+
+                # Ensure that idx2 + 1 is within the valid range
+                if idx2 + 1 < size:
+                    delta_distance += (c[route[idx2], route[idx2 + 1]]
+                                    - c[route[idx1], route[idx2 + 1]])
+
+                # Ensure that idx2 - 1 is within the valid range
+                if idx2 - 1 >= 0:
+                    delta_distance += (c[route[idx2 - 1], route[idx2]]
+                                    - c[route[idx2 - 1], route[idx1]])
 
                 new_distance = current_obj+delta_distance
 
@@ -569,7 +590,7 @@ class Routing():
         
 
             @staticmethod
-            def two_opt_mutation(route, current_obj, c, **kwargs):
+            def two_opt_mutation(route,current_obj,c,**kwargs):
                 """
                 Applies a 2-opt mutation on a route's segment. The segment is reversed, which might lead to a shorter path.
                 Returns the mutated route and its new distance. Ensures the route starts and ends with the depot (0).
@@ -585,7 +606,7 @@ class Routing():
                 size = len(route)
                 
                 # Ensure that the depot is not included in the reversed segment
-                idx1, idx2 = sorted(np.random.choice(range(1, size - 1), 2, replace=False))
+                idx1,idx2 = sorted(np.random.choice(range(1,size - 1), 2,replace=False))
 
                 # Reverse the segment
                 new_route = route[:idx1] + route[idx1:idx2][::-1] + route[idx2:]
