@@ -26,7 +26,7 @@ policies['Golden'] = policies1[:-1]
 policies['Uchoa'] = policies1
 
 def save_pickle(inst_set,policy,instance,performance):
-    with open(experiments_path+f'{inst_set}/{policy}/Random/{instance[:-4]}.pkl','wb') as file:
+    with open(experiments_path+f'{inst_set}/{policy}/Adaptative/{instance[:-4]}.pkl','wb') as file:
         # Use pickle.dump to serialize and save the dictionary to the file
         pickle.dump(performance,file)
 
@@ -111,7 +111,7 @@ for inst_set,inst_list in instances.items():
                                                                                         purchase,inst_gen,env,n=10,
                                                                                         averages=True,dynamic_p=False,
                                                                                         time_limit=30,RCL_alphas=RCL_alphas,
-                                                                                        adaptative=False)
+                                                                                        adaptative=True)
             save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max)])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
                                                                              show_gap,benchmark,end=end,
