@@ -220,7 +220,7 @@ class routing_instances():
                 min_gap = round((intervals[2]-benchmark[0])/benchmark[0],4) * 100; min_gap = round(min_gap,2)
                 max_gap = round((intervals[3]-benchmark[0])/benchmark[0],4) * 100; max_gap = round(max_gap,2)
                 if tt < 10:
-                    string += f' {tt:.2f}\t  {veh}\t {gap}\t {stdev}\t  {min_gap}\t {max_gap}\t|'
+                    string += f' {tt:.2f}\t  {veh}\t {gap}\t {median} \t{stdev}\t  {min_gap}\t {max_gap}\t|'
                 else:
                     string += f' {tt:.1f}\t  {veh}\t {gap}\t {median} \t{stdev}\t  {min_gap}\t {max_gap}\t|'
             
