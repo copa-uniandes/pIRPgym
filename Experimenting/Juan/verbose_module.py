@@ -169,7 +169,7 @@ class routing_instances():
                 string2 += f' t(s)\t #Veh \t {item} \t|'
             else:
                 string1 += f'\t  \t  \t{strategy} \t \t \t|'
-                string2 += f' t(s)\t #Veh \t {item} \t stdev\t min\t max\t|'
+                string2 += f' t(s)\t #Veh \t mean \t median \t stdev\t min\t max\t|'
                 
         print(string1)
         print(string2)
