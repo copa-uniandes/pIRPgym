@@ -116,7 +116,7 @@ class steroid_IRP():
             '''
             
             real_action["purchase"] = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
-            real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action['demand_compliance'],real_action["purchase"],self.strong_rate)      
+            real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen,self,real_action["purchase"])      
 
             if self.config['routing']:
                 real_action["routing"] = action['routing']
@@ -152,14 +152,11 @@ class steroid_IRP():
         # Time step update and termination check
         self.t += 1
         done = self.check_termination(inst_gen)
-        _ = {'backorders': back_orders, 'perished': perished}
+        _ = (back_orders, perished)
 
         # State update
-        if not done:
-            self.state = s_tprime
-            return self.state, reward, done, real_action, _
-        else:
-            return None, reward, done, real_action, _
+        self.state = s_tprime
+        return self.state, reward, done, real_action, _
 
 
     # Checking for episode's termination

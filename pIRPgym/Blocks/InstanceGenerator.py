@@ -89,7 +89,13 @@ class instance_generator():
         self.F = 15                                     # Fleet
         self.Q = 40                                     # Vehicles capacity
         self.d_max = 500                                # Max distance per route
-        self.E = ["climate","water","land","fossil"]
+
+        self.theta = 0.8                                # Service Level requirement
+        self.E = ["climate","water","land","fossil"]    # Environmental Indicators
+        self.metric_names = {"transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
+                             "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion"}
+        self.metric_units = {"transport cost":"$", "purchase cost":"$", "holding cost":"$", "backorders cost":"$",
+                             "climate":"kg CO2 eq", "water":"m3 depriv.", "land":"Pt.", "fossil":"MJ"}
 
         ### Look-ahead parameters ###
         if look_ahead:    
@@ -118,7 +124,7 @@ class instance_generator():
 
 
     # Generates a complete, completely random instance with a given random seed
-    def generate_random_instance(self,d_rd_seed:int,s_rd_seed:int,I0:float, **kwargs):
+    def generate_random_instance(self,d_rd_seed:int,s_rd_seed:int,I0:float=0, **kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -129,8 +135,10 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
-        #self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
-        self.O_k = {k:3 for k in self.Products} 
+        #self.O_k = {k:randint(3,self.T+1) for k in self.Products}
+        ages = [3,3,6,6,5,4,4]
+        if len(self.Products) <= 7: self.O_k = dict(zip(self.Products,ages[:len(self.Products)]))
+        else: self.O_k = {k:3 for k in self.Products}
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
 
         self.i00 = self.gen_initial_inventory(I0)

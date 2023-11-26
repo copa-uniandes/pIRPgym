@@ -169,15 +169,14 @@ class Inventory_management():
                     for o in range(2, max_age + 1):
                             inventory[k,o] = round(env.state[k,o - 1] - demand_compliance[k,o - 1],2)
                 
-                if inst_gen.other_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)) < inst_gen.W_d[env.t][k]:
-                    back_orders[k] = round(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),2)
+                if inst_gen.other_params['backorders'] == 'backorders':
+                    back_orders[k] = max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)), 0)
 
                 if inst_gen.other_params['backorders'] == 'backlogs':
                     new_backlogs = round(max(inst_gen.W_d[k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),0),2)
                     inventory[k,'B'] = round(env.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),2)
                 
-                if env.state[k, max_age] - demand_compliance[k,max_age] > 0:
-                    perished[k] = env.state[k, max_age] - demand_compliance[k,max_age]
+                perished[k] = env.state[k, max_age] - demand_compliance[k,max_age]
 
                 # Factibility checks         
                 if warnings:

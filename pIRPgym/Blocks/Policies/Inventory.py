@@ -16,7 +16,7 @@ class Inventory():
     
     
     @staticmethod
-    def Stochastic_Rolling_Horizon(state,env,inst_gen,objs={"costs":1}):
+    def Stochastic_Rolling_Horizon(state,env,inst_gen,objs={"costs":1},hold_cost=False):
 
         # ----------------------------------------
         # MODEL PARAMETERS
@@ -29,13 +29,13 @@ class Inventory():
         Num_periods = inst_gen.sp_window_sizes[env.t]
         T = range(Num_periods)
 
-        theta = 0.8
+        serv_level = inst_gen.theta
 
         # Sets
         M = inst_gen.Suppliers; K = inst_gen.Products; S = inst_gen.Samples
 
         # Routing cost approximation
-        C_MIP = {(i,t):inst_gen.c[0,i]+inst_gen.c[i,0] for t in T for i in inst_gen.Suppliers} 
+        C_MIP = {i:inst_gen.c[0,i]+inst_gen.c[i,0] for i in inst_gen.Suppliers} 
 
         m = gu.Model('Inventory')
 
@@ -57,6 +57,9 @@ class Inventory():
 
         # Backorder units of product k at time period t on scenario s
         bo = {(k,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name="bo_"+str((k,t,s))) for t in T for k in K for s in S}
+
+        # Auxiliary variable for the objective function
+        v = m.addVar(vtype=gu.GRB.CONTINUOUS,name="Objs_Aux_Var",obj=1)
 
         # ----------------------------------------
         # MODEL CONSTRAINTS
@@ -100,36 +103,40 @@ class Inventory():
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i,k,s}')
 
         ''' Service Level control constraint '''
-        theta *= min(1,sum(inst_gen.s_paths_q[env.t][t,s][i,k] for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t+t])/sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S))
-        m.addConstr(gu.quicksum(y[k,t,o,s] for t in T for k in K for o in range(inst_gen.O_k[k] + 1) for s in S) >= theta*sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S))
+        #serv_level *= min(1,sum(inst_gen.s_paths_q[env.t][t,s][i,k] for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t+t])/sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S))
+        for k in K:
+            m.addConstr(gu.quicksum(gu.quicksum(y[k,t,o,s] for t in T for o in range(inst_gen.O_k[k] + 1))/sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T) for s in S) >= serv_level*len(inst_gen.Samples))
 
         # ----------------------------------------
         # OBJECTIVE FUNCTION
         # ----------------------------------------
 
-        v = m.addVar(vtype=gu.GRB.CONTINUOUS,name="Objs_Aux_Var",obj=1)
-
         ''' Expected costs '''
         purch_cost = gu.quicksum(inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
         backo_cost = gu.quicksum(inst_gen.back_o_cost[k]*bo[k,t,s] for k in K for t in T for s in S)/len(S)
-        rout_aprox_cost = gu.quicksum(C_MIP[i,t]*w[i,t,s] for i in M for t in T for s in S)/len(S)
+        rout_aprox_cost = gu.quicksum(C_MIP[i]*w[i,t,s] for i in M for t in T for s in S)/len(S)
+        holding_cost = gu.quicksum(inst_gen.W_h[env.t][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
         
         if len(objs) == 1:
             if "costs" in objs:
-                m.addConstr(v >= purch_cost + backo_cost + rout_aprox_cost)
+                if hold_cost: m.addConstr(v >= purch_cost + backo_cost + rout_aprox_cost + holding_cost)
+                else: m.addConstr(v >= purch_cost + backo_cost + rout_aprox_cost)
             else:
                 e = list(objs.keys())[0]
+                #transp_aprox_impact = 0
                 transp_aprox_impact = gu.quicksum((inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
                 storage_impact = gu.quicksum(inst_gen.h_LCA[e][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
                 m.addConstr(v >= transp_aprox_impact + storage_impact)
 
         else:
-            m.addConstr(v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost - env.norm_matrix["costs"]["best"])/(env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"]))
+            if hold_cost: m.addConstr(v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost + holding_cost - env.norm_matrix["costs"]["best"])/(env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"]))
+            else: m.addConstr(v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost - env.norm_matrix["costs"]["best"])/(env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"]))
             for e in inst_gen.E:
+                #transp_aprox_impact = 0
                 transp_aprox_impact = gu.quicksum((inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
                 storage_impact = gu.quicksum(inst_gen.h_LCA[e][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
                 
-                m.addConstr(v >= objs[e]*(transp_aprox_impact+storage_impact-env.norm_matrix[e]["best"])/(env.norm_matrix[e]["worst"] - env.norm_matrix[e]["best"]))
+                m.addConstr((env.norm_matrix[e]["worst"] - env.norm_matrix[e]["best"])*v >= objs[e]*(transp_aprox_impact+storage_impact-env.norm_matrix[e]["best"]))
 
         # ----------------------------------------
         # MODEL IMPLEMENTATION
@@ -143,7 +150,6 @@ class Inventory():
             for const in m.getConstrs():
                 if const.IISConstr:
                     print(const.ConstrName)'''
-
 
         if (not inst_gen.sustainability and len(objs) == 1) or (inst_gen.sustainability and len(objs) > 1):
         
@@ -195,7 +201,7 @@ class Inventory():
             yy = {t:{s:{(k,o):y[k,t,o,s].x for k in K for o in range(inst_gen.O_k[k]+1)} for s in S} for t in T}
 
             la_decisions = [I0, zz, bb, yy]
-
+            
             return action, la_decisions
 
         else:
@@ -205,12 +211,14 @@ class Inventory():
             # ----------------------------------------
 
             impacts = dict()
-            impacts["costs"] = purch_cost.getValue() + backo_cost.getValue() + rout_aprox_cost.getValue()
+            if hold_cost: impacts["costs"] = purch_cost.getValue() + backo_cost.getValue() + rout_aprox_cost.getValue() + holding_cost.getValue()
+            else: impacts["costs"] = purch_cost.getValue() + backo_cost.getValue() + rout_aprox_cost.getValue()
             for e in inst_gen.E:
+                #transp_aprox_impact = 0*z[1,1,1,1]
                 transp_aprox_impact = gu.quicksum((inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
                 storage_impact = gu.quicksum(inst_gen.h_LCA[e][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k] + 1) for s in S)/len(S)
                 impacts[e] = transp_aprox_impact.getValue() + storage_impact.getValue()
-            
+
             return impacts
 
 
