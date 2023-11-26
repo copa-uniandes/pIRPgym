@@ -119,7 +119,7 @@ class Routing():
         def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alphas:list=[0.25],adaptative=True,rd_seed=None,
                           price_routes:bool=False,time_limit:float=15):
             start = process_time()
-            pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
+            pending_sup,requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
             best_sol = list()
             best_obj = 1e9
@@ -128,7 +128,7 @@ class Routing():
 
             if adaptative:
                 alpha_performance:dict = {alpha:0 for alpha in RCL_alphas}
-                while process_time()-start<0.3*time_limit:
+                while process_time()-start<0.2*time_limit:
                     alpha_performance = Routing.GA.calibrate_alpha(RCL_alphas,alpha_performance,requirements,inst_gen)    
 
             while process_time()-start < time_limit:
@@ -140,10 +140,10 @@ class Routing():
 
                 if not price_routes:
                     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
-                                                                                        RCL_alpha,rd_seed,price_routes)
+                                                                         RCL_alpha,rd_seed,price_routes)
                 else:
                     routes,FO,(distances,loads),_,reduced_costs = Routing.RCL_Solution(purchase,inst_gen,t,
-                                                                                                RCL_alpha,rd_seed,price_routes)
+                                                                                       RCL_alpha,rd_seed,price_routes)
 
                 if FO < best_obj:
                     best_sol = routes
@@ -158,6 +158,7 @@ class Routing():
                 return best_sol,best_obj,best_info,best_time
             else:
                 return best_sol,best_obj,best_info,best_time,best_r
+
 
         ''' RCL based constructive '''
         @staticmethod
@@ -1128,7 +1129,7 @@ class Routing():
 
         @staticmethod
         def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
-                                       dynamic_p=False,**kwargs) -> tuple:
+                                       dynamic_p=False,**kwargs)->tuple:
             times = list()
             vehicles = list()
             objectives = list()
@@ -1137,7 +1138,7 @@ class Routing():
 
             if router == Routing.RCL_Heuristic:
                 for i in range(n):
-                    seed = i * 2
+                    seed = (i+1) * 2
                     RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
                                                                   adaptative=kwargs['adaptative'],rd_seed=seed,time_limit=kwargs['time_limit'])
                     assert RCL_obj==Routing_management.price_routes(inst_gen,RCL_routes),"Computed distance doesn't match route cost"
@@ -1153,19 +1154,20 @@ class Routing():
 
             if dynamic_p:
                 if averages:
-                    return (np.mean(objectives), round(np.mean(vehicles), 2), np.mean(times),
-                            np.std(objectives), np.min(objectives), np.max(objectives),
-                            np.std(vehicles), np.min(vehicles), np.max(vehicles),
-                            np.std(times), np.min(times), np.max(times),
-                            np.mean(extra_costs), np.min(extra_costs), np.max(extra_costs),
-                            np.mean(missings), np.min(missings), np.max(missings))
+                    return (np.mean(objectives),round(np.mean(vehicles), 2),np.mean(times),
+                            np.std(objectives),np.min(objectives),np.max(objectives),
+                            np.std(vehicles),np.min(vehicles),np.max(vehicles),
+                            np.std(times),np.min(times),np.max(times),
+                            np.mean(extra_costs),np.min(extra_costs),np.max(extra_costs),
+                            np.mean(missings),np.min(missings),np.max(missings))
                 else:
-                    return objectives, vehicles, times, extra_costs, missings
+                    return objectives,vehicles,times,extra_costs,missings
             else:
                 if averages:
-                    return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.std(objectives),np.min(objectives),np.max(objectives))
+                    return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
+                           np.std(objectives),np.min(objectives),np.max(objectives))
                 else:
-                    return objectives, vehicles, times
+                    return objectives,vehicles,times
 
 
 

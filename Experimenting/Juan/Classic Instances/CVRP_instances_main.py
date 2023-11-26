@@ -52,7 +52,7 @@ env_config = {  'M':13,'K':15,'T':12,'F':13,'Q':2000,
 
 # Creating instance generator object
 inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
-                              historical_data, backorders, env_config = env_config)
+                                      historical_data,backorders,env_config=env_config)
 
 ### Environment 
 # Creating environment object
@@ -106,16 +106,16 @@ for inst_set,inst_list in instances.items():
         if 'RCL' in policies[inst_set]:
             if 'RCL'== policies[inst_set][-1]:end=True
             else:end=False
-            RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+            RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                        purchase,inst_gen,env,n=10,
+                                                                                        purchase,inst_gen,env,n=30,
                                                                                         averages=True,dynamic_p=False,
-                                                                                        time_limit=30,RCL_alphas=RCL_alphas,
+                                                                                        time_limit=20,RCL_alphas=RCL_alphas,
                                                                                         adaptative=True)
-            save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_std,RCL_min,RCL_max)])                 
+            save_pickle(inst_set,'RCL',instance,[RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)])                 
             if verbose: string = verb.routing_instances.print_routing_update(string,RCL_obj,RCL_veh,RCL_time,
                                                                              show_gap,benchmark,end=end,
-                                                                             intervals=(RCL_std,RCL_min,RCL_max))
+                                                                             intervals=(RCL_median,RCL_std,RCL_min,RCL_max))
 
         ''' Genetic Algorithm '''
         if 'GA' in policies[inst_set]:
