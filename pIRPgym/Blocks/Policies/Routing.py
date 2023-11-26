@@ -119,31 +119,30 @@ class Routing():
         def RCL_Heuristic(purchase:dict,inst_gen:instance_generator,t,RCL_alphas:list=[0.25],adaptative=True,rd_seed=None,
                           price_routes:bool=False,time_limit:float=15):
             start = process_time()
-            pending_sup,requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
+            _,requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
 
             best_sol = list()
             best_obj = 1e9
             best_info = ()
             best_time = float
 
-            if adaptative:
-                alpha_performance:dict = {alpha:0 for alpha in RCL_alphas}
-                while process_time()-start<0.2*time_limit:
-                    alpha_performance = Routing.GA.calibrate_alpha(RCL_alphas,alpha_performance,requirements,inst_gen)    
+            alpha_performance:dict = {alpha:1/len(RCL_alphas) for alpha in RCL_alphas}
 
             while process_time()-start < time_limit:
-                if adaptative:
-                    # Choosing alpha
-                    RCL_alpha = choice(RCL_alphas,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alphas])    
-                else: 
-                    RCL_alpha = choice(RCL_alphas,size=1)
+                # Choosing alpha
+                RCL_alpha = choice(RCL_alphas,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alphas])    
+
 
                 if not price_routes:
                     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
                                                                          RCL_alpha,rd_seed,price_routes)
-                else:
-                    routes,FO,(distances,loads),_,reduced_costs = Routing.RCL_Solution(purchase,inst_gen,t,
-                                                                                       RCL_alpha,rd_seed,price_routes)
+
+                # if not price_routes:
+                #     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
+                #                                                          alpha_performance,rd_seed,price_routes)
+                # else:
+                #     routes,FO,(distances,loads),_,reduced_costs = Routing.RCL_Solution(purchase,inst_gen,t,
+                #                                                                        alpha_performance,rd_seed,price_routes)
 
                 if FO < best_obj:
                     best_sol = routes
@@ -152,6 +151,9 @@ class Routing():
                     best_time = process_time()-start
 
                     if price_routes:    best_r = reduced_costs
+                
+                # alpha update
+                alpha_performance[RCL_alpha] += 1/FO
 
 
             if not price_routes: 
@@ -163,6 +165,7 @@ class Routing():
         ''' RCL based constructive '''
         @staticmethod
         def RCL_Solution(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,rd_seed=None,price_routes:bool=False) -> tuple:
+        # def RCL_Solution(purchase:dict,inst_gen:instance_generator,t,alpha_performance:dict,rd_seed=None,price_routes:bool=False) -> tuple:
             """
             Generates a solution using the RCL (Restricted Candidate List) based constructive heuristic for the dCVRP.
 
@@ -184,7 +187,7 @@ class Routing():
             ```
             """
             start = process_time()
-            pending_sup, requirements = Routing.consolidate_purchase(purchase, inst_gen,t)
+            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             if seed != None:
                 seed(rd_seed)
@@ -198,6 +201,8 @@ class Routing():
                 reduced_costs = list()
 
             while len(pending_sup) > 0:
+                
+                # RCL_alpha = choice(alpha_performance.keys(),p=[performance/sum(alpha_performance.values()) for alpha,performance in alpha_performance.keys()])   #INTRA 
                 route,distance,load,pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha,pending_sup,requirements,inst_gen)
 
                 if price_routes:
@@ -1257,8 +1262,6 @@ class RoutingAgent(Routing):
             for RCL_alpha in grid['RCL alpha']:
                 for adaptative in grid['adaptative']:
                     pass
-
-
 
 
     def policy_routing(self,policy,purchase,inst_gen,t,**kwargs)->tuple:
