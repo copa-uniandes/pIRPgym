@@ -160,7 +160,7 @@ class routing_instances():
         else: item = 'Obj' 
         num = len(policies)
 
-        print(f'**************{"*"*num*13}  {inst_set} set Instances  {"*"*num*13}**************',flush = True)
+        print(f'*****************{"*"*num*13}  {inst_set} set Instances  {"*"*num*13}*****************',flush = True)
         string1 = f'--------|{"-"*23}|'
         string2 = 'Inst\t|   M \t  Veh\t Obj\t|'
         for strategy in policies:
@@ -168,12 +168,12 @@ class routing_instances():
                 string1 += f'\t  {strategy} \t \t|'
                 string2 += f' t(s)\t #Veh \t {item} \t|'
             else:
-                string1 += f'\t  \t  \t{strategy} \t \t \t|'
-                string2 += f' t(s)\t #Veh \t mean \t median \t stdev\t min\t max\t|'
+                string1 += f'\t  \t  \t \t{strategy} \t \t \t|'
+                string2 += f' t(s)\t #Veh \t mean \tmedian\t stdev\t min\t max\t|'
                 
         print(string1)
         print(string2)
-        print(f'------------------------------------------------{"-"*num*28}')
+        print(f'--------------------------------------------------------{"-"*num*28}')
 
 
         # print(f'{"-"*8}|\tBKS \t|\t   NN \t \t|\t   RCL \t \t|\t   HGA \t \t|\t  HGS*')# \t \t|\t   CG \t \t')
