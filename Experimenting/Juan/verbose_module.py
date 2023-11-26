@@ -215,7 +215,7 @@ class routing_instances():
                 else:
                     string += f' {tt:.1f}\t  {veh}\t {gap}\t|'
             else:
-                median = round(intervals[0]/benchmark[0],4) * 100; median = round(median,2)
+                median = round((intervals[0]-benchmark[0])/benchmark[0],4) * 100; median = round(median,2)
                 stdev = round(intervals[1]/benchmark[0],4) * 100; stdev = round(stdev,2)
                 min_gap = round((intervals[2]-benchmark[0])/benchmark[0],4) * 100; min_gap = round(min_gap,2)
                 max_gap = round((intervals[3]-benchmark[0])/benchmark[0],4) * 100; max_gap = round(max_gap,2)
