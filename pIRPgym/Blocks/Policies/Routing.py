@@ -1152,7 +1152,7 @@ class Routing():
                     objectives.append(RCL_obj)
 
                     if dynamic_p:
-                        extra_cost, missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase,
+                        extra_cost,missing = Routing_management.evaluate_dynamic_potential(inst_gen,env,RCL_routes,purchase,
                                                                                             discriminate_missing=False)
                         extra_costs.append(extra_cost)
                         missings.append(missing)
