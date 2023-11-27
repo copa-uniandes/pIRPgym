@@ -94,7 +94,7 @@ class RoutingV():
 
 
     @staticmethod
-    def plot_indicator_evolution(routing_performance,indicator,x_axis:str='Time step'):
+    def plot_indicator_evolution(routing_performance,indicator,x_axis:str='Time step',x_values=None):
         """
         Plot the evolution of a specific indicator for different routing policies.
 
@@ -112,8 +112,12 @@ class RoutingV():
         # Plot the evolution for each routing policy
         for i, (policy, data) in enumerate(routing_performance.items()):
             if indicator in data:
-                ax.plot(data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
-                        linestyle='-',markersize=8,linewidth=2)
+                if x_values == None: 
+                    ax.plot(data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
+                            linestyle='-',markersize=8,linewidth=2)
+                else: 
+                    ax.plot(x_values,data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
+                            linestyle='-',markersize=8,linewidth=2)
 
         # Add labels and a legend
         ax.set_xlabel(x_axis, fontsize=12)
