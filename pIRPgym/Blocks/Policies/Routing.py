@@ -130,19 +130,18 @@ class Routing():
 
             while process_time()-start < time_limit:
                 # Choosing alpha
-                # RCL_alpha = choice(RCL_alphas,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alphas])    
-
-
-                # if not price_routes:
-                #     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
-                #                                                          RCL_alpha,rd_seed,price_routes)
+                RCL_alpha = choice(RCL_alphas,p=[alpha_performance[alpha]/sum(alpha_performance.values()) for alpha in RCL_alphas])    
 
                 if not price_routes:
                     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
-                                                                         alpha_performance,rd_seed,price_routes)
-                else:
-                    routes,FO,(distances,loads),_,reduced_costs = Routing.RCL_Solution(purchase,inst_gen,t,
-                                                                                       alpha_performance,rd_seed,price_routes)
+                                                                         RCL_alpha,rd_seed,price_routes)
+
+                # if not price_routes:
+                #     routes,FO,(distances,loads),_ = Routing.RCL_Solution(purchase,inst_gen,t,
+                #                                                          alpha_performance,rd_seed,price_routes)
+                # else:
+                #     routes,FO,(distances,loads),_,reduced_costs = Routing.RCL_Solution(purchase,inst_gen,t,
+                                                                                    #    alpha_performance,rd_seed,price_routes)
 
                 if FO < best_obj:
                     best_sol = routes
@@ -150,10 +149,11 @@ class Routing():
                     best_info = (distances,loads)
                     best_time = process_time()-start
 
-                    if price_routes:    best_r = reduced_costs
+                    if price_routes:    
+                        best_r = reduced_costs
                 
                 # alpha update
-                # alpha_performance[RCL_alpha] += 1/FO
+                alpha_performance[RCL_alpha] += 1/FO
 
 
             if not price_routes: 
@@ -164,8 +164,8 @@ class Routing():
 
         ''' RCL based constructive '''
         @staticmethod
-        # def RCL_Solution(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,rd_seed=None,price_routes:bool=False) -> tuple:
-        def RCL_Solution(purchase:dict,inst_gen:instance_generator,t,alpha_performance:dict,rd_seed=None,price_routes:bool=False) -> tuple:
+        def RCL_Solution(purchase:dict,inst_gen:instance_generator,t,RCL_alpha:float=0.35,rd_seed=None,price_routes:bool=False) -> tuple:
+        # def RCL_Solution(purchase:dict,inst_gen:instance_generator,t,alpha_performance:dict,rd_seed=None,price_routes:bool=False) -> tuple:
             """
             Generates a solution using the RCL (Restricted Candidate List) based constructive heuristic for the dCVRP.
 
@@ -201,8 +201,6 @@ class Routing():
                 reduced_costs = list()
 
             while len(pending_sup) > 0:
-                
-                RCL_alpha = choice(list(alpha_performance.keys()))   #INTRA 
                 route,distance,load,pending_sup = Routing.RCL_constructive.generate_RCL_route(RCL_alpha,pending_sup,requirements,inst_gen)
 
                 if price_routes:
@@ -317,7 +315,7 @@ class Routing():
             pending_sup,requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             # Parameters
-            Population_size:int = 1000
+            Population_size:int = 1500
             Population_iter:range = range(Population_size)
             training_time:float = 10
             Elite_size:int = int(Population_size*0.25)
@@ -365,12 +363,13 @@ class Routing():
                     # TODO: Operators
                     ###################
                     if random() <= mutation_rate:
-                        new_individual,new_distances = Routing.GA.mutation(Population[individual_i],
+                        new_individual,new_distances,evolved = Routing.GA.mutation(Population[individual_i],
                                                                             Distances[individual_i],inst_gen)
+                        if Routing_management.price_routes(inst_gen,new_individual)!=sum(new_distances):
+                            x = 5
                         new_FO = sum(new_distances) 
                         new_loads = Loads[individual_i]
                         mutated = True
-                            
                     else:
                         pass
                     
@@ -384,9 +383,9 @@ class Routing():
                     New_Distances.append(new_distances);New_Loads.append(new_loads)
 
                     # Updating incumbent
-                    if sum(new_distances) < incumbent:
-                        incumbent = sum(new_distances)
-                        best_individual:list = [new_individual, sum(new_distances), (new_distances, new_loads), process_time()-start]
+                    if new_FO < incumbent:
+                        incumbent = new_FO
+                        best_individual:list = [new_individual,new_FO,(new_distances,new_loads),process_time()-start]
                         print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
 
                 # Update population
@@ -524,14 +523,14 @@ class Routing():
             def mutation(individual:list,distances:float,inst_gen:instance_generator)->list:
                 pos = randint(0,len(individual))
                 if len(individual[pos])<=3: 
-                    return individual,distances
+                    return individual,distances,False
                 
-                if random() <= 0.5:
-                    individual[pos],distances[pos] = Routing.GA.swap_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
+                if random() <= 0:
+                    individual[pos],distances[pos],mutated = Routing.GA.swap_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max,inst_gen=inst_gen)
                 else:
-                    individual[pos],distances[pos] = Routing.GA.two_opt_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
+                    individual[pos],distances[pos],mutated = Routing.GA.two_opt_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
                 
-                return individual,distances
+                return individual,distances,mutated
 
 
             @staticmethod
@@ -550,25 +549,13 @@ class Routing():
                 size = len(route)
                 idx1, idx2 = sorted(np.random.choice(range(1,size-1),2,replace=False))
                 
-                if idx2 == idx1+1: return route,current_obj
+                if idx2 == idx1+1: return route,current_obj,False
                 # Swap the nodes
                 old_route = deepcopy(route)
                 route[idx1],route[idx2] = route[idx2],route[idx1]
 
                 # Recompute the affected distances
                 delta_distance = 0
-
-                # delta_distance += (c[route[idx1 - 1],route[idx1]] 
-                #                 - c[route[idx1 - 1],route[idx2]])
-
-                # delta_distance += (c[route[idx1],route[idx1 + 1]]
-                #                 - c[route[idx2],route[idx1 + 1]])
-
-                # delta_distance += (c[route[idx2],route[idx2 + 1]] 
-                #                 - c[route[idx1],route[idx2 + 1]])
-                
-                # delta_distance += (c[route[idx2 - 1],route[idx2]] 
-                #                 - c[route[idx2 - 1],route[idx1]])
                 
                 delta_distance += (c[route[idx1 - 1], route[idx1]]
                   - c[route[idx1 - 1], route[idx2]])
@@ -590,9 +577,9 @@ class Routing():
 
                 # Evaluate route's feasibility
                 if new_distance > kwargs['d_max']:
-                    return route,current_obj
+                    return old_route,current_obj,False
                 
-                return route,new_distance
+                return route,new_distance,True
         
 
             @staticmethod
@@ -630,9 +617,9 @@ class Routing():
                 
                 # Evaluate route's feasibility
                 if 'd_max' in kwargs and new_distance > kwargs['d_max']:
-                    return route, current_obj
+                    return route,current_obj,False
 
-                return new_route, new_distance
+                return new_route,new_distance,True
 
 
         ''' Hybrid Genetic Search (CVRP) '''

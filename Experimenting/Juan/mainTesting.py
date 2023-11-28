@@ -45,8 +45,8 @@ d_params = {'dist': 'log-normal', 'r_f_params': (3,1)}          # Demand
 
 h_params = {'dist': 'd_uniform', 'r_f_params': (20,61)}         # Holding costs
 
-stoch_rd_seed = 3       # Random seeds
-det_rd_seed = 3
+stoch_rd_seed = 0       # Random seeds
+det_rd_seed = 0
 
 disc = ("strong","conc")
 
@@ -72,17 +72,38 @@ state = env.reset(inst_gen,return_state=True)
 
 # requirements,_ = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
 
+CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=60,
+                                                                            verbose=False,heuristic_initialization=5,
+                                                                            return_num_cols=True,RCL_alpha=0.6) 
+print(f'CG objective: {CG_obj}')
+
+# nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+# print(f'NN objective: {nn_obj}')
 
 
-GA_routes,GA_obj,(GA_distances,GA_loads),GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                                     rd_seed=0,time_limit=1000,verbose=True)    # Genetic Algorithm
+RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
+                                                                                        purchase,inst_gen,env,n=30,
+                                                                                        averages=True,dynamic_p=False,
+                                                                                        time_limit=20,RCL_alphas=[0.2],
+                                                                                        adaptative=True)
+print(f'RCL objective light: {RCL_obj}')
+
+RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
+                                                                                        purchase,inst_gen,env,n=30,
+                                                                                        averages=True,dynamic_p=False,
+                                                                                        time_limit=60,RCL_alphas=[0.2],
+                                                                                        adaptative=True)
+print(f'RCL objective hard: {RCL_obj}')
 
 
 
+# GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+#                                                                      rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
+# print(f'GA objective: {GA_obj}')
 
-
-
-
+# x = 1
 
 
 
