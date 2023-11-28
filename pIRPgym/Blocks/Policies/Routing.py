@@ -1175,6 +1175,8 @@ class Routing():
                 return RCL_routes,RCL_obj,RCL_info,RCL_time                
             
             Results = p.map(run_eval,seeds)
+            p.close()
+            p.join()
 
             objectives = [i[1] for i in Results]
             vehicles = [len(i[0]) for i in Results]
