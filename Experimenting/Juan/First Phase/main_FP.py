@@ -3,7 +3,10 @@ import sys
 from time import process_time
 import os
 import pickle
+import numpy as np
 from numpy.random import seed
+
+from multiprocess import pool,freeze_support
 
 sys.path.append('../.')
 import verbose_module as verb
@@ -134,8 +137,31 @@ for experiment in experiments:
             results_information['NN'].append((nn_routes,nn_obj,nn_info,nn_time))
 
             # RCL Heuristic
-            RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-                                                            multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
+            def multiprocess_eval_stoch_policy(router,purchase,inst_gen,env, n=30,averages=True,
+                                       dynamic_p=False,initial_seed=0,**kwargs):
+                freeze_support()
+
+                seeds = [i for i in range(initial_seed,initial_seed+n)] 
+                p = pool.Pool()
+
+                def run_eval(seed):
+                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
+                                                                adaptative=kwargs['adaptative'],rd_seed=seed,
+                                                                time_limit=kwargs['time_limit'])
+                    return RCL_routes,RCL_obj,RCL_info,RCL_time                
+                
+                Results = p.map(run_eval,seeds)
+                p.close()
+                p.join()
+
+                objectives = [i[1] for i in Results]
+                vehicles = [len(i[0]) for i in Results]
+                times = [i[3] for i in Results]
+                
+                return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
+                            np.std(objectives),np.min(objectives),np.max(objectives))
+            
+            RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
                                                                                             purchase,inst_gen,env,n=30,
                                                                                             averages=True,dynamic_p=False,
                                                                                             time_limit=15,RCL_alphas=[0.05,0.1,0.2,0.35],
