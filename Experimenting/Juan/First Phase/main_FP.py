@@ -40,7 +40,29 @@ time_limits = [1,30,60,300,1800,3600]
 init_times = {1:0.1,30:1,60:3,300:5,1800:5,3600:10}
 
 
+def multiprocess_eval_stoch_policy(router,purchase,inst_gen,env, n=30,averages=True,
+                            dynamic_p=False,initial_seed=0,**kwargs):
+    freeze_support()
 
+    seeds = [i for i in range(initial_seed,initial_seed+n)] 
+    p = pool.Pool()
+
+    def run_eval(seed):
+        RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
+                                                    adaptative=kwargs['adaptative'],rd_seed=seed,
+                                                    time_limit=kwargs['time_limit'])
+        return RCL_routes,RCL_obj,RCL_info,RCL_time                
+    
+    Results = p.map(run_eval,seeds)
+    p.close()
+    p.join()
+
+    objectives = [i[1] for i in Results]
+    vehicles = [len(i[0]) for i in Results]
+    times = [i[3] for i in Results]
+    
+    return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
+                np.std(objectives),np.min(objectives),np.max(objectives))
 
 
 
@@ -136,31 +158,7 @@ for experiment in experiments:
             nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
             results_information['NN'].append((nn_routes,nn_obj,nn_info,nn_time))
 
-            # RCL Heuristic
-            def multiprocess_eval_stoch_policy(router,purchase,inst_gen,env, n=30,averages=True,
-                                       dynamic_p=False,initial_seed=0,**kwargs):
-                freeze_support()
-
-                seeds = [i for i in range(initial_seed,initial_seed+n)] 
-                p = pool.Pool()
-
-                def run_eval(seed):
-                    RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
-                                                                adaptative=kwargs['adaptative'],rd_seed=seed,
-                                                                time_limit=kwargs['time_limit'])
-                    return RCL_routes,RCL_obj,RCL_info,RCL_time                
-                
-                Results = p.map(run_eval,seeds)
-                p.close()
-                p.join()
-
-                objectives = [i[1] for i in Results]
-                vehicles = [len(i[0]) for i in Results]
-                times = [i[3] for i in Results]
-                
-                return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
-                            np.std(objectives),np.min(objectives),np.max(objectives))
-            
+            # RCL Heuristic            
             RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
                                                                                             purchase,inst_gen,env,n=30,
                                                                                             averages=True,dynamic_p=False,
