@@ -92,9 +92,9 @@ class instance_generator():
 
         self.theta = 0.8                                # Service Level requirement
         self.E = ["climate","water","land","fossil"]    # Environmental Indicators
-        self.metric_names = {"transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
+        self.metric_names = {"costs":"Total\nCost","transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
                              "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion"}
-        self.metric_units = {"transport cost":"$", "purchase cost":"$", "holding cost":"$", "backorders cost":"$",
+        self.metric_units = {"costs":"$","transport cost":"$", "purchase cost":"$", "holding cost":"$", "backorders cost":"$",
                              "climate":"kg CO2 eq", "water":"m3 depriv.", "land":"Pt.", "fossil":"MJ"}
 
         ### Look-ahead parameters ###

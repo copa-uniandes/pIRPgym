@@ -125,6 +125,17 @@ class export_results():
 
         file = open(new_dir+f"Perished_{weights}_{seed_ix}","wb")
         dump(perished,file); file.close()
+    
+    @staticmethod
+    def export_norm_matrix(weights, seed_ix, norm_matrix):
+
+        path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Matrix/"
+        new_dir = path + f"Matrix_{weights}/"
+
+        if not os.path.exists(new_dir): os.makedirs(new_dir)
+
+        file = open(new_dir+f"Matrix_{weights}_{seed_ix}","wb")
+        dump(norm_matrix,file); file.close()
 
 class import_results():
 
@@ -201,6 +212,17 @@ class import_results():
         new_dir = path + f"Perished_{weights}/"
 
         file = open(new_dir+f"Perished_{weights}_{seed_ix}","rb")
+        resp = load(file); file.close()
+
+        return resp
+
+    @staticmethod
+    def import_norm_matrix(weights, seed_ix):
+
+        path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Matrix/"
+        new_dir = path + f"Matrix_{weights}/"
+
+        file = open(new_dir+f"Matrix_{weights}_{seed_ix}","rb")
         resp = load(file); file.close()
 
         return resp
