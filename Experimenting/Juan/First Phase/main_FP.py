@@ -39,10 +39,10 @@ time_limits = [1,30,60,300,1800,3600]
 init_times = {1:0.1,30:1,60:3,300:5,1800:5,3600:10}
 
 
-def multiprocess_eval_stoch_policy(router,purchase,inst_gen,env, n=30,averages=True,
-                            dynamic_p=False,initial_seed=0,**kwargs):
+def multiprocess_eval_stoch_policy( router,purchase,inst_gen,env, n=30,averages=True,
+                                    dynamic_p=False,initial_seed=0,**kwargs):
     freeze_support()
-    seeds = [i for i in range(initial_seed,initial_seed+n)] 
+    seeds = [i for i in range(initial_seed,initial_seed+n)]
     p = pool.Pool()
 
     def run_eval(seed):
@@ -107,7 +107,7 @@ show_gap = True
 cont = 200
 for experiment in experiments:
     print(f'Experiment {experiment}')
-    env_config = {'T':4,'Q':750,'S':2,'LA_horizon':2,
+    env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000
                  }
     env_config['M'] = sizes[experiment]
