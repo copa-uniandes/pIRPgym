@@ -50,9 +50,10 @@ class objectives_performance():
 class export_results():
 
     @staticmethod
-    def export_rewards(weights,seed_ix,rewards):
+    def export_rewards(weights,seed_ix,rewards, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Rewards/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Rewards/"
         new_dir = path + f"Rewards_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -61,9 +62,10 @@ class export_results():
         dump(rewards,file); file.close()
     
     @staticmethod
-    def export_actions(weights,seed_ix,action):
+    def export_actions(weights,seed_ix,action, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Actions/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Actions/"
         new_dir = path + f"Actions_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -72,9 +74,10 @@ class export_results():
         dump(action,file); file.close()
     
     @staticmethod
-    def export_lookahead_decisions(weights,seed_ix,lookahead):
+    def export_lookahead_decisions(weights,seed_ix,lookahead, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Lookahead/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Lookahead/"
         new_dir = path + f"Lookahead_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -83,9 +86,10 @@ class export_results():
         dump(lookahead,file); file.close()
     
     @staticmethod
-    def export_instance_parameters(weights,seed_ix,inst_gen):
+    def export_instance_parameters(weights,seed_ix,inst_gen, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Instance/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Instance/"
         new_dir = path + f"Instance_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -94,9 +98,10 @@ class export_results():
         dump(inst_gen,file); file.close()
 
     @staticmethod
-    def export_inventory(weights, seed_ix, i0):
+    def export_inventory(weights, seed_ix, i0, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Inventory/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Inventory/"
         new_dir = path + f"Inventory_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -105,9 +110,10 @@ class export_results():
         dump(i0,file); file.close()
     
     @staticmethod
-    def export_backorders(weights, seed_ix, backo):
+    def export_backorders(weights, seed_ix, backo, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Backorders/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Backorders/"
         new_dir = path + f"Backorders_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -116,9 +122,10 @@ class export_results():
         dump(backo,file); file.close()
     
     @staticmethod
-    def export_perished(weights, seed_ix, perished):
+    def export_perished(weights, seed_ix, perished, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Perished/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Perished/"
         new_dir = path + f"Perished_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -127,9 +134,10 @@ class export_results():
         dump(perished,file); file.close()
     
     @staticmethod
-    def export_norm_matrix(weights, seed_ix, norm_matrix):
+    def export_norm_matrix(weights, seed_ix, norm_matrix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Matrix/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Matrix/"
         new_dir = path + f"Matrix_{weights}/"
 
         if not os.path.exists(new_dir): os.makedirs(new_dir)
@@ -140,9 +148,10 @@ class export_results():
 class import_results():
 
     @staticmethod
-    def import_rewards(weights,seed_ix):
+    def import_rewards(weights,seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Rewards/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Rewards/"
         new_dir = path + f"Rewards_{weights}/"
 
         file = open(new_dir+f"Rewards_{weights}_{seed_ix}","rb")
@@ -151,9 +160,10 @@ class import_results():
         return resp
     
     @staticmethod
-    def import_actions(weights,seed_ix):
+    def import_actions(weights,seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Actions/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Actions/"
         new_dir = path + f"Actions_{weights}/"
 
         file = open(new_dir+f"Actions_{weights}_{seed_ix}","rb")
@@ -162,9 +172,10 @@ class import_results():
         return resp
     
     @staticmethod
-    def import_lookahead_decisions(weights,seed_ix):
+    def import_lookahead_decisions(weights,seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Lookahead/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Lookahead/"
         new_dir = path + f"Lookahead_{weights}/"
 
         file = open(new_dir+f"Lookahead_{weights}_{seed_ix}","rb")
@@ -173,9 +184,10 @@ class import_results():
         return resp
     
     @staticmethod
-    def import_instance_parameters(weights,seed_ix):
+    def import_instance_parameters(weights,seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Instance/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Instance/"
         new_dir = path + f"Instance_{weights}/"
 
         file = open(new_dir+f"Instance_{weights}_{seed_ix}","rb")
@@ -184,9 +196,10 @@ class import_results():
         return resp
 
     @staticmethod
-    def import_inventory(weights, seed_ix):
+    def import_inventory(weights, seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Inventory/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Inventory"
         new_dir = path + f"Inventory_{weights}/"
 
         file = open(new_dir+f"Inventory_{weights}_{seed_ix}","rb")
@@ -195,9 +208,10 @@ class import_results():
         return resp
     
     @staticmethod
-    def import_backorders(weights, seed_ix):
+    def import_backorders(weights, seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Backorders/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Backorders/"
         new_dir = path + f"Backorders_{weights}/"
 
         file = open(new_dir+f"Backorders_{weights}_{seed_ix}","rb")
@@ -206,9 +220,10 @@ class import_results():
         return resp
     
     @staticmethod
-    def import_perished(weights, seed_ix):
+    def import_perished(weights, seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Perished/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Perished/"
         new_dir = path + f"Perished_{weights}/"
 
         file = open(new_dir+f"Perished_{weights}_{seed_ix}","rb")
@@ -217,9 +232,10 @@ class import_results():
         return resp
 
     @staticmethod
-    def import_norm_matrix(weights, seed_ix):
+    def import_norm_matrix(weights, seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Matrix/"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Matrix/"
         new_dir = path + f"Matrix_{weights}/"
 
         file = open(new_dir+f"Matrix_{weights}_{seed_ix}","rb")
