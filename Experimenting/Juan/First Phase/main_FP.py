@@ -30,7 +30,8 @@ def save_pickle(experiment,replica,policy,performance):
         pickle.dump(performance,file)
 
 
-experiments = [i for i in range(2,7)]
+Experiments = [i for i in range(2,7)]
+Replicas = [i for i in range(1,6)]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6,0.8]
@@ -52,10 +53,12 @@ def multiprocess_eval_stoch_policy( router,purchase,inst_gen,env, n=30,averages=
         return RCL_routes,RCL_obj,RCL_info,RCL_time                
     
     Results = p.map(run_eval,seeds)
+    
     p.close()
     p.join()
 
     objectives = [i[1] for i in Results]
+    print(objectives)
     vehicles = [len(i[0]) for i in Results]
     times = [i[3] for i in Results]
     
@@ -104,8 +107,8 @@ verbose = False
 start = process_time()
 show_gap = True
 
-cont = 400
-for experiment in experiments:
+cont = 1000
+for experiment in Experiments:
     env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000
                  }
@@ -117,7 +120,7 @@ for experiment in experiments:
     inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
                                 historical_data,backorders,env_config=env_config)
     
-    for replica in range(1,6):
+    for replica in Replicas:
         if verbose: string = verb.CG_initialization.print_head(experiment,replica)
 
         instance_information = dict()
@@ -154,21 +157,20 @@ for experiment in experiments:
             results_information['NN'].append((nn_routes,nn_obj,nn_info,nn_time))
 
             # RCL Heuristic     
-            if __name__=='__main__':
-                RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                                purchase,inst_gen,env,n=30,
-                                                                                                averages=True,dynamic_p=False,
-                                                                                                time_limit=15,RCL_alphas=[0.05,0.1,0.2,0.35],
-                                                                                                adaptative=True)
-                results_information['RCL'].append((RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)))
-            
-            # RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-            #                                                 evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-            #                                                                             purchase,inst_gen,env,n=15,
-            #                                                                             averages=True,dynamic_p=False,
-            #                                                                             time_limit=20,RCL_alphas=[0.05,0.1,0.25,0.4],
-            #                                                                             adaptative=True)
+            # RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
+            #                                                                                 purchase,inst_gen,env,n=15,
+            #                                                                                 averages=True,dynamic_p=False,
+            #                                                                                 time_limit=15,RCL_alphas=[0.05,0.1,0.25,0.4],
+            #                                                                                 adaptative=True)
             # results_information['RCL'].append((RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)))
+            
+            RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
+                                                                                        purchase,inst_gen,env,n=15,
+                                                                                        averages=True,dynamic_p=False,
+                                                                                        time_limit=15,RCL_alphas=[0.05,0.1,0.25,0.4],
+                                                                                        adaptative=True)
+            results_information['RCL'].append((RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)))
 
             # # Genetic Algorithm
             # GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
