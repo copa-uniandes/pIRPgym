@@ -26,7 +26,7 @@ def save_pickle(experiment,replica,policy,performance):
 
 
 
-experiments = [i for i in range(1,7)]
+experiments = [i for i in range(3,7)]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6,0.8]
@@ -115,6 +115,7 @@ for experiment in experiments:
         results_information.update({f'CG_{time_limit}_{alpha}':list() for time_limit in time_limits for alpha in alphas})
 
         while not done:
+            print(f'\t {env.t}',end='\r')
             ''' Purchase '''
             try:
                 [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
