@@ -81,21 +81,23 @@ print(f'CG objective: {CG_obj}')
 # print(f'NN objective: {nn_obj}')
 
 
-RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                        purchase,inst_gen,env,n=30,
-                                                                                        averages=True,dynamic_p=False,
-                                                                                        time_limit=20,RCL_alphas=[0.2],
-                                                                                        adaptative=True)
-print(f'RCL objective light: {RCL_obj}')
+# RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+#                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
+#                                                                                         purchase,inst_gen,env,n=15,
+#                                                                                         averages=True,dynamic_p=False,
+#                                                                                         time_limit=20,RCL_alphas=[0.05,0.1,0.25,0.4],
+#                                                                                         adaptative=True)
+# print(f'RCL objective light: {RCL_obj}')
+# print(RCL_median,RCL_min,RCL_max)
 
-RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                        purchase,inst_gen,env,n=30,
-                                                                                        averages=True,dynamic_p=False,
-                                                                                        time_limit=60,RCL_alphas=[0.2],
-                                                                                        adaptative=True)
-print(f'RCL objective hard: {RCL_obj}')
+# RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+#                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
+#                                                                                         purchase,inst_gen,env,n=15,
+#                                                                                         averages=True,dynamic_p=False,
+#                                                                                         time_limit=60,RCL_alphas=[0.05,0.1,0.25,0.4],
+#                                                                                         adaptative=True)
+# print(f'RCL objective hard: {RCL_obj}')
+# print(RCL_median,RCL_min,RCL_max)
 
 
 
@@ -105,6 +107,15 @@ print(f'RCL objective hard: {RCL_obj}')
 
 # x = 1
 
+#%%
+
+
+RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+                                                            multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
+                                                                                        purchase,inst_gen,env,n=15,
+                                                                                        averages=True,dynamic_p=False,
+                                                                                        time_limit=15,RCL_alphas=[0.05,0.1,0.25,0.4],
+                                                                                        adaptative=True)
 
 
 

@@ -1,10 +1,9 @@
-from functools import reduce
 import pandas as np
 import numpy as np
-from numpy import count_nonzero,array_equal
 from numpy.random import seed,random,choice,randint
 from time import time,process_time
 from copy import deepcopy
+from multiprocess import pool
 
 import gurobipy as gu
 import hygese as hgs
@@ -1160,6 +1159,29 @@ class Routing():
                            np.std(objectives),np.min(objectives),np.max(objectives))
                 else:
                     return objectives,vehicles,times
+
+
+        @staticmethod
+        def multiprocess_eval_stoch_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
+                                       dynamic_p=False,initial_seed=0,**kwargs):
+            
+            seeds = [i for i in range(initial_seed,initial_seed+n)] 
+            p = pool.Pool()
+
+            def run_eval(seed):
+                RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
+                                                              adaptative=kwargs['adaptative'],rd_seed=seed,
+                                                              time_limit=kwargs['time_limit'])
+                return RCL_routes,RCL_obj,RCL_info,RCL_time                
+            
+            Results = p.map(run_eval,seeds)
+
+            objectives = [i[1] for i in Results]
+            vehicles = [len(i[0]) for i in Results]
+            times = [i[3] for i in Results]
+            
+            return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
+                           np.std(objectives),np.min(objectives),np.max(objectives))
 
 
 

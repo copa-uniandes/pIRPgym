@@ -26,7 +26,7 @@ def save_pickle(experiment,replica,policy,performance):
 
 
 
-experiments = [i for i in range(1,6)]
+experiments = [i for i in range(1,7)]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6,0.8]
@@ -75,12 +75,13 @@ env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 
 ################################## Policy Evaluation ##################################
 ''' Parameters '''
-verbose = True
+verbose = False
 start = process_time()
 show_gap = True
 
 cont = 200
 for experiment in experiments:
+    print(f'Experiment {experiment}')
     env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000
                  }
@@ -93,6 +94,7 @@ for experiment in experiments:
                                 historical_data,backorders,env_config=env_config)
     
     for replica in range(1,6):
+        print(f'\t Replica {replica}')
         if verbose: string = verb.CG_initialization.print_head(experiment,replica)
 
         instance_information = dict()
@@ -107,8 +109,9 @@ for experiment in experiments:
         state = env.reset(inst_gen,return_state=True)
         done = False
 
-        instance_information.update({'T':env.T,'M':list(),'Requirements':list()})
+        instance_information.update({'T':inst_gen.T,'M':list(),'Requirements':list()})
         results_information = {'NN':list(),'RCL':list(),'GA':list(),'CG':list()}
+        results_information.update({f'CG_{time_limit}':list() for time_limit in time_limits})
         results_information.update({f'CG_{time_limit}_{alpha}':list() for time_limit in time_limits for alpha in alphas})
 
         while not done:
@@ -120,7 +123,7 @@ for experiment in experiments:
                 demand_compliance = pIRPgym.Inventory.det_FIFO(purchase,inst_gen,env)
             pending_sup,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
             instance_information['M'].append(len(pending_sup))
-            instance_information['Requrements'].append(requirements)
+            instance_information['Requirements'].append(requirements)
 
             ''' Routing '''
             # Nearest Neighbor
@@ -129,11 +132,11 @@ for experiment in experiments:
 
             # RCL Heuristic
             RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                        purchase,inst_gen,env,n=15,
-                                                                                        averages=True,dynamic_p=False,
-                                                                                        time_limit=20,RCL_alphas=[0.05,0.1,0.2,0.35],
-                                                                                        adaptative=True)
+                                                            multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
+                                                                                            purchase,inst_gen,env,n=30,
+                                                                                            averages=True,dynamic_p=False,
+                                                                                            time_limit=15,RCL_alphas=[0.05,0.1,0.2,0.35],
+                                                                                            adaptative=True)
             results_information['RCL'].append((nn_routes,nn_obj,nn_info,nn_time))
             
             # # Genetic Algorithm
