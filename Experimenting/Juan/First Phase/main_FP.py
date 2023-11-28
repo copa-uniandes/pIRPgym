@@ -14,23 +14,23 @@ sys.path.append('../../../.')
 import pIRPgym
 
 
-# computer_name = input("Running experiment on mac? [Y/n]")
-# if computer_name == '': 
-#     path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
-#     experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
-# else: 
-#     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-#     experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
+computer_name = input("Running experiment on mac? [Y/n]")
+if computer_name == '': 
+    path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
+    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
+else: 
+    path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+    experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
-path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
+# path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+# experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
 def save_pickle(experiment,replica,policy,performance):
     with open(experiments_path+f'Experiment {experiment}/Replica {replica}/{policy}.pkl','wb') as file:
         pickle.dump(performance,file)
 
 
-experiments = [i for i in range(2,7)]
+experiments = [i for i in range(1,2)]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6,0.8]
@@ -104,7 +104,7 @@ verbose = False
 start = process_time()
 show_gap = True
 
-cont = 200
+cont = 10
 for experiment in experiments:
     print(f'Experiment {experiment}')
     env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
@@ -163,7 +163,7 @@ for experiment in experiments:
                                                                                                 averages=True,dynamic_p=False,
                                                                                                 time_limit=15,RCL_alphas=[0.05,0.1,0.2,0.35],
                                                                                                 adaptative=True)
-                results_information['RCL'].append((nn_routes,nn_obj,nn_info,nn_time))
+                results_information['RCL'].append((RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)))
             
             # # Genetic Algorithm
             # GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
