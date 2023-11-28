@@ -84,7 +84,7 @@ show_gap = True
 cont = 200
 for experiment in experiments:
     print(f'Experiment {experiment}')
-    env_config = {'T':2,'Q':750,'S':2,'LA_horizon':2,
+    env_config = {'T':4,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000
                  }
     env_config['M'] = sizes[experiment]
