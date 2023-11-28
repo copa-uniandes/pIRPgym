@@ -94,7 +94,8 @@ class Inventory():
                         
             for t in T:
                 for i in M:
-                    m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i,t,s}')
+                    m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q*w[i,t,s], f'Vehicle capacity {i,t,s}')
+                    m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) >= w[i,t,s], f'Vehicle capacity {i,t,s}')
 
             '''' NON-ANTICIPATIVITY CONSTRAINTS '''
             for k in K:
@@ -129,8 +130,8 @@ class Inventory():
                 m.addConstr(v >= transp_aprox_impact + storage_impact)
 
         else:
-            if hold_cost: m.addConstr(v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost + holding_cost - env.norm_matrix["costs"]["best"])/(env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"]))
-            else: m.addConstr(v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost - env.norm_matrix["costs"]["best"])/(env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"]))
+            if hold_cost: m.addConstr((env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"])*v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost + holding_cost - env.norm_matrix["costs"]["best"]))
+            else: m.addConstr((env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"])*v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost - env.norm_matrix["costs"]["best"]))
             for e in inst_gen.E:
                 #transp_aprox_impact = 0
                 transp_aprox_impact = gu.quicksum((inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
@@ -152,7 +153,7 @@ class Inventory():
                     print(const.ConstrName)'''
 
         if (not inst_gen.sustainability and len(objs) == 1) or (inst_gen.sustainability and len(objs) > 1):
-        
+            
             # ----------------------------------------
             # DECISIONS RETRIEVAL
             # ----------------------------------------
@@ -201,7 +202,7 @@ class Inventory():
             yy = {t:{s:{(k,o):y[k,t,o,s].x for k in K for o in range(inst_gen.O_k[k]+1)} for s in S} for t in T}
 
             la_decisions = [I0, zz, bb, yy]
-            
+
             return action, la_decisions
 
         else:

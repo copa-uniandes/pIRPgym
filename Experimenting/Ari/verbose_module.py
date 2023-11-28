@@ -32,7 +32,7 @@ class objectives_performance():
 
         purch_cost = sum(inst_gen.W_p[env.t][i,k]*purchase[t][s][i,k] for t in purchase for s in inst_gen.Samples for k in inst_gen.Products for i in inst_gen.M_kt[k,env.t + t])/len(inst_gen.Samples)
         backo_cost = sum(inst_gen.back_o_cost[k]*backorders[t][s][k] for t in backorders for s in inst_gen.Samples for k in inst_gen.Products)/len(inst_gen.Samples)
-        w = {(i,t,s):1 if sum(purchase[t][s][i,k] for k in inst_gen.Products if i in inst_gen.M_kt[k,env.t+t])>0.1 else 0 for t in purchase for s in inst_gen.Samples for i in inst_gen.Suppliers}
+        w = {(i,t,s):1 if sum(purchase[t][s][i,k] for k in inst_gen.Products if i in inst_gen.M_kt[k,env.t+t])>0 else 0 for t in purchase for s in inst_gen.Samples for i in inst_gen.Suppliers}
         rout_aprox_cost = sum((inst_gen.c[0,i]+inst_gen.c[i,0])*w[i,t,s] for (i,t,s) in w)/len(inst_gen.Samples)
         holding_cost = sum(inst_gen.W_h[t][k]*inventory[t][s][k,o] for t in inventory for s in inst_gen.Samples for k in inst_gen.Products for o in range(inst_gen.O_k[k]))/len(inst_gen.Samples)
         if hold_cost: impact["costs"] = purch_cost + backo_cost + rout_aprox_cost + holding_cost
