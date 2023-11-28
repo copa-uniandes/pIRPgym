@@ -11,14 +11,16 @@ sys.path.append('../../../.')
 import pIRPgym
 
 
-computer_name = input("Running experiment on mac? [Y/n]")
-if computer_name == '': 
-    path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
-    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
-else: 
-    path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-    experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
+# computer_name = input("Running experiment on mac? [Y/n]")
+# if computer_name == '': 
+#     path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
+#     experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
+# else: 
+#     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+#     experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
+path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
 def save_pickle(experiment,replica,policy,performance):
     with open(experiments_path+f'Experiment {experiment}/Replica {replica}/{policy}.pkl','wb') as file:
