@@ -3,7 +3,7 @@ import numpy as np
 from numpy.random import seed,random,choice,randint
 from time import time,process_time
 from copy import deepcopy
-from multiprocess import pool
+from multiprocess import pool,freeze_support
 
 import gurobipy as gu
 import hygese as hgs
@@ -1164,14 +1164,15 @@ class Routing():
         @staticmethod
         def multiprocess_eval_stoch_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
                                        dynamic_p=False,initial_seed=0,**kwargs):
-            
+            freeze_support()
+
             seeds = [i for i in range(initial_seed,initial_seed+n)] 
             p = pool.Pool()
 
             def run_eval(seed):
                 RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
-                                                              adaptative=kwargs['adaptative'],rd_seed=seed,
-                                                              time_limit=kwargs['time_limit'])
+                                                            adaptative=kwargs['adaptative'],rd_seed=seed,
+                                                            time_limit=kwargs['time_limit'])
                 return RCL_routes,RCL_obj,RCL_info,RCL_time                
             
             Results = p.map(run_eval,seeds)
@@ -1183,7 +1184,7 @@ class Routing():
             times = [i[3] for i in Results]
             
             return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
-                           np.std(objectives),np.min(objectives),np.max(objectives))
+                        np.std(objectives),np.min(objectives),np.max(objectives))
 
 
 
