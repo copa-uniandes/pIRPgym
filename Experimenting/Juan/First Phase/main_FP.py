@@ -14,21 +14,20 @@ sys.path.append('../../../.')
 import pIRPgym
 
 
-computer_name = input("Running experiment on mac? [Y/n]")
-if computer_name == '': 
-    path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
-    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
-else: 
-    path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-    experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
+# computer_name = input("Running experiment on mac? [Y/n]")
+# if computer_name == '': 
+#     path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
+#     experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
+# else: 
+#     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+#     experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
-# path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-# experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
+path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
 def save_pickle(experiment,replica,policy,performance):
     with open(experiments_path+f'Experiment {experiment}/Replica {replica}/{policy}.pkl','wb') as file:
         pickle.dump(performance,file)
-
 
 
 experiments = [i for i in range(1,7)]
@@ -42,27 +41,28 @@ init_times = {1:0.1,30:1,60:3,300:5,1800:5,3600:10}
 
 def multiprocess_eval_stoch_policy(router,purchase,inst_gen,env, n=30,averages=True,
                             dynamic_p=False,initial_seed=0,**kwargs):
-    freeze_support()
+    if __name__=='__main__':
+        freeze_support()
 
-    seeds = [i for i in range(initial_seed,initial_seed+n)] 
-    p = pool.Pool()
+        seeds = [i for i in range(initial_seed,initial_seed+n)] 
+        p = pool.Pool()
 
-    def run_eval(seed):
-        RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
-                                                    adaptative=kwargs['adaptative'],rd_seed=seed,
-                                                    time_limit=kwargs['time_limit'])
-        return RCL_routes,RCL_obj,RCL_info,RCL_time                
-    
-    Results = p.map(run_eval,seeds)
-    p.close()
-    p.join()
+        def run_eval(seed):
+            RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
+                                                        adaptative=kwargs['adaptative'],rd_seed=seed,
+                                                        time_limit=kwargs['time_limit'])
+            return RCL_routes,RCL_obj,RCL_info,RCL_time                
+        
+        Results = p.map(run_eval,seeds)
+        p.close()
+        p.join()
 
-    objectives = [i[1] for i in Results]
-    vehicles = [len(i[0]) for i in Results]
-    times = [i[3] for i in Results]
-    
-    return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
-                np.std(objectives),np.min(objectives),np.max(objectives))
+        objectives = [i[1] for i in Results]
+        vehicles = [len(i[0]) for i in Results]
+        times = [i[3] for i in Results]
+        
+        return np.mean(objectives),round(np.mean(vehicles),2),np.mean(times),(np.median(objectives),
+                    np.std(objectives),np.min(objectives),np.max(objectives))
 
 
 
