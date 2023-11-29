@@ -43,7 +43,7 @@ init_times = {1:0.1,30:1,60:3,300:5,1800:5,3600:10}
 def multiprocess_eval_stoch_policy( router,purchase,inst_gen,env, n=30,averages=True,
                                     dynamic_p=False,initial_seed=0,**kwargs):
     freeze_support()
-    seeds = [i for i range(initial_seed,initial_seed+n)]
+    seeds = [i for i in range(initial_seed,initial_seed+n)]
     p = pool.Pool()
 
     def run_eval(seed):
