@@ -30,7 +30,7 @@ def save_pickle(experiment,replica,policy,performance):
         pickle.dump(performance,file)
 
 
-Experiments = [i for i in range(2,7)]
+Experiments = [i for i in range(3,7)]
 Replicas = [i for i in range(1,6)]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
@@ -58,7 +58,6 @@ def multiprocess_eval_stoch_policy( router,purchase,inst_gen,env, n=30,averages=
     p.join()
 
     objectives = [i[1] for i in Results]
-    print(objectives)
     vehicles = [len(i[0]) for i in Results]
     times = [i[3] for i in Results]
     
