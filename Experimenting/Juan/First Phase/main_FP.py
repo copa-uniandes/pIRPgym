@@ -14,23 +14,23 @@ sys.path.append('../../../.')
 import pIRPgym
 
 
-# computer_name = input("Running experiment on mac? [Y/n]")
-# if computer_name == '': 
-#     path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
-#     experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
-# else: 
-#     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-#     experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
+computer_name = input("Running experiment on mac? [Y/n]")
+if computer_name == '': 
+    path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
+    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/First Phase/'
+else: 
+    path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+    experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
-path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
+# path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+# experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/First Phase/'
 
 def save_pickle(experiment,replica,policy,performance):
     with open(experiments_path+f'Experiment {experiment}/Replica {replica}/{policy}.pkl','wb') as file:
         pickle.dump(performance,file)
 
 
-Experiments = [i for i in range(3,7)]
+Experiments = [i for i in range(1,3)]
 Replicas = [i for i in range(1,6)]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
