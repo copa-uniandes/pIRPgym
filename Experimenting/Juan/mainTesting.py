@@ -51,7 +51,6 @@ det_rd_seed = 0
 disc = ("strong","conc")
 
 
-#%%
 # Creating instance generator object
 inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
                               historical_data,backorders,env_config=env_config)
@@ -68,17 +67,22 @@ perishability = 'ages'
 env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 state = env.reset(inst_gen,return_state=True)
 
+
 [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
+_,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+
+#%%
+
 
 # requirements,_ = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
 
-CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=60,
+CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
                                                                             verbose=False,heuristic_initialization=5,
                                                                             return_num_cols=True,RCL_alpha=0.6) 
 print(f'CG objective: {CG_obj}')
 
-# nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-# print(f'NN objective: {nn_obj}')
+nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+print(f'NN objective: {nn_obj}')
 
 
 # RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
@@ -101,9 +105,9 @@ print(f'CG objective: {CG_obj}')
 
 
 
-# GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-#                                                                      rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
-# print(f'GA objective: {GA_obj}')
+GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                                                                     rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
+print(f'GA objective: {GA_obj}')
 
 # x = 1
 

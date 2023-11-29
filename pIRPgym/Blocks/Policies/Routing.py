@@ -359,20 +359,18 @@ class Routing():
                     mutated = False
 
                     ###################
-                    # TODO: Operators
+                    # Operators
                     ###################
                     if random() <= mutation_rate:
                         new_individual,new_distances,evolved = Routing.GA.mutation(Population[individual_i],
                                                                             Distances[individual_i],inst_gen)
-                        if Routing_management.price_routes(inst_gen,new_individual)!=sum(new_distances):
-                            x = 5
                         new_FO = sum(new_distances) 
                         new_loads = Loads[individual_i]
                         mutated = True
                     else:
                         pass
                     
-                    # No operator is performed
+                    # No operation is performed
                     if not mutated: 
                         new_individual = Population[individual_i];new_FO = FOs[individual_i] 
                         new_distances = Distances[individual_i];new_loads = Loads[individual_i]
@@ -383,8 +381,9 @@ class Routing():
 
                     # Updating incumbent
                     if new_FO < incumbent:
+                        print(new_individual)
                         incumbent = new_FO
-                        best_individual:list = [new_individual,new_FO,(new_distances,new_loads),process_time()-start]
+                        best_individual = [new_individual,new_FO,(new_distances,new_loads),process_time()-start]
                         print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
 
                 # Update population
@@ -398,6 +397,8 @@ class Routing():
                 print('\n')
 
             if not return_top:
+                print('\n')
+                print(best_individual[0])
                 return *best_individual,None
             else:
                 combined = list(zip(Distances, Population))                 # Combine 'Distances' and 'Population' into tuples
@@ -524,7 +525,7 @@ class Routing():
                 if len(individual[pos])<=3: 
                     return individual,distances,False
                 
-                if random() <= 0:
+                if random() <= 0.5:
                     individual[pos],distances[pos],mutated = Routing.GA.swap_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max,inst_gen=inst_gen)
                 else:
                     individual[pos],distances[pos],mutated = Routing.GA.two_opt_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
