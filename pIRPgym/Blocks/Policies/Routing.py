@@ -464,7 +464,7 @@ class Routing():
                     Distances.append(distances)
                     Loads.append(loads)
 
-                return Population, FOs, Distances, Loads, incumbent, best_individual, alpha_performance
+                return Population,FOs,Distances,Loads,incumbent,best_individual,alpha_performance
 
 
             ''' Calibrate alphas for RCL '''
