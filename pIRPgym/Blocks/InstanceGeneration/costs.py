@@ -17,9 +17,14 @@ class costs():
     # Historic holding cost
     @staticmethod
     def gen_hist_h(inst_gen,rd_function,**kwargs) -> dict[dict]: 
+        
         hist_h = {t:{} for t in inst_gen.Horizon}
 
-        h_fixed = {k:round(rd_function(*kwargs['r_f_params']),2) for k in inst_gen.Products}
+        h_fixed = dict()
+        for k in inst_gen.Products:
+            historic_avg = {i:sum(inst_gen.hist_p[0][i,k][t+inst_gen.hist_window] for t in inst_gen.historical)/inst_gen.hist_window for i in inst_gen.M_kt[k,0]}
+            h_fixed[k] = sum(historic_avg.values())/(len(historic_avg)*(inst_gen.O_k[k]+1))
+        
         if inst_gen.other_params['historical'] != False and ('h' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
             hist_h[0] = {k:[h_fixed[k] for t in inst_gen.historical] for k in inst_gen.Products}
         else:
@@ -51,7 +56,7 @@ class costs():
         profit = dict()
         seed(inst_gen.d_rd_seed + 10)
         for k in inst_gen.Products:
-            profit[k] = 0.1+0.9*random()
+            profit[k] = 0.1+0.65*random()
         
         return profit
 
@@ -61,7 +66,7 @@ class costs():
         back_o_cost = dict()
         for k in inst_gen.Products:
             historic_avg = {i:sum(inst_gen.hist_p[0][i,k][t+inst_gen.hist_window] for t in inst_gen.historical)/inst_gen.hist_window for i in inst_gen.M_kt[k,0]}
-            back_o_cost[k] = (1+inst_gen.prof_margin[k])*sum(historic_avg.values())/len(historic_avg)
+            back_o_cost[k] = (inst_gen.prof_margin[k])*sum(historic_avg.values())/len(historic_avg)
         
         return back_o_cost
             

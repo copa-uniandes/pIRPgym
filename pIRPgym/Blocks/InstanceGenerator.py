@@ -91,6 +91,8 @@ class instance_generator():
         self.d_max = 500                                # Max distance per route
 
         self.theta = 0.8                                # Service Level requirement
+        self.hold_cost = True                           # Whether to include the holding cost in the objectives or not
+        self.rr = 0.1                                   # Minimum order quantity per supplier
         self.E = ["climate","water","land","fossil"]    # Environmental Indicators
         self.metric_names = {"costs":"Total\nCost","transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
                              "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion"}
@@ -164,7 +166,7 @@ class instance_generator():
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
-        if self.sustainability: self.c_LCA, self.h_LCA = indicators.get_environmental_indicators(self)
+        if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
     
     # Generates a basic, completely random instance with a given random seed
@@ -205,7 +207,7 @@ class instance_generator():
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
-        if self.sustainability: self.c_LCA, self.h_LCA = indicators.get_environmental_indicators(self)
+        if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
 
     # Generates a (dummy) instance of CundiBoy
@@ -250,7 +252,7 @@ class instance_generator():
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V,self.d_rd_seed)
-        if self.sustainability: self.c_LCA, self.h_LCA = indicators.get_environmental_indicators(self)
+        if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
 
     # Generates an CVRPTW instance of the literature

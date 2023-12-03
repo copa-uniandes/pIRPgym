@@ -8,7 +8,7 @@ class indicators():
     @staticmethod
     def get_environmental_indicators(inst_gen):
 
-        K = inst_gen.Products[:7]
+        K = inst_gen.Products[:min(len(inst_gen.Products),7)]
         script_dir = os.path.dirname(os.path.abspath(__file__)); file = f"{script_dir}/LCA indicators.xlsx"
 
         df = pd.read_excel(io=file, sheet_name="Transport", index_col=[0])
@@ -17,4 +17,7 @@ class indicators():
         df = pd.read_excel(io=file, sheet_name="Storage", index_col=[0])
         h_LCA = {e:{k:df.loc[e,k] for k in K} for e in inst_gen.E}
 
-        return c_LCA, h_LCA
+        df = pd.read_excel(io=file, sheet_name="Waste", index_col=[0])
+        waste_LCA = {e:{k:df.loc[e,k] for k in K} for e in inst_gen.E}
+
+        return c_LCA, h_LCA, waste_LCA
