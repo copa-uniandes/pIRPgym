@@ -202,7 +202,7 @@ class import_results():
     def import_inventory(weights, seed_ix, other_path=False):
 
         path = "C:/Users/ari_r/OneDrive - Universidad de los Andes/1. MIIND/Tesis/Experimentos/Inventory/"
-        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Inventory"
+        if other_path: path = "C:/Users/a.rojasa55/OneDrive - Universidad de los andes/1. MIIND/Tesis/Experimentos/Inventory/"
         new_dir = path + f"Inventory_{weights}/"
 
         file = open(new_dir+f"Inventory_{weights}_{seed_ix}","rb")
