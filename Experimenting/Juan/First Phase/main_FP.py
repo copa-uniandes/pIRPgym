@@ -106,7 +106,7 @@ verbose = False
 start = process_time()
 show_gap = True
 
-cont = 199999
+cont = 0
 for experiment in Experiments:
     env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000

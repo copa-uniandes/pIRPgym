@@ -688,7 +688,8 @@ class Routing():
 
             model.update()
             model.setParam('OutputFlag',0)
-            model.setParam('MIPGap',0.1)
+            model.setParam('MIPGap',0.01)
+            model.setParam('TimeLimit',7200)
             model.optimize()
 
             routes, distances, loads = Routing.MIP.get_MIP_decisions(inst_gen, model, V, A, distances, requirements)

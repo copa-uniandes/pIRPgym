@@ -106,7 +106,7 @@ class RoutingV():
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Define a list of colors and markers for better visibility
-        colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black', 'yellow']
+        colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']
         markers = ['o', 's', '^', 'D', '*', 'v', 'p', 'H', 'X']
 
         # Plot the evolution for each routing policy
