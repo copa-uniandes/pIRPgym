@@ -30,8 +30,8 @@ def save_pickle(experiment,replica,policy,performance):
         pickle.dump(performance,file)
 
 
-Experiments = [i for i in range(5,6)]
-Replicas = [i for i in range(1,6)]
+Experiments = [i for i in range(6,7)]
+Replicas = [i for i in range(3,6)]
 sizes = {1:5,2:10,3:15,4:20,5:40,6:60}
 
 alphas = [0.1,0.2,0.4,0.6,0.8]
@@ -106,7 +106,7 @@ verbose = False
 start = process_time()
 show_gap = True
 
-cont = 1000000
+cont = 199999
 for experiment in Experiments:
     env_config = {'T':12,'Q':750,'S':2,'LA_horizon':2,
                   'd_max':2000,'hist_window':60,'back_o_cost':5000

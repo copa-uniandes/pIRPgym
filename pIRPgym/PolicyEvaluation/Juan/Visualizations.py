@@ -106,7 +106,7 @@ class RoutingV():
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Define a list of colors and markers for better visibility
-        colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta', 'yellow', 'black']
+        colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black', 'yellow']
         markers = ['o', 's', '^', 'D', '*', 'v', 'p', 'H', 'X']
 
         # Plot the evolution for each routing policy
@@ -114,10 +114,10 @@ class RoutingV():
             if indicator in data:
                 if x_values == None: 
                     ax.plot(data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
-                            linestyle='-',markersize=8,linewidth=2)
+                            linestyle='-',markersize=4,linewidth=1)
                 else: 
                     ax.plot(x_values,data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
-                            linestyle='-',markersize=8,linewidth=2)
+                            linestyle='-',markersize=4,linewidth=1)
 
         # Add labels and a legend
         ax.set_xlabel(x_axis, fontsize=12)
