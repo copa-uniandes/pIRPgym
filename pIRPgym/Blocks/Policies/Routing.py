@@ -688,7 +688,7 @@ class Routing():
 
             model.update()
             model.setParam('OutputFlag',0)
-            model.setParam('MIPGap',0.01)
+            model.setParam('MIPGap',0.0001)
             model.setParam('TimeLimit',7200)
             model.optimize()
 
@@ -743,7 +743,7 @@ class Routing():
 
             # Retrieve and consolidate decisions from MIP
             @staticmethod
-            def get_MIP_decisions(inst_gen:instance_generator, model:gu.Model, V:list, A:list, distances:dict, requirements:dict):
+            def get_MIP_decisions(inst_gen:instance_generator,model:gu.Model,V:list,A:list,distances:dict,requirements:dict):
                 routes = list()
                 dist = list()
                 loads = list()
@@ -771,7 +771,7 @@ class Routing():
                                 loads.append(load)
                             break
 
-                return routes, dist, loads
+                return routes,dist,loads
         
 
         ''' Column generation algorithm '''
