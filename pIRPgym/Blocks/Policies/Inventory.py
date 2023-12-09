@@ -115,10 +115,10 @@ class Inventory():
         # ----------------------------------------
 
         ''' Expected costs '''
-        purch_cost = gu.quicksum(inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
-        backo_cost = gu.quicksum(inst_gen.back_o_cost[k]*bo[k,t,s] for k in K for t in T for s in S)/len(S)
-        rout_aprox_cost = gu.quicksum(C_MIP[i]*w[i,t,s] for i in M for t in T for s in S)/len(S)
-        holding_cost = gu.quicksum(inst_gen.W_h[env.t][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
+        purch_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
+        backo_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.back_o_cost[k]*bo[k,t,s] for k in K for t in T for s in S)/len(S)
+        rout_aprox_cost = gu.quicksum((inst_gen.gamma**t)*C_MIP[i]*w[i,t,s] for i in M for t in T for s in S)/len(S)
+        holding_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.W_h[env.t][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
         
         if len(objs) == 1:
             if "costs" in objs:
@@ -126,23 +126,21 @@ class Inventory():
                 else: m.addConstr(v >= purch_cost + backo_cost + rout_aprox_cost)
             else:
                 e = list(objs.keys())[0]
-                transp_aprox_impact = gu.quicksum((inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
-                storage_impact = gu.quicksum(inst_gen.h_LCA[e][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
-                waste_impact = gu.quicksum(inst_gen.waste_LCA[e][k]*ii[k,t,inst_gen.O_k[k],s] for k in K for t in T for s in S)/len(S)
+                transp_aprox_impact = gu.quicksum((inst_gen.gamma**t)*(inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
+                storage_impact = gu.quicksum((inst_gen.gamma**t)*inst_gen.h_LCA[e][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
+                waste_impact = gu.quicksum((inst_gen.gamma**t)*inst_gen.waste_LCA[e][k]*ii[k,t,inst_gen.O_k[k],s] for k in K for t in T for s in S)/len(S)
                 
                 m.addConstr(v >= transp_aprox_impact + storage_impact + waste_impact)
-                #m.addConstr(v >= transp_aprox_impact + waste_impact)
 
         else:
             if inst_gen.hold_cost: m.addConstr((env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"])*v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost + holding_cost - env.norm_matrix["costs"]["best"]))
             else: m.addConstr((env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"])*v >= objs["costs"]*(purch_cost + backo_cost + rout_aprox_cost - env.norm_matrix["costs"]["best"]))
             for e in inst_gen.E:
-                transp_aprox_impact = gu.quicksum((inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
-                storage_impact = gu.quicksum(inst_gen.h_LCA[e][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
-                waste_impact = gu.quicksum(inst_gen.waste_LCA[e][k]*ii[k,t,inst_gen.O_k[k],s] for k in K for t in T for s in S)/len(S)
+                transp_aprox_impact = gu.quicksum((inst_gen.gamma**t)*(inst_gen.c_LCA[e][k][0,i]+inst_gen.c_LCA[e][k][i,0])*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
+                storage_impact = gu.quicksum((inst_gen.gamma**t)*inst_gen.h_LCA[e][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
+                waste_impact = gu.quicksum((inst_gen.gamma**t)*inst_gen.waste_LCA[e][k]*ii[k,t,inst_gen.O_k[k],s] for k in K for t in T for s in S)/len(S)
 
                 m.addConstr((env.norm_matrix[e]["worst"] - env.norm_matrix[e]["best"])*v >= objs[e]*(transp_aprox_impact+storage_impact+waste_impact-env.norm_matrix[e]["best"]))
-                #m.addConstr((env.norm_matrix[e]["worst"] - env.norm_matrix[e]["best"])*v >= objs[e]*(transp_aprox_impact+waste_impact-env.norm_matrix[e]["best"]))
 
 
         # ----------------------------------------

@@ -93,6 +93,7 @@ class instance_generator():
         self.theta = 0.8                                # Service Level requirement
         self.hold_cost = True                           # Whether to include the holding cost in the objectives or not
         self.rr = 0.1                                   # Minimum order quantity per supplier
+        self.gamma = 1                                  # Time discounting factor
         self.E = ["climate","water","land","fossil"]    # Environmental Indicators
         self.metric_names = {"costs":"Total\nCost","transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
                              "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion"}
