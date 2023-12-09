@@ -1199,6 +1199,10 @@ class Routing():
             @staticmethod
             def generate_complete_graph(inst_gen:instance_generator,pending_sup:list,requirements:dict) -> tuple:
                 N = pending_sup
+                if 0 in N:
+                    N.remove(0)
+                if inst_gen.M+1 in N:
+                    N.remove(inst_gen.M+1)
                 V:list = [0]+ N +[inst_gen.M+1]
                 A:list = [(i,j) for i in V for j in V if i!=j and i!=inst_gen.M+1 and j!=0 and not (i == 0 and j == inst_gen.M+1)]
 

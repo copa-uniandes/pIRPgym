@@ -9,6 +9,7 @@ from numpy.random import seed
 from multiprocess import pool,freeze_support
 
 sys.path.append('../.')
+
 import verbose_module as verb
 sys.path.append('../../../.')
 import pIRPgym
@@ -52,8 +53,10 @@ for experiment in Experiments:
         for t in range(len(inst_info['Requirements'])):
             requirements = inst_info['Requirements'][t]
             for time_limit in time_limits:
-                CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(requirements,inst_gen,t,time_limit=time_limit,
-                                                                                                verbose=False,return_num_cols=True)
+                CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(   requirements,inst_gen,t,
+                                                                                                    time_limit=time_limit,verbose=False,
+                                                                                                    heuristic_initialization=init_times[time_limit],
+                                                                                                    return_num_cols=True,RCL_alpha=0.9)
                 CG_performance[time_limit].append((CG_routes,CG_obj,CG_info,CG_time,CG_cols))
 
         for time_limit in time_limits:
