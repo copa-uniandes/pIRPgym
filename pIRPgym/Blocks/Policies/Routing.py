@@ -7,6 +7,7 @@ from multiprocess import pool,freeze_support
 
 import gurobipy as gu
 import hygese as hgs
+from traitlets import Float
 
 from ..InstanceGenerator import instance_generator
 from ..BuildingBlocks import Inventory_management, Routing_management
@@ -959,7 +960,7 @@ class Routing():
                         routes,FO,info,time = Routing.RCL_Solution(new_req,inst_gen,t,RCL_alpha=RCL_alpha)
 
                         for i,route in enumerate(routes):
-                            if route not in cols:
+                            if route not in cols and len(route) > 5:
                                 card_omega += 1
                                 route_cost = info[0][i]
 
