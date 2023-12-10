@@ -2,11 +2,7 @@ import numpy as np; import gurobipy as gu
 
 class Inventory():
     @staticmethod
-<<<<<<< HEAD
-    def det_FIFO(purchase:dict,inst_gen:instance_generator,env:steroid_IRP)->dict[float]:
-=======
     def det_FIFO(state:dict,purchase:dict,inst_gen,env) -> dict[float,int]:
->>>>>>> Sustainability
         demand_compliance = {}
         for k in inst_gen.Products:
             left_to_comply = inst_gen.W_d[env.t][k]
@@ -98,32 +94,18 @@ class Inventory():
                         
             for t in T:
                 for i in M:
-<<<<<<< HEAD
-                    m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q, f'Vehicle capacity {i}{t}{s}')
-        
-=======
                     m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q*w[i,t,s], f'Vehicle capacity {i,t,s}')
                     min_q = min(sum(inst_gen.s_paths_q[env.t][t,s][i,k] for k in inst_gen.Products if i in inst_gen.M_kt[k,env.t+t]),inst_gen.rr*inst_gen.Q)
                     if t != 0:
                         m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) >= min_q*w[i,t,s], f'Vehicle capacity {i,t,s}')
 
->>>>>>> Sustainability
             '''' NON-ANTICIPATIVITY CONSTRAINTS '''
             for k in K:
 
                 for i in inst_gen.M_kt[k,env.t]:
-<<<<<<< HEAD
-                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i}{k}{s}')
-            
-            ###### TRY IF ERROR
-            # for i in M:
-            #     m.addConstr(w[i,0,s] == gu.quicksum(w[i,0,ss] for ss in S)/len(S), f'Anticipativity binary {i}{s}')
-=======
                     m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i,k,s}')
->>>>>>> Sustainability
 
         ''' Service Level control constraint '''
-        #serv_level *= min(1,sum(inst_gen.s_paths_q[env.t][t,s][i,k] for t in T for k in K for s in S for i in inst_gen.M_kt[k,env.t+t])/sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T for k in K for s in S))
         for k in K:
             m.addConstr(gu.quicksum(gu.quicksum(y[k,t,o,s] for t in T for o in range(inst_gen.O_k[k] + 1))/sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T) for s in S) >= serv_level*len(inst_gen.Samples))
 

@@ -207,13 +207,9 @@ class instance_generator():
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
-<<<<<<< HEAD
         self.coor,self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
         self.d_max = max(self.d_max,max([2*value for value in self.c.values()]))
-=======
-        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
         if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
->>>>>>> Sustainability
 
 
     # Generates a (dummy) instance of CundiBoy

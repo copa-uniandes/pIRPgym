@@ -76,11 +76,6 @@ class steroid_IRP():
 
         self.strong_rate = strong_rate
 
-<<<<<<< HEAD
-        if self.config['inventory'] and self.config['perishability'] == 'ages':
-            self.state = Inventory_management.perish_per_age_inv.reset(inst_gen)
-                
-=======
         if self.config['inventory']:
             self.state = Inventory_management.perish_per_age_inv.reset(inst_gen)
         
@@ -88,7 +83,6 @@ class steroid_IRP():
             self.payoff_matrix = {e:dict() for e in inst_gen.E+["costs"]}
             self.norm_matrix = {e:dict() for e in inst_gen.E+["costs"]}
 
->>>>>>> Sustainability
         if return_state:
             return self.state
         
@@ -125,30 +119,8 @@ class steroid_IRP():
             real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen,self,real_action["purchase"])      
 
             if self.config['routing']:
-<<<<<<< HEAD
-                real_routing = action['routing']
-                real_purchase = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
-
-            if self.config['inventory']:
-                real_purchase = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
-             
-                if self.config['perishability'] == 'ages' and not self.config['routing']:
-                    if inst_gen.other_params["demand_type"] == "aggregated":
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
-                    else:
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
-
-                elif self.config['perishability'] == 'ages':
-                    if inst_gen.other_params["demand_type"] == "aggregated":
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
-                    else:
-                        real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_age_compl_rate(inst_gen,self,action['demand_compliance'],real_purchase,self.strong_rate)
-                
-                #real_demand_compliance = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen, self, real_purchase)
-=======
                 real_action["routing"] = action['routing']
->>>>>>> Sustainability
-            
+        
         else:
             real_action["purchase"] = action["purchase"]
             real_action["demand_compliance"]  = action['demand_compliance']
@@ -180,23 +152,7 @@ class steroid_IRP():
         # Time step update and termination check
         self.t += 1
         done = self.check_termination(inst_gen)
-<<<<<<< HEAD
-        if self.config['inventory']:
-            _ = {'backorders': back_orders,'perished': perished}
-        else:
-            _ = {}
-
-        # Action assembly
-        real_action = dict()
-        if self.config['routing']:
-            real_action['routing'] = real_routing
-            real_action['purchase'] = real_purchase
-        if self.config['inventory']:
-            real_action['purchase'] = real_purchase
-            real_action['demand_compliance'] = real_demand_compliance
-=======
         _ = (back_orders, perished)
->>>>>>> Sustainability
 
         # State update
         self.state = s_tprime

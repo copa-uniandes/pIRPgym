@@ -6,12 +6,8 @@ from copy import deepcopy
 from multiprocess import pool,freeze_support
 
 import gurobipy as gu
-<<<<<<< HEAD
-import hygese as hgs
-from traitlets import Float
-=======
 #import hygese as hgs
->>>>>>> Sustainability
+from traitlets import Float
 
 from ..InstanceGenerator import instance_generator
 from ..BuildingBlocks import Inventory_management, Routing_management
@@ -312,7 +308,7 @@ class Routing():
 
         ''' Genetic Algorithm '''
         @staticmethod
-        def GenticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,
+        def GeneticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,
                                   rd_seed:int=0,time_limit:float=30,verbose:bool=False):            
             start = process_time()
             seed(rd_seed)
@@ -324,7 +320,7 @@ class Routing():
             training_time:float = 10
             Elite_size:int = int(Population_size*0.25)
 
-            mutation_rate:float = 1
+            mutation_rate:float = 0
             crossover_rate:float = 1 - mutation_rate
             
 
