@@ -16,7 +16,7 @@ from .InstanceGeneration.selling_prices import selling_prices
 from .InstanceGeneration.offer import offer
 from .InstanceGeneration.locations import locations
 from .InstanceGeneration.CundiBoy import CundiBoy
-
+from .InstanceGeneration.environmental_indicators import indicators
 
 class instance_generator():
     ''' Main Instance Generator instance. Generate one of the following instances:
@@ -31,7 +31,7 @@ class instance_generator():
     # Initalization method for an instange_generator object
     def __init__(self,look_ahead=['d'],stochastic_params:Union[list[str],bool]=False,
                  historical_data:Union[list[str],bool]=['*'],backorders = 'backorders', 
-                 demand_type = "aggregated", **kwargs):
+                 demand_type = "aggregated",sustainability=False, **kwargs):
         '''
         Stochastic-Dynamic Inventory-Routing-Problem with Perishable Products instance
         INITIALIZATION
@@ -89,27 +89,34 @@ class instance_generator():
         self.F = 15                                     # Fleet
         self.Q = 40                                     # Vehicles capacity
         self.d_max = 500                                # Max distance per route
-                
+
+        self.theta = 0.8                                # Service Level requirement
+        self.hold_cost = True                           # Whether to include the holding cost in the objectives or not
+        self.rr = 0.1                                   # Minimum order quantity per supplier
+        self.gamma = 1                                  # Time discounting factor
+        self.E = ["climate","water","land","fossil"]    # Environmental Indicators
+        self.metric_names = {"costs":"Total\nCost","transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
+                             "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion"}
+        self.metric_units = {"costs":"$","transport cost":"$", "purchase cost":"$", "holding cost":"$", "backorders cost":"$",
+                             "climate":"kg CO2 eq", "water":"m3 depriv.", "land":"Pt.", "fossil":"MJ"}
 
         ### Look-ahead parameters ###
         if look_ahead:    
             self.S = 4              # Number of sample paths
             self.LA_horizon = 5     # Look-ahead time window's size (includes current period)
-            
         
         ### historical log parameters ###
         if historical_data:        
             self.hist_window = 40       # historical window
 
         ### Backorders parameters ###
-        if backorders == 'backorders':
-            self.back_o_cost = 600
-        elif backorders == 'backlogs':
+        if backorders == 'backlogs':
             self.back_l_cost = 600
 
         ### Extra information ###
         self.other_params = {'look_ahead':look_ahead, 'historical': historical_data, 'backorders': backorders, "demand_type" : demand_type}
         self.s_params = stochastic_params
+        self.sustainability = sustainability
 
         ### Custom configurations ###
         assign_env_config(self,kwargs)
@@ -120,7 +127,7 @@ class instance_generator():
 
 
     # Generates a complete, completely random instance with a given random seed
-    def generate_random_instance(self,d_rd_seed:int,s_rd_seed:int,I0:float, **kwargs):
+    def generate_random_instance(self,d_rd_seed:int,s_rd_seed:int,I0:float=0, **kwargs):
         # Random seeds
         self.d_rd_seed = d_rd_seed
         self.s_rd_seed = s_rd_seed
@@ -131,8 +138,10 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
-        #self.O_k = {k:randint(3,self.T+1) for k in self.Products} 
-        self.O_k = {k:3 for k in self.Products} 
+        #self.O_k = {k:randint(3,self.T+1) for k in self.Products}
+        ages = [3,3,6,6,5,4,4]
+        if len(self.Products) <= 7: self.O_k = dict(zip(self.Products,ages[:len(self.Products)]))
+        else: self.O_k = {k:3 for k in self.Products}
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
 
         self.i00 = self.gen_initial_inventory(I0)
@@ -146,23 +155,19 @@ class instance_generator():
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
-        if self.other_params["demand_type"] == "aggregated":
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
-        else:
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self,**kwargs['d_params'])
+        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
-
-        # Selling prices
-        self.salv_price = selling_prices.gen_salvage_price(self)
-        self.opt_price = selling_prices.gen_optimal_price(self)
-
-        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
+        # Backorders
+        self.prof_margin = costs.gen_profit_margin(self)
+        self.back_o_cost = costs.gen_backo_cost(self)
+
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
     
     # Generates a basic, completely random instance with a given random seed
@@ -194,18 +199,21 @@ class instance_generator():
         self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
 
-        # Selling prices
-        self.salv_price = selling_prices.gen_salvage_price(self)
-        self.opt_price = selling_prices.gen_optimal_price(self)
-
-        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
+        # Backorders
+        self.prof_margin = costs.gen_profit_margin(self)
+        self.back_o_cost = costs.gen_backo_cost(self)
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
         # Routing
+<<<<<<< HEAD
         self.coor,self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
         self.d_max = max(self.d_max,max([2*value for value in self.c.values()]))
+=======
+        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
+>>>>>>> Sustainability
 
 
     # Generates a (dummy) instance of CundiBoy
@@ -242,23 +250,15 @@ class instance_generator():
         if self.s_paths_p == None: del self.s_paths_p
 
         # Demand
-        if self.other_params["demand_type"] == "aggregated":
-            self.hist_d, self.W_d, self.s_paths_d = CundiBoy.demand.gen_demand(self,ex_d,hist_demand,**kwargs['d_params'])
-        else:
-            self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand_age(self,**kwargs['d_params'])
+        self.hist_d, self.W_d, self.s_paths_d = CundiBoy.demand.gen_demand(self,ex_d,hist_demand,**kwargs['d_params'])
         if self.s_paths_d == None: del self.s_paths_d
-
-        # Selling prices
-        self.salv_price = selling_prices.gen_salvage_price(self)
-        self.opt_price = selling_prices.gen_optimal_price(self)
-
-        self.sell_prices = selling_prices.get_selling_prices(self, kwargs["discount"])
         
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self,**kwargs['h_params'])
 
         # Routing
         self.coor, self.c = locations.euclidean_dist_costs(self.V,self.d_rd_seed)
+        if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
 
     # Generates an CVRPTW instance of the literature
@@ -282,7 +282,7 @@ class instance_generator():
     # Auxiliary method: Generate iterables of sets
     def gen_sets(self):
         self.Suppliers:list = list(range(1,self.M + 1));  self.V = [0]+self.Suppliers
-        self.Products:list = list(range(self.K))
+        self.Products:list = list(range(1,self.K+1))
         self.Vehicles: range = range(self.F)
         self.Horizon: range = range(self.T)
 

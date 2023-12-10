@@ -1,12 +1,11 @@
 from ..InstanceGenerator import instance_generator
-from ..pIRPenv import steroid_IRP
 
 class Purchasing():
     options = ['det_purchase_all', 'avg_purchase_all']
     
     # Purchases all available quantities assuming deterministic available quantities of each supplier
     @staticmethod
-    def det_purchase_all(inst_gen:instance_generator, env:steroid_IRP) -> dict[tuple:float]:
+    def det_purchase_all(inst_gen:instance_generator, env) -> dict[tuple:float]:
         purchase = dict()
         for i in inst_gen.Suppliers:
             for k in inst_gen.Products:
@@ -17,7 +16,7 @@ class Purchasing():
 
     # Purchases expected value of available quantities of each supplier
     @staticmethod
-    def avg_purchase_all(inst_gen:instance_generator,env:steroid_IRP)->dict:
+    def avg_purchase_all(inst_gen:instance_generator,env)->dict:
         purchase = dict()
         for i in inst_gen.Suppliers:
             for k in inst_gen.Products:

@@ -5,7 +5,7 @@ import os
 class locations():
 
     @staticmethod
-    def generate_grid(V: range): 
+    def generate_grid(V: list):
         # Suppliers locations in grid
         size_grid = 1000
         coor = {i:(randint(0, size_grid+1), randint(0, size_grid+1)) for i in V}
@@ -13,13 +13,13 @@ class locations():
     
 
     @staticmethod
-    def euclidean_distance(coor: dict, V: range):
+    def euclidean_distance(coor: dict, V: list):
         # Transportation cost between nodes i and j, estimated using euclidean distance
         return {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in V for j in V if i!=j}
     
 
     @staticmethod
-    def euclidean_dist_costs(V: range, d_rd_seed):
+    def euclidean_dist_costs(V: list, d_rd_seed):
         seed(d_rd_seed + 6)
         coor, _ = locations.generate_grid(V)
         return coor, locations.euclidean_distance(coor, _)

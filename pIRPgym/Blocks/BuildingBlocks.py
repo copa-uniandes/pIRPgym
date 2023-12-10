@@ -3,24 +3,42 @@
 Independent transition blocks of a Supply Chain
 """
 ################################## Modules ##################################
-### Basic Librarires
+### Basic Libraries
+from hmac import trans_36
+from turtle import back
 from numpy.random import seed, random, randint, lognormal
 from copy import deepcopy
 from termcolor import colored
-
-from .InstanceGenerator import instance_generator
+import numpy as np
 
 class Routing_management():
 
     @staticmethod
-    def price_routes(inst_gen:instance_generator,routes:list)->float:
-        transport_cost=0
-        for route in routes:
-            transport_cost += sum(inst_gen.c[route[i],route[i + 1]] for i in range(len(route) - 1))
+    def price_routes(inst_gen, routes:list, purchase:dict, aggregated:bool = True):
+        
+        c_mod = dict(); total_units = dict(); arcs = dict()
+        for r in routes:
+            arcs[r[1]] = [(r[i],r[i+1]) for i in range(1,len(r)-1)]
+            total_units[arcs[r[1]][0]] = 0
+            for a in arcs[r[1]]:
+                total_units[arcs[r[1]][0]] += sum(purchase[a[0],k] for k in inst_gen.Products)
+                c_mod[a] = inst_gen.c[a]/(total_units[arcs[r[1]][0]])
+        
+        transport_cost = dict()
+        for k in inst_gen.Products:
+            transport = 0
+            for r in routes:
+                for i in range(1,len(r)-1):
+                    transport += sum(c_mod[r[j],r[j+1]] for j in range(i,len(r)-1))*purchase[r[i],k]
+                transport += inst_gen.c[0,r[1]]*sum(purchase[i,k] for i in r[1:-1])/total_units[arcs[r[1]][0]]
+            transport_cost[k] = transport
+        
+        if aggregated: transport_cost = sum(transport_cost.values())
+        
         return transport_cost
 
     @staticmethod
-    def evaluate_routes(inst_gen:instance_generator,routes:list,purchase:dict)->tuple:
+    def evaluate_routes(inst_gen,routes:list,purchase:dict)->tuple:
         feasible = True
         objective = 0
         distances = list()
@@ -41,7 +59,7 @@ class Routing_management():
         
     ''' Compute route's dynamic purchasing delta'''
     @staticmethod
-    def evaluate_dynamic_potential(inst_gen:instance_generator,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
+    def evaluate_dynamic_potential(inst_gen,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
         extra_cost = 0
         total_missing = {k:0 for k in inst_gen.Products}
         for route in routes:
@@ -84,9 +102,6 @@ class Inventory_management():
             ## State ##
 
             state = {(k,o):inst_gen.i00[k,o]  for k in inst_gen.Products for o in range(1, inst_gen.O_k[k] + 1)}
-            if inst_gen.other_params['backorders'] == 'backlogs':
-                for k in inst_gen.Products:
-                    state[k,'B'] = 0
             
             return state
     
@@ -139,8 +154,9 @@ class Inventory_management():
 
 
         @staticmethod
-        def update_inventory(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
-            inventory = deepcopy(env.state)
+        def update_inventory(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = {}):
+
+            inventory = dict()
             back_orders = {}
             perished = {}
 
@@ -153,16 +169,14 @@ class Inventory_management():
                     for o in range(2, max_age + 1):
                             inventory[k,o] = round(env.state[k,o - 1] - demand_compliance[k,o - 1],2)
                 
-                if inst_gen.other_params['backorders'] == 'backorders' and sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)) < inst_gen.W_d[env.t][k]:
-                    back_orders[k] = round(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),2)
+                if inst_gen.other_params['backorders'] == 'backorders':
+                    back_orders[k] = max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)), 0)
 
                 if inst_gen.other_params['backorders'] == 'backlogs':
                     new_backlogs = round(max(inst_gen.W_d[k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),0),2)
                     inventory[k,'B'] = round(env.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),2)
                 
-                if env.state[k, max_age] - demand_compliance[k,max_age] > 0:
-                        perished[k] = env.state[k, max_age] - demand_compliance[k,max_age]
-        
+                perished[k] = env.state[k, max_age] - demand_compliance[k,max_age]
 
                 # Factibility checks         
                 if warnings:
@@ -178,7 +192,7 @@ class Inventory_management():
 
 
         @staticmethod
-        def update_inventory_age(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = False):
+        def update_inventory_age(inst_gen, env, purchase, demand_compliance, warnings, back_o_compliance = {}):
             inventory = deepcopy(env.state)
             back_orders = {}
             perished = {}
@@ -200,7 +214,7 @@ class Inventory_management():
                             back_orders[k,o] = 0
 
                 if inst_gen.other_params['backorders'] == 'backlogs':
-                    new_backlogs = round(max(inst_gen.W_d[k,o] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),0),2)
+                    new_backlogs = round(max(sum(inst_gen.W_d[k,o]-demand_compliance[k,o] for o in range(inst_gen.O_k[k] + 1)),0),2)
                     inventory[k,'B'] = round(env.state[k,'B'] + new_backlogs - sum(back_o_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),2)
                 
                 if env.state[k, max_age] - demand_compliance[k,max_age] > 0:
@@ -210,20 +224,21 @@ class Inventory_management():
 
 
         @staticmethod
-        def compute_costs(inst_gen, env, purchase, demand_compliance, s_tprime, perished):            
-            purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)
+        def compute_costs(inst_gen, env, purchase, demand_compliance, s_tprime, perished, aggregated = True):     
+            purchase_cost = {k:sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers) for k in inst_gen.Products}
         
-            holding_cost = sum(sum(s_tprime[k,o] for o in range(1, inst_gen.O_k[k] + 1)) * inst_gen.W_h[env.t][k] for k in inst_gen.Products)
-            for k in perished.keys():
-                holding_cost += perished[k] * inst_gen.W_h[env.t][k]
+            holding_cost = {k:inst_gen.W_h[env.t][k]*sum(s_tprime[k,o] for o in range(1, inst_gen.O_k[k] + 1)) for k in inst_gen.Products}
 
             backorders_cost = 0
             if inst_gen.other_params['backorders'] == 'backorders':
-                backorders = sum(max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),0) for k in inst_gen.Products)
-                backorders_cost = backorders * inst_gen.back_o_cost
-            
-            elif inst_gen.other_params['backorders'] == 'backlogs':
-                backorders_cost = sum(s_tprime[k,'B'] for k in inst_gen.Products) * inst_gen.back_l_cost
+                 backorders_cost = {k:inst_gen.back_o_cost[k]*max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),0) for k in inst_gen.Products}
+            else:
+                backorders_cost = {k:inst_gen.back_l_cost*s_tprime[k,'B'] for k in inst_gen.Products}
+
+            if aggregated:
+                purchase_cost = sum(purchase_cost.values())
+                holding_cost = sum(holding_cost.values())
+                backorders_cost = sum(backorders_cost.values())
 
             return purchase_cost, holding_cost, backorders_cost
 
@@ -240,9 +255,6 @@ class Inventory_management():
             purchase_cost = sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers for k in inst_gen.Products)
         
             holding_cost = sum(sum(s_tprime[k,o] for o in range(1, inst_gen.O_k[k] + 1)) * inst_gen.W_h[env.t][k] for k in inst_gen.Products)
-            
-            for k in perished.keys():
-                holding_cost += perished[k] * inst_gen.W_h[env.t][k]
 
             backorders_cost = 0
             if inst_gen.other_params['backorders'] == 'backorders':
@@ -253,3 +265,30 @@ class Inventory_management():
                 backorders_cost = sum(s_tprime[k,'B'] for k in inst_gen.Products) * inst_gen.back_l_cost
 
             return purchase_cost, holding_cost, backorders_cost
+
+
+class Environmental_management():
+
+    @staticmethod
+    def compute_environmental_impact(inst_gen,purchase,routing,inventory, aggregated = True):
+        
+        impact = dict(); K = inst_gen.Products[:7]
+        for e in inst_gen.E:
+            impact[e] = dict()
+            for k in K:
+
+                transport = 0
+                for r in routing:
+                    for i in range(1,len(r)-1):
+                        if purchase[r[i],k] > 0:
+                            transport += sum(inst_gen.c_LCA[e][k][r[j],r[j+1]] for j in range(i,len(r)-2))*purchase[r[i],k]
+                
+                storage = sum(inst_gen.h_LCA[e][k]*inventory[k,o] for o in range(1, inst_gen.O_k[k] + 1))
+                
+                impact[e][k] = transport + storage
+            
+            if aggregated:
+                impact[e] = sum(impact[e].values())
+
+        return impact
+
