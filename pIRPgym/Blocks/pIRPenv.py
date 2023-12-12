@@ -143,7 +143,7 @@ class steroid_IRP():
         if self.config['inventory']:
             reward['purchase cost'], reward['holding cost'], reward['backorders cost'] = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_action["purchase"], real_action["demand_compliance"], s_tprime, perished, aggregated = aggregated)
             if inst_gen.sustainability:
-                reward.update(Environmental_management.compute_environmental_impact(inst_gen, real_action["purchase"], real_action["routing"], s_tprime, aggregated = aggregated))
+                reward.update(Environmental_management.compute_environmental_impact(inst_gen, real_action["purchase"], real_action["routing"], s_tprime, perished, aggregated = aggregated))
 
         # -----------------------------
         # Time step

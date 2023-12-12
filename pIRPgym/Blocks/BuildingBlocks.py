@@ -270,7 +270,7 @@ class Inventory_management():
 class Environmental_management():
 
     @staticmethod
-    def compute_environmental_impact(inst_gen,purchase,routing,inventory, aggregated = True):
+    def compute_environmental_impact(inst_gen,purchase,routing,inventory,perished, aggregated = True):
         
         impact = dict(); K = inst_gen.Products[:7]
         for e in inst_gen.E:
@@ -284,8 +284,9 @@ class Environmental_management():
                             transport += sum(inst_gen.c_LCA[e][k][r[j],r[j+1]] for j in range(i,len(r)-2))*purchase[r[i],k]
                 
                 storage = sum(inst_gen.h_LCA[e][k]*inventory[k,o] for o in range(1, inst_gen.O_k[k] + 1))
-                
-                impact[e][k] = transport + storage
+                waste = inst_gen.waste_LCA[e][k]*perished[k]
+
+                impact[e][k] = transport + storage + waste
             
             if aggregated:
                 impact[e] = sum(impact[e].values())
