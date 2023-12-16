@@ -15,4 +15,18 @@ class Compromise_Programming():
         for e in inst_gen.E:
             env.norm_matrix[e]["best"] = env.payoff_matrix[e][e]
             env.norm_matrix[e]["worst"] = np.max([env.payoff_matrix[ee][e] for ee in inst_gen.E+["costs"]])
+    
+    @staticmethod
+    def normalize_objectives_IRP(inst_gen, env, verbose=False):
+
+        env.payoff_matrix["costs"] = Inventory.Stochastic_RH_IRP(env.state,env,inst_gen, verbose=verbose)
+        for e in inst_gen.E:
+            env.payoff_matrix[e] = Inventory.Stochastic_RH_IRP(env.state,env,inst_gen,objs={e:1}, verbose=verbose)
+        
+        env.norm_matrix["costs"]["best"] = env.payoff_matrix["costs"]["costs"]
+        env.norm_matrix["costs"]["worst"] = np.max([env.payoff_matrix[e]["costs"] for e in inst_gen.E])
+        for e in inst_gen.E:
+            env.norm_matrix[e]["best"] = env.payoff_matrix[e][e]
+            env.norm_matrix[e]["worst"] = np.max([env.payoff_matrix[ee][e] for ee in inst_gen.E+["costs"]])
+
         

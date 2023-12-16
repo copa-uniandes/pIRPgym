@@ -1,4 +1,5 @@
 import numpy as np; import gurobipy as gu
+from itertools import combinations
 
 class Inventory():
     @staticmethod
@@ -226,3 +227,369 @@ class Inventory():
                 #impacts[e] = transp_aprox_impact.getValue() + waste_impact.getValue()
 
             return impacts
+    
+
+
+    class IRP():
+
+        @staticmethod
+        def correct_routing(inst_gen,env,x,z,q,N,V,A,P,S,T):
+
+            xx = {ix:0 for ix in x}; routes = dict()
+            for s in S:
+                for t in T:
+
+                    routes[t,s] = list(); m = int(round(z[0,t,s].X))
+                    nodes_to_visit = N + []
+                    for r in range(m):
+                        nodes_to_visit.append(0)
+                        next_node = [j for j in nodes_to_visit if ((0,j) in A) and (x[0,j,t,s].X > 0.5)][0]
+                        order = [0,next_node]; nodes_to_visit.remove(next_node)
+                        while next_node != 0:
+                            if round(sum(q[next_node,p,t,s].X for p in P if next_node in inst_gen.M_kt[p,env.t]),2) == 0: order.remove(next_node)
+                            next_node = [j for j in V if ((next_node,j) in A) and (x[next_node,j,t,s].X > 0.5)][0]
+                            order += [next_node]; nodes_to_visit.remove(next_node)
+                        
+                        if len(order) > 2:
+                            routes[t,s].append(order)
+
+                    for r in routes[t,s]:
+                        arcs = [(r[i], r[i+1]) for i in range(len(r)-1)]
+                        for a in arcs:
+                            xx[a[0],a[1],t,s] = 1
+            
+            return xx, routes
+
+        @staticmethod
+        def correct_inventory_management(inst_gen,env,q,I,v,b,P,S,T):
+            
+            II = {ix:0 for ix in I}; vv = {ix:0 for ix in v}; bb = {ix:0 for ix in b}
+            for s in S:
+                for t in T:
+
+                    for p in P:
+                        left_to_comply = inst_gen.s_paths_d[env.t][t,s][p]
+                        for o in range(inst_gen.O_k[p],0,-1):
+                            if t == 0: inv = env.state[p,o]
+                            else: inv = II[p,o-1,t-1,s]
+                            vv[p,o,t,s] = np.min((inv, left_to_comply))
+                            left_to_comply -= vv[p,o,t,s]
+                            II[p,o,t,s] = inv - vv[p,o,t,s]
+                        
+                        vv[p,0,t,s] = np.min((sum(q[i,p,t,s].X for i in inst_gen.M_kt[p,env.t]), left_to_comply))
+                        II[p,0,t,s] = sum(q[i,p,t,s].X for i in inst_gen.M_kt[p,env.t]) - vv[p,0,t,s]
+                        bb[p,t,s] = left_to_comply - vv[p,0,t,s]
+
+            return II, vv, bb
+        
+        @staticmethod
+        def print_IRP_decisions(inst_gen,env,string,S,P,T,A,q,v,I,b,x,y):
+
+            print("---------------------------------------------------------------------------------------")
+            print(f"- OPTIMIZING {string} ")
+            print("---------------------------------------------------------------------------------------")
+            for s in S:
+                print(f"Sample path {s}")
+                print(f"\tPurchasing decisions:")
+                for p in P:
+                    print(f"\t\tP{p} demand:", *[f"{round(inst_gen.s_paths_d[env.t][t,s][p],2)}" for t in T], sep="\t")
+                    for i in inst_gen.M_kt[p,env.t+0]:
+                        print(f"\t\t\tSupplier {i}:",[f"{round(q[i,p,t,s].X,2)}" for t in T],sep="\t")
+                
+                print(f"\tInventory Management:")
+                for p in P:
+                    print(f"\t\tProduct {p}")
+                    print(f"\t\t\tFulfil.",*[f"{[round(v[p,o,t,s],2) for o in range(inst_gen.O_k[p])]}" for t in T],sep="\t")
+                    print(f"\t\t\tInvent.",*[f"{[round(I[p,o,t,s],2) for o in range(inst_gen.O_k[p])]}" for t in T],sep="\t")
+                    print("\t\t\tPerished",*[f"\t{round(I[p,inst_gen.O_k[p],t,s],2)}" for t in T],sep="\t")
+                    print("\t\t\tBackord.",*[f"\t{round(b[p,t,s],2)}" for t in T],sep="\t")
+                
+                print("\tRouting:")
+                for t in T:
+                    print(f"\t\tDay {t}",[f"{(i,j),(round(y[i,j,1,t,s].X,2),round(y[i,j,2,t,s].X,2))}" for (i,j) in A if x[i,j,t,s] > 0.5],sep="\t")
+            
+            print("\n")
+
+    @staticmethod
+    def Stochastic_RH_IRP(state,env,inst_gen,objs={"costs":1},verbose=False):
+        
+        ###################################
+        # Parameters Setting
+        ###################################
+
+        I_0 = state.copy()
+
+        S = inst_gen.Samples; P = inst_gen.Products; N = inst_gen.Suppliers
+        A = inst_gen.A; V = inst_gen.V
+        T = range(inst_gen.sp_window_sizes[env.t])
+        
+        M = list()
+        for r in range(2,len(N)+1):
+            M += combinations(iterable = N, r = r)
+        
+        m = gu.Model("VRP")
+
+        ###################################
+        # Variables
+        ###################################
+
+        ''' Whether supplier i in N is visited on day t in T on sample path s in S '''
+        z = {(i,t,s):m.addVar(vtype=gu.GRB.BINARY, name=f"z_{i,t,s}") for i in N for t in T for s in S}; z.update({(0,t,s):m.addVar(vtype=gu.GRB.INTEGER, name=f"z_{0,t,s}") for t in T for s in S})
+        
+        ''' Number of times that the arc (i,j) in A is traversed on day t in T on sample path s in S '''
+        x = {(i,j,t,s):m.addVar(vtype=gu.GRB.BINARY, name=f"x_{i,j,t,s}") for (i,j) in A for t in T for s in S}
+        
+        ''' Amount of product p in P that traverses arc (i,j) in A on day t in T on sample path s in S '''
+        y = {(i,j,p,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"y_{i,j,p,t,s}") for (i,j) in A for p in P for t in T for s in S}
+
+        ''' Amount of product p in P bought from supplier i in N_p on day t in T on sample path s in S '''
+        q = {(i,p,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"q_{i,p,t,s}") for t in T for p in P for i in inst_gen.M_kt[p,env.t + t] for s in S}
+
+        ''' Inventory level of product p in P that has aged o in O_p days at the warehouse by the end of day t in T on sample path s in S '''
+        I = {(p,o,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"I_{p,o,t,s}") for p in P for o in range(inst_gen.O_k[p]+1) for t in T for s in S}
+        
+        ''' Amount of product p in P that has aged o in O_p days at the warehouse used to fulfill the customer's demand on day t in T on sample path s in S '''
+        v = {(p,o,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"v_{p,o,t,s}") for p in P for o in range(inst_gen.O_k[p]+1) for t in T for s in S}
+        
+        ''' Unfulfilled demand of product p in P on day t in T on sample path s in S '''
+        b = {(p,t,s):m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"b_{p,t,s}") for p in P for t in T for s in S}
+
+        ''' Auxiliary Variable for objectives '''
+        Z = m.addVar(vtype=gu.GRB.CONTINUOUS, name=f"ZZ", obj = 1)
+
+        ###################################
+        # Constraints
+        ###################################
+
+        for s in S:
+
+            for p in P:
+                for o in range(1,inst_gen.O_k[p]+1):
+                    ''' Initial inventory of aged product '''
+                    m.addConstr(I[p,o,0,s] == I_0[p,o] - v[p,o,0,s])
+                
+                for t in T:
+                    ''' Inventory of fresh product '''
+                    m.addConstr(I[p,0,t,s] == gu.quicksum(q[i,p,t,s] for i in inst_gen.M_kt[p,env.t + t]) - v[p,0,t,s])
+                    
+                    if t >= 1:
+                        for o in range(1,inst_gen.O_k[p]+1):
+                            ''' Inventory dynamics throughout the lookahead horizon '''
+                            m.addConstr(I[p,o,t,s] == I[p,o-1,t-1,s] - v[p,o,t,s])
+
+            for t in T:
+                
+                ''' Fleet size '''
+                m.addConstr(z[0,t,s] <= inst_gen.F)
+
+                for i in N:
+                    ''' Maximum allowed total purchase at each visited supplier '''
+                    m.addConstr(gu.quicksum(q[i,p,t,s] for p in P if i in inst_gen.M_kt[p,env.t + t]) <= inst_gen.Q*z[i,t,s])
+                    
+                    #if t >= 1:
+                    ''' Minimum required purchase at each visited supplier '''
+                    m.addConstr(gu.quicksum(q[i,p,t,s] for p in P if i in inst_gen.M_kt[p,env.t + t]) >= inst_gen.rr*inst_gen.Q*z[i,t,s])
+                    
+                    for p in P:
+                        if i in inst_gen.M_kt[p,env.t + t]:
+
+                            ''' Product availability at each supplier '''
+                            m.addConstr(q[i,p,t,s] <= inst_gen.s_paths_q[env.t][t,s][i,p]*z[i,t,s])
+                            
+                            ''' Flow of products at the supplier nodes '''
+                            m.addConstr(gu.quicksum(y[i,j,p,t,s] for j in V if (i,j) in A) - gu.quicksum(y[j,i,p,t,s] for j in V if (j,i) in A) == q[i,p,t,s])
+                        else:
+                            m.addConstr(gu.quicksum(y[i,j,p,t,s] for j in V if (i,j) in A) - gu.quicksum(y[j,i,p,t,s] for j in V if (j,i) in A) == 0)
+                    
+                for p in P:
+                    
+                    ''' Demand compliance and backorders '''
+                    m.addConstr(gu.quicksum(v[p,o,t,s] for o in range(inst_gen.O_k[p]+1)) + b[p,t,s] == inst_gen.s_paths_d[env.t][t,s][p])
+                    
+                    ''' Flow of products at the warehouse '''
+                    m.addConstr(gu.quicksum(y[i,0,p,t,s] for i in N) == gu.quicksum(q[i,p,t,s] for i in inst_gen.M_kt[p,env.t + t]))
+                    m.addConstr(gu.quicksum(y[0,i,p,t,s] for i in N) == 0)
+                    
+                    ''' Flow variables association '''
+                    for (i,j) in A:
+                        m.addConstr(y[i,j,p,t,s] <= inst_gen.Q*x[i,j,t,s])
+
+                for i in V:
+                    ''' Flow through the network '''
+                    m.addConstr(gu.quicksum(x[i,j,t,s] for j in V if (i,j) in A) == z[i,t,s])
+                    m.addConstr(gu.quicksum(x[j,i,t,s] for j in V if (j,i) in A) == z[i,t,s])
+                
+                for mm in M:
+                    ''' Subtour elimination and capacity constraints '''
+                    m.addConstr(inst_gen.Q*gu.quicksum(x[i,j,t,s] for (i,j) in A if (i in mm) and (j in mm)) <= gu.quicksum(inst_gen.Q*z[i,t,s] - gu.quicksum(q[i,p,t,s] for p in P if i in inst_gen.M_kt[p,env.t + t]) for i in mm))
+                
+                ''' Non-anticipativity constraints '''
+                for p in P:
+                    for i in inst_gen.M_kt[p,env.t + t]:
+                        m.addConstr(q[i,p,0,s] == gu.quicksum(q[i,p,0,ss] for ss in S)/len(S))
+                
+                for (i,j) in A:
+                    m.addConstr(x[i,j,0,s] == gu.quicksum(x[i,j,0,ss] for ss in S)/len(S))
+                    
+        
+        ''' Service Level requirement constraints '''
+        for p in P:
+            m.addConstr(gu.quicksum(gu.quicksum(v[p,o,t,s] for o in range(inst_gen.O_k[p]+1) for t in T)/sum(inst_gen.s_paths_d[env.t][t,s][p] for t in T) for s in S) >= inst_gen.theta*len(S))
+
+        ###################################
+        # Objectives
+        ###################################
+
+        ''' Expected costs '''
+        purch_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.W_p[env.t][i,p]*q[i,p,t,s] for p in P for t in T for s in S for i in inst_gen.M_kt[p,env.t + t])/len(S)
+        backo_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.back_o_cost[p]*b[p,t,s] for p in P for t in T for s in S)/len(S)
+        rout_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.c[i,j]*x[i,j,t,s] for (i,j) in A for t in T for s in S)/len(S)
+        holding_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.W_h[env.t][p]*I[p,o,t,s] for p in P for t in T for o in range(inst_gen.O_k[p]) for s in S)/len(S)
+        
+        transp_impact, storage_impact, waste_impact = dict(), dict(), dict()
+        for e in inst_gen.E:
+            transp_impact[e] = gu.quicksum((inst_gen.gamma**t)*(inst_gen.c_LCA[e][p][i,j])*y[i,j,p,t,s] for p in P for t in T for s in S for (i,j) in A)/len(S)
+            storage_impact[e] = gu.quicksum((inst_gen.gamma**t)*inst_gen.h_LCA[e][p]*I[p,o,t,s] for p in P for t in T for o in range(inst_gen.O_k[p]) for s in S)/len(S)
+            waste_impact[e] = gu.quicksum((inst_gen.gamma**t)*inst_gen.waste_LCA[e][p]*I[p,inst_gen.O_k[p],t,s] for p in P for t in T for s in S)/len(S)
+
+        if len(objs) == 1:
+            if "costs" in objs:
+                if inst_gen.hold_cost: m.addConstr(Z >= purch_cost + backo_cost + rout_cost + holding_cost)
+                else: m.addConstr(Z >= purch_cost + backo_cost + rout_cost)
+            else:
+                e = list(objs.keys())[0]
+                m.addConstr(Z >= transp_impact[e] + storage_impact[e] + waste_impact[e])
+
+        else:
+            if inst_gen.hold_cost: m.addConstr((env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"])*Z >= objs["costs"]*(purch_cost + backo_cost + rout_cost + holding_cost - env.norm_matrix["costs"]["best"]))
+            else: m.addConstr((env.norm_matrix["costs"]["worst"] - env.norm_matrix["costs"]["best"])*Z >= objs["costs"]*(purch_cost + backo_cost + rout_cost - env.norm_matrix["costs"]["best"]))
+            for e in inst_gen.E:
+                m.addConstr((env.norm_matrix[e]["worst"] - env.norm_matrix[e]["best"])*Z >= objs[e]*(transp_impact[e]+storage_impact[e]+waste_impact[e]-env.norm_matrix[e]["best"]))
+
+        m.setParam("OutputFlag",0)
+        m.setParam("MIPGAP",1e-5)
+        m.update()
+        m.optimize()
+
+        xx, routes = Inventory.IRP.correct_routing(inst_gen,env,x,z,q,N,V,A,P,S,T)
+        #II, vv, bb = Inventory.IRP.correct_inventory_management(inst_gen,env,q,I,v,b,P,S,T)
+        II = {ix:I[ix].X for ix in I}; vv = {ix:v[ix].X for ix in v}; bb = {ix:b[ix].X for ix in b}
+
+        rout_cost = sum((inst_gen.gamma**t)*inst_gen.c[i,j]*xx[i,j,t,s] for (i,j) in A for t in T for s in S)/len(S)
+        backo_cost = sum((inst_gen.gamma**t)*inst_gen.back_o_cost[p]*bb[p,t,s] for p in P for t in T for s in S)/len(S)
+        holding_cost = sum((inst_gen.gamma**t)*inst_gen.W_h[env.t][p]*II[p,o,t,s] for p in P for t in T for o in range(inst_gen.O_k[p]) for s in S)/len(S)
+        for e in inst_gen.E:
+            storage_impact[e] = sum((inst_gen.gamma**t)*inst_gen.h_LCA[e][p]*II[p,o,t,s] for p in P for t in T for o in range(inst_gen.O_k[p]) for s in S)/len(S)
+            waste_impact[e] = sum((inst_gen.gamma**t)*inst_gen.waste_LCA[e][p]*II[p,inst_gen.O_k[p],t,s] for p in P for t in T for s in S)/len(S)
+
+        if (not inst_gen.sustainability and len(objs) == 1) or (inst_gen.sustainability and len(objs) > 1):
+            
+            # ----------------------------------------
+            # DECISIONS RETRIEVAL
+            # ----------------------------------------
+
+            # Purchase
+            purchase = {(i,p):q[i,p,0,0].x if i in inst_gen.M_kt[p,env.t] else 0 for i in N for p in P}
+            
+            # Routing
+            routing = routes[0,0]
+            
+            if verbose: print(f"Final routes: {routing}")
+
+            # Demand Compliance
+            demand_compliance = {}
+            for p in P:
+                
+                # If fresh product is available
+                if sum(purchase[i,p] for i in inst_gen.M_kt[p,env.t]) > 0:
+                    demand_compliance[p,0] = 0
+                    for s in S:
+                        if v[p,0,0,s].x > 0:
+                            demand_compliance[p,0] += 1
+                    demand_compliance[p,0] /= len(S)
+                
+                else:
+                    demand_compliance[p,0] = 1
+
+                for o in range(1,inst_gen.O_k[p]+1):
+                    demand_compliance[p,o] = 0
+                    for s in S:
+                        # If still some left to comply
+                        if round(b[p,0,s].x + sum(v[p,oo,0,s].x for oo in range(inst_gen.O_k[p],o,-1)),3) < round(inst_gen.s_paths_d[env.t][0,s][p],3):
+                            #... and used to comply
+                            if v[p,o,0,s].x > 0:
+                                demand_compliance[p,o] += 1
+                        else:
+                            demand_compliance[p,o] += 1
+                    demand_compliance[p,o] /= len(S)
+
+            action = {'routing':routing,'purchase':purchase,'demand_compliance':demand_compliance}            
+
+            if verbose:
+                Inventory.IRP.print_IRP_decisions(inst_gen, env, list(objs.values()), S, P, T, A, q, vv, II, bb, xx, y)
+
+                print(f"Costs Performance")
+                print("\tPurchase", round(purch_cost.getValue(),2))
+                print("\tRouting", round(rout_cost,2))
+                print("\tHolding", round(holding_cost,2))
+                print("\tBackorders", round(backo_cost,2))
+                print("\tTotal Cost", round(purch_cost.getValue() + rout_cost + holding_cost + backo_cost, 2))
+                print("\n")
+
+                print(f"Environmental Performance")
+                print("\t       ",*[" "*(9-len(e))+e for e in inst_gen.E],sep="\t")
+                print("\tTransp.",*[" "*(9-len(str(round(transp_impact[e].getValue(),2))))+f"{round(transp_impact[e].getValue(),2)}" for e in inst_gen.E],sep="\t")
+                print("\tStorage",*[" "*(9-len(str(round(storage_impact[e],2))))+f"{round(storage_impact[e],2)}" for e in inst_gen.E],sep="\t")
+                print("\tWaste  ",*[" "*(9-len(str(round(waste_impact[e],2))))+f"{round(waste_impact[e],2)}" for e in inst_gen.E],sep="\t")
+                print("\tTotal  ",*[" "*(9-len(str(round(transp_impact[e].getValue()+storage_impact[e]+waste_impact[e],2))))+f"{round(transp_impact[e].getValue()+storage_impact[e]+waste_impact[e],2)}" for e in inst_gen.E],sep="\t")
+                print("\n")
+
+            # ----------------------------------------
+            # LOOKAHEAD DECISIONS
+            # ----------------------------------------
+
+            II = {t:{s:{(p,o):II[p,o,t,s] for p in P for o in range(inst_gen.O_k[p]+1)} for s in S} for t in T}
+            qq = {t:{s:{(i,p):q[i,p,t,s].x for p in P for i in inst_gen.M_kt[p,env.t+t]} for s in S} for t in T}
+            bb = {t:{s:{p:bb[p,t,s] for p in P} for s in S} for t in T}
+            vv = {t:{s:{(p,o):vv[p,o,t,s] for p in P for o in range(inst_gen.O_k[p]+1)} for s in S} for t in T}
+
+            xx = {t:{s:{(i,j):xx[i,j,t,s] for (i,j) in A} for s in S} for t in T}
+            yy = {t:{s:{(i,j,p):y[i,j,p,t,s].x for (i,j) in A for p in P} for s in S} for t in T}
+
+            la_decisions = [II, qq, bb, vv, xx, yy]
+
+            return action, la_decisions
+
+        else:
+            
+            # ----------------------------------------
+            # Objectives Performance
+            # ----------------------------------------
+            
+            if verbose:
+                Inventory.IRP.print_IRP_decisions(inst_gen, env, list(objs.keys())[0], S, P, T, A, q, vv, II, bb, xx, y)
+
+                print(f"Costs Performance")
+                print("\tPurchase", round(purch_cost.getValue(),2))
+                print("\tRouting", round(rout_cost,2))
+                print("\tHolding", round(holding_cost,2))
+                print("\tBackorders", round(backo_cost,2))
+                print("\tTotal Cost", round(purch_cost.getValue() + rout_cost + holding_cost + backo_cost, 2))
+                print("\n")
+
+                print(f"Environmental Performance")
+                print("\t       ",*[" "*(9-len(e))+e for e in inst_gen.E],sep="\t")
+                print("\tTransp.",*[" "*(9-len(str(round(transp_impact[e].getValue(),2))))+f"{round(transp_impact[e].getValue(),2)}" for e in inst_gen.E],sep="\t")
+                print("\tStorage",*[" "*(9-len(str(round(storage_impact[e],2))))+f"{round(storage_impact[e],2)}" for e in inst_gen.E],sep="\t")
+                print("\tWaste  ",*[" "*(9-len(str(round(waste_impact[e],2))))+f"{round(waste_impact[e],2)}" for e in inst_gen.E],sep="\t")
+                print("\tTotal  ",*[" "*(9-len(str(round(transp_impact[e].getValue()+storage_impact[e]+waste_impact[e],2))))+f"{round(transp_impact[e].getValue()+storage_impact[e]+waste_impact[e],2)}" for e in inst_gen.E],sep="\t")
+                print("\n")
+
+            impacts = dict()
+            if inst_gen.hold_cost: impacts["costs"] = purch_cost.getValue() + backo_cost + holding_cost + rout_cost
+            else: impacts["costs"] = purch_cost.getValue() + backo_cost + rout_cost
+            for e in inst_gen.E:
+                impacts[e] = transp_impact[e].getValue() + storage_impact[e] + waste_impact[e]
+
+            return impacts
+

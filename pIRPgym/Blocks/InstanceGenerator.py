@@ -277,7 +277,7 @@ class instance_generator():
 
     # Auxiliary method: Generate iterables of sets
     def gen_sets(self):
-        self.Suppliers:list = list(range(1,self.M + 1));  self.V = [0]+self.Suppliers
+        self.Suppliers:list = list(range(1,self.M + 1));  self.V = [0]+self.Suppliers; self.A = [(i,j) for i in self.V for j in self.V if i != j]
         self.Products:list = list(range(1,self.K+1))
         self.Vehicles: range = range(self.F)
         self.Horizon: range = range(self.T)
