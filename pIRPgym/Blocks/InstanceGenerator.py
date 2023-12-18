@@ -138,7 +138,6 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
-        #self.O_k = {k:randint(3,self.T+1) for k in self.Products}
         ages = [3,3,6,6,5,4,4]
         if len(self.Products) <= 7: self.O_k = dict(zip(self.Products,ages[:len(self.Products)]))
         else: self.O_k = {k:3 for k in self.Products}
@@ -146,27 +145,29 @@ class instance_generator():
 
         self.i00 = self.gen_initial_inventory(I0)
 
-        # Offer
+        # Routing
+        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed, self.sustainability)
+
+        # Supply
         self.M_kt, self.K_it = offer.gen_availabilities(self)
         self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self,**kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q
 
+        # Purchase
         self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self,**kwargs['p_params'])
         if self.s_paths_p == None: del self.s_paths_p
-
-        # Demand
-        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
-        if self.s_paths_d == None: del self.s_paths_d
-        
-        # Backorders
-        self.prof_margin = costs.gen_profit_margin(self)
-        self.back_o_cost = costs.gen_backo_cost(self)
 
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
-        # Routing
-        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        # Backorders
+        self.prof_margin = costs.gen_profit_margin(self); self.back_o_cost = costs.gen_backo_cost(self)
+
+        # Demand
+        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
+        if self.s_paths_d == None: del self.s_paths_d
+
+        # Environmental Indicators
         if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
     
@@ -187,7 +188,7 @@ class instance_generator():
 
         self.i00 = self.gen_initial_inventory(I0)
 
-        # Offer
+        # Supply
         self.M_kt, self.K_it = offer.gen_availabilities(self)
         self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self, **kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q

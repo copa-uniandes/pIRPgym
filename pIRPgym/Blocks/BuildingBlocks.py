@@ -118,6 +118,20 @@ class Inventory_management():
                 real_demand_compliance[k,0] = min(sum(real_purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
             
             return real_demand_compliance
+        
+        @staticmethod
+        def get_costs_dem_compl_without_waste(inst_gen, env, real_purchase):
+            real_demand_compliance={}
+            for k in inst_gen.Products:
+                left_to_comply = inst_gen.W_d[env.t][k]
+                for o in range(inst_gen.O_k[k]-1,0,-1):
+                    real_demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
+                    left_to_comply -= real_demand_compliance[k,o]
+                
+                real_demand_compliance[k,0] = min(sum(real_purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
+                real_demand_compliance[k,inst_gen.O_k[k]] = min(env.state[k,inst_gen.O_k[k]], left_to_comply)
+            
+            return real_demand_compliance
 
 
         @staticmethod
@@ -224,14 +238,14 @@ class Inventory_management():
 
 
         @staticmethod
-        def compute_costs(inst_gen, env, purchase, demand_compliance, s_tprime, perished, aggregated = True):     
+        def compute_costs(inst_gen, env, purchase, s_tprime, backorders, aggregated = True):
+
             purchase_cost = {k:sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers) for k in inst_gen.Products}
-        
             holding_cost = {k:inst_gen.W_h[env.t][k]*sum(s_tprime[k,o] for o in range(1, inst_gen.O_k[k] + 1)) for k in inst_gen.Products}
 
             backorders_cost = 0
             if inst_gen.other_params['backorders'] == 'backorders':
-                 backorders_cost = {k:inst_gen.back_o_cost[k]*max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),0) for k in inst_gen.Products}
+                backorders_cost = {k:inst_gen.back_o_cost[k]*backorders[k] for k in inst_gen.Products}
             else:
                 backorders_cost = {k:inst_gen.back_l_cost*s_tprime[k,'B'] for k in inst_gen.Products}
 
@@ -279,9 +293,10 @@ class Environmental_management():
 
                 transport = 0
                 for r in routing:
-                    for i in range(1,len(r)-1):
-                        if purchase[r[i],k] > 0:
-                            transport += sum(inst_gen.c_LCA[e][k][r[j],r[j+1]] for j in range(i,len(r)-2))*purchase[r[i],k]
+                    arcs = [(r[i],r[i+1]) for i in range(len(r)-1)]
+                    for ix in range(1,len(arcs)):
+                        cumulative_purch = sum(purchase[arcs[ii][0],k] for ii in range(1,ix+1) for k in K)
+                        transport += inst_gen.c_LCA[e][k][arcs[ix]]*cumulative_purch
                 
                 storage = sum(inst_gen.h_LCA[e][k]*inventory[k,o] for o in range(1, inst_gen.O_k[k] + 1))
                 waste = inst_gen.waste_LCA[e][k]*perished[k]
