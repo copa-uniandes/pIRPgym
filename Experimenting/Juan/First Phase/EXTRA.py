@@ -60,7 +60,7 @@ for experiment in Experiments:
                 CG_performance[time_limit].append((CG_routes,CG_obj,CG_info,CG_time,CG_cols))
 
         for time_limit in time_limits:
-            save_pickle(experiment,replica,f'CGv2_{time_limit}',CG_performance)
+            save_pickle(experiment,replica,f'CGv2_{time_limit}',CG_performance[time_limit])
 
         print(f'✅ E{experiment}/R{replica}')
 
