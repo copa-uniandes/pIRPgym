@@ -26,10 +26,9 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':20,'K':60,'T':4,'Q':2000,
+env_config = {'M':15,'K':13,'T':4,'Q':750,
               'S':6,'LA_horizon':4,
-             'd_max':2500,'hist_window':60,
-             'back_o_cost':100}
+             'd_max':2500,'hist_window':60}
 env_config['F'] = env_config['M']
 
 # Creating instance generator object
@@ -45,8 +44,8 @@ d_params = {'dist': 'log-normal', 'r_f_params': (3,1)}          # Demand
 
 h_params = {'dist': 'd_uniform', 'r_f_params': (20,61)}         # Holding costs
 
-stoch_rd_seed = 0       # Random seeds
-det_rd_seed = 0
+stoch_rd_seed = 1       # Random seeds
+det_rd_seed = 1
 
 disc = ("strong","conc")
 
@@ -68,7 +67,9 @@ env = pIRPgym.steroid_IRP(routing, inventory, perishability)
 state = env.reset(inst_gen,return_state=True)
 
 
-[purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
+# [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
+purchase = pIRPgym.Purchasing.avg_purchase_all(inst_gen,env)
+demand_compliance = pIRPgym.Inventory.det_FIFO(purchase,inst_gen,env)
 _,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
 
 #%%
@@ -81,8 +82,12 @@ CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purc
                                                                             return_num_cols=True,RCL_alpha=0.6) 
 print(f'CG objective: {CG_obj}')
 
-nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-print(f'NN objective: {nn_obj}')
+# nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+# print(f'NN objective: {nn_obj}')
+results = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase)
+
+# nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+# print(f'NN objective: {nn_obj}')
 
 
 # RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
@@ -105,11 +110,10 @@ print(f'NN objective: {nn_obj}')
 
 
 
-GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                     rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
-print(f'GA objective: {GA_obj}')
+# GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+#                                                                      rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
+# print(f'GA objective: {GA_obj}')
 
-# x = 1
 
 #%%
 

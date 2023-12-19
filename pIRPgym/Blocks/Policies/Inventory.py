@@ -2,7 +2,7 @@ import numpy as np; import gurobipy as gu
 
 class Inventory():
     @staticmethod
-    def det_FIFO(state:dict,purchase:dict,inst_gen,env) -> dict[float,int]:
+    def det_FIFO(purchase:dict,inst_gen,env) -> dict[float,int]:
         demand_compliance = {}
         for k in inst_gen.Products:
             left_to_comply = inst_gen.W_d[env.t][k]

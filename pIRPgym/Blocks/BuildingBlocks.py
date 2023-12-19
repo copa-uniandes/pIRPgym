@@ -61,6 +61,8 @@ class Routing_management():
     ''' Compute route's dynamic purchasing delta'''
     @staticmethod
     def evaluate_route_dynamic_potential(inst_gen,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
+        purchase = {key:value for key,value in purchase.keys() if value > 0}
+
         extra_cost = 0
         total_missing = {k:0 for k in inst_gen.Products}
         for route in routes:
@@ -106,7 +108,7 @@ class Routing_management():
         
         while True:
             active_route = aux_flags.index(min(aux_flags))
-            sup = flags[active_route]
+            sup = routes[active_route][flags[active_route]]
             for k in inst_gen.K_it[sup,env.t]:
                 if (sup,k) in list(purchase.keys()) and inst_gen.W_q[env.t][sup,k] < purchase[sup,k]:
                     not_bought = purchase[sup,k] - inst_gen.W_q[env.t][sup,k]
@@ -115,8 +117,8 @@ class Routing_management():
                     reactive_missing[k] += not_bought
                     extra_cost -=  not_bought*inst_gen.W_p[env.t][sup,k]
 
-            for k in reactive_missing.keys():
-                if reactive_missing[k] > 0:
+            for k,val in reactive_missing.items():
+                if val > 0:
                     if sup in inst_gen.M_kt[k,env.t]:
                         if (sup,k) in purchase.keys():
                             buying = purchase[sup,k]
@@ -132,13 +134,14 @@ class Routing_management():
             flags[active_route]+=1
 
             # Closing route
-            if routes[active_route][flags[active_route]]==0:
+            if flags[active_route]==len(routes[active_route])-1:
                 aux_flags[active_route]=1e6
             
                 # Closing solution
                 if sum(aux_flags)==1e6*len(routes):
                     break
-
+        
+        return total_missing,reactive_missing,extra_cost
 
             
 
