@@ -1319,3 +1319,43 @@ class RoutingAgent(Routing):
 
     def direct_shipping_cost(self,requirements:dict,inst_gen:instance_generator,)->float:
         return sum(inst_gen.c[0,i]*2 for i in requirements.keys())
+
+
+class MemoryAgent(Routing):
+    def __init__(self,routes_num:int=100):
+        self.routes = list()
+        self.routes_num=routes_num
+
+    def update_route_list(self,routes):
+        sorted_routes = sorted(routes,key=lambda route:route[1])
+
+        # New solution
+        if sorted_routes not in self.routes:
+            # Enough space
+            if len(self.routes)<self.routes_num:
+                self.routes.append(routes)
+            
+
+    def fit_existing_route(self):
+        pass          
+    
+    
+    def _compute_likeness(solution1, solution2):
+        suppliers1 = set()
+        suppliers2 = set()
+
+        # Extract suppliers from the solutions
+        for route in solution1:
+            suppliers1.update(set(route[1:-1]))
+
+        for route in solution2:
+            suppliers2.update(set(route[1:-1]))
+
+        # Calculate the Jaccard similarity index
+        intersection = len(suppliers1.intersection(suppliers2))
+        union = len(suppliers1.union(suppliers2))
+
+        likeness_index = intersection / union if union != 0 else 0.0
+
+        return likeness_index
+            

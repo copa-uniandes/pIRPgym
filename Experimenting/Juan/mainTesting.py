@@ -80,11 +80,11 @@ _,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
 CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
                                                                             verbose=False,heuristic_initialization=5,
                                                                             return_num_cols=True,RCL_alpha=0.6) 
-print(f'CG objective: {CG_obj}')
+inverse_routes = [[i for i in route[::-1]] for route in CG_routes]
 
 # nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
 # print(f'NN objective: {nn_obj}')
-results = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase)
+total_missing,reactive_missing,extra_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase)
 
 # nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
 # print(f'NN objective: {nn_obj}')
