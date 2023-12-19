@@ -5,6 +5,7 @@ Independent transition blocks of a Supply Chain
 ################################## Modules ##################################
 ### Basic Libraries
 from hmac import trans_36
+from re import A
 from turtle import back
 from numpy.random import seed, random, randint, lognormal
 from copy import deepcopy
@@ -14,8 +15,7 @@ import numpy as np
 class Routing_management():
 
     @staticmethod
-    def price_routes(inst_gen, routes:list, purchase:dict, aggregated:bool = True):
-        
+    def price_routes(inst_gen,routes:list,purchase:dict,aggregated:bool=True):
         c_mod = dict(); total_units = dict(); arcs = dict()
         for r in routes:
             arcs[r[1]] = [(r[i],r[i+1]) for i in range(1,len(r)-1)]
@@ -37,6 +37,7 @@ class Routing_management():
         
         return transport_cost
 
+    ''' Evaluete route's performance (feasibility and objective)'''
     @staticmethod
     def evaluate_routes(inst_gen,routes:list,purchase:dict)->tuple:
         feasible = True
@@ -59,7 +60,7 @@ class Routing_management():
         
     ''' Compute route's dynamic purchasing delta'''
     @staticmethod
-    def evaluate_dynamic_potential(inst_gen,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
+    def evaluate_route_dynamic_potential(inst_gen,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
         extra_cost = 0
         total_missing = {k:0 for k in inst_gen.Products}
         for route in routes:
@@ -92,6 +93,60 @@ class Routing_management():
             return extra_cost,total_missing
         else:
             return extra_cost,sum([i for i in total_missing.values()])
+
+    ''' Compute solution's dynamic purchasing delta'''
+    @staticmethod
+    def evaluate_solution_dynamic_potential(inst_gen,env,routes:list[list],purchase:dict,discriminate_missing:bool=False):
+        extra_cost = 0
+        total_missing = {k:0 for k in inst_gen.Products}
+        reactive_missing = {k:0 for k in inst_gen.Products}
+        
+        flags = [1 for route in routes]
+        aux_flags = [inst_gen.c[0,route[1]] for route in routes]
+        
+        while True:
+            active_route = aux_flags.index(min(aux_flags))
+            sup = flags[active_route]
+            for k in inst_gen.K_it[sup,env.t]:
+                if (sup,k) in list(purchase.keys()) and inst_gen.W_q[env.t][sup,k] < purchase[sup,k]:
+                    not_bought = purchase[sup,k] - inst_gen.W_q[env.t][sup,k]
+
+                    total_missing[k] += not_bought
+                    reactive_missing[k] += not_bought
+                    extra_cost -=  not_bought*inst_gen.W_p[env.t][sup,k]
+
+            for k in reactive_missing.keys():
+                if reactive_missing[k] > 0:
+                    if sup in inst_gen.M_kt[k,env.t]:
+                        if (sup,k) in purchase.keys():
+                            buying = purchase[sup,k]
+                        else:
+                            buying = 0
+                        
+                        if buying < inst_gen.W_q[env.t][sup,k]:
+                            to_buy = min(inst_gen.W_q[env.t][sup,k]-purchase[sup,k], reactive_missing[k])
+                            reactive_missing[k] -= to_buy
+                            extra_cost += to_buy*inst_gen.W_p[env.t][sup,k]
+            
+            aux_flags[active_route]+=inst_gen.c[routes[active_route][flags[active_route]],routes[active_route][flags[active_route]+1]]
+            flags[active_route]+=1
+
+            # Closing route
+            if routes[active_route][flags[active_route]]==0:
+                aux_flags[active_route]=1e6
+            
+                # Closing solution
+                if sum(aux_flags)==1e6*len(routes):
+                    break
+
+
+            
+
+
+
+
+        
+        
 
 class Inventory_management():
     
