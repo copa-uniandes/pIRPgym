@@ -63,41 +63,68 @@ inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_par
 routing = True
 inventory = True
 perishability = 'ages'
-env = pIRPgym.steroid_IRP(routing, inventory, perishability)
+env = pIRPgym.steroid_IRP(routing,inventory,perishability)
 state = env.reset(inst_gen,return_state=True)
 
 
 # [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
 purchase = pIRPgym.Purchasing.avg_purchase_all(inst_gen,env)
 demand_compliance = pIRPgym.Inventory.det_FIFO(purchase,inst_gen,env)
-_,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+pending_suppliers,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
 
 #%%
 
 
-# requirements,_ = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+
+# GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+#                                                                       rd_seed=0,time_limit=30,verbose=True)    # Genetic Algorithm
+# print(f'GA objective: {GA_obj}')
+
+
+# transport_cost = pIRPgym.Routing_management.price_routes(inst_gen,GA_routes,purchase)
+# feasible,objective,(distances,loads)=pIRPgym.Routing_management.evaluate_routes(inst_gen,GA_routes,requirements)
+# total_missing,reactive_missing,extra_cost=pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase)
+
+
+# #%%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
                                                                             verbose=False,heuristic_initialization=5,
                                                                             return_num_cols=True,RCL_alpha=0.6) 
 inverse_routes = [[i for i in route[::-1]] for route in CG_routes]
 
-# nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-# print(f'NN objective: {nn_obj}')
+nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+print(f'CG objective: {CG_obj}')
 total_missing,reactive_missing,extra_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase)
 
-# nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
-# print(f'NN objective: {nn_obj}')
+nn_routes,nn_obj,nn_info,nn_time = pIRPgym.Routing.NearestNeighbor(purchase,inst_gen,env.t)
+print(f'NN objective: {nn_obj}')
 
 
-# RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-#                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-#                                                                                         purchase,inst_gen,env,n=15,
-#                                                                                         averages=True,dynamic_p=False,
-#                                                                                         time_limit=20,RCL_alphas=[0.05,0.1,0.25,0.4],
-#                                                                                         adaptative=True)
-# print(f'RCL objective light: {RCL_obj}')
-# print(RCL_median,RCL_min,RCL_max)
+RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+                                                            evaluate_randomized_policy( pIRPgym.Routing.RCL_Heuristic,
+                                                                                        purchase,inst_gen,env,n=15,
+                                                                                        averages=True,dynamic_p=False,
+                                                                                        time_limit=20,RCL_alphas=[0.05,0.1,0.25,0.4],
+                                                                                        adaptative=True)
+print(f'RCL objective light: {RCL_obj}')
+print(RCL_median,RCL_min,RCL_max)
 
 # RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
 #                                                             evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
@@ -109,10 +136,11 @@ total_missing,reactive_missing,extra_cost = pIRPgym.Routing_management.evaluate_
 # print(RCL_median,RCL_min,RCL_max)
 
 
+GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                                                                      rd_seed=0,time_limit=30,verbose=True)    # Genetic Algorithm
+print(f'GA objective: {GA_obj}')
 
-# GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-#                                                                      rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
-# print(f'GA objective: {GA_obj}')
+
 
 
 #%%

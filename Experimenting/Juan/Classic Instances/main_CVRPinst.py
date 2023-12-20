@@ -19,7 +19,7 @@ else:
     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
     experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/Classic Instances/'
 
-policies1 = ['RCL']
+policies1 = ['GA']
 policies=dict()
 policies['Li'] = policies1[:-1]
 policies['Golden'] = policies1[:-1]
@@ -57,17 +57,17 @@ inst_gen = pIRPgym.instance_generator(look_ahead, stochastic_params,
 ### Environment 
 # Creating environment object
 routing = True
-inventory = False    
+inventory = False
 perishability = False
 env = pIRPgym.steroid_IRP(routing,inventory,perishability)
 env.reset(inst_gen)
 
 
 instances = dict()
-# instances['Li'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Li') if i[-3:]=='vrp']
-# instances['Golden'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Golden') if i[-3:]=='vrp']
+instances['Li'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Li') if i[-3:]=='vrp']
+instances['Golden'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Instances/dCVRP/Golden') if i[-3:]=='vrp']
 instances['Uchoa'] = [i for i in os.listdir(path+'pIRPgym/Instances/CVRP Instances/CVRP/Uchoa') if i[-3:]=='vrp']
-# instances['Li'].sort();instances['Golden'].sort()
+instances['Li'].sort();instances['Golden'].sort()
 instances['Uchoa'].sort();instances['Uchoa'] = instances['Uchoa'][1:] + [instances['Uchoa'][0]]
 
 

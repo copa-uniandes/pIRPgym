@@ -40,6 +40,7 @@ class Routing_management():
     ''' Evaluete route's performance (feasibility and objective)'''
     @staticmethod
     def evaluate_routes(inst_gen,routes:list,purchase:dict)->tuple:
+        
         feasible = True
         objective = 0
         distances = list()
@@ -141,7 +142,7 @@ class Routing_management():
                 if sum(aux_flags)==1e6*len(routes):
                     break
         
-        return total_missing,reactive_missing,extra_cost     
+        return total_missing,reactive_missing,extra_cost
         
 
 class Inventory_management():

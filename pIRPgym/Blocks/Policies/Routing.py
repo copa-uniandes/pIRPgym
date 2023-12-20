@@ -39,7 +39,7 @@ class Routing():
             ```
             """
             start = process_time()
-            pending_sup, requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
+            pending_sup,requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             routes = list()
             loads = list()
@@ -315,12 +315,12 @@ class Routing():
             pending_sup,requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             # Parameters
-            Population_size:int = 1500
+            Population_size:int = 2000
             Population_iter:range = range(Population_size)
-            training_time:float = 10
+            training_time:float = 3
             Elite_size:int = int(Population_size*0.25)
 
-            mutation_rate:float = 0
+            mutation_rate:float = 1
             crossover_rate:float = 1 - mutation_rate
             
 
@@ -333,8 +333,8 @@ class Routing():
             if verbose: 
                 print('\n')
                 print(f'----- Genetic Algorithm -----')
-                print('\nt \tFO \t#V \tgen')
-                print(f'{round(best_individual[3],2)} \t{round(incumbent,2)} \t{len(best_individual[0])} \t-1')
+                print('\nt \tgen \tFO \t#V \tRoutes')
+                print(f'{round(best_individual[3],2)} \t-1 \t{round(incumbent,2)} \t{len(best_individual[0])} \t{best_individual[0]}')
 
             # Genetic process
             generation = 0
@@ -382,10 +382,9 @@ class Routing():
 
                     # Updating incumbent
                     if new_FO < incumbent:
-                        print(new_individual)
-                        incumbent = new_FO
-                        best_individual = [new_individual,new_FO,(new_distances,new_loads),process_time()-start]
-                        print(f'{round(process_time() - start)} \t{incumbent} \t{len(new_individual)} \t{generation}')
+                        incumbent = deepcopy(new_FO)
+                        best_individual = [deepcopy(new_individual),deepcopy(new_FO),(deepcopy(new_distances),deepcopy(new_loads)),process_time()-start]
+                        print(f'{round(process_time() - start)} \t{generation} \t{incumbent} \t{len(new_individual)} \t{best_individual[0]}')
 
                 # Update population
                 Population = New_Population
@@ -393,6 +392,7 @@ class Routing():
                 Distances = New_Distances
                 Loads = New_Loads
                 generation += 1
+
             
             if verbose:
                 print('\n')
@@ -499,7 +499,7 @@ class Routing():
                     fit_f.append(tots/FOs[i])
                 for i in Population_iter:
                     probs.append(fit_f[i]/sum(fit_f))
-                return choice([i for i in Population_iter], size = int(Population_size - Elite_size), replace = True, p = probs)
+                return choice([i for i in Population_iter],size=int(Population_size - Elite_size),replace=True,p=probs)
 
 
             ''' Tournament '''
@@ -1122,7 +1122,7 @@ class Routing():
 
 
         @staticmethod
-        def evaluate_stochastic_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
+        def evaluate_randomized_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
                                        dynamic_p=False,**kwargs)->tuple:
             times = list()
             vehicles = list()
@@ -1135,7 +1135,7 @@ class Routing():
                     seed = (i+1) * 2
                     RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
                                                                   adaptative=kwargs['adaptative'],rd_seed=seed,time_limit=kwargs['time_limit'])
-                    assert RCL_obj==Routing_management.price_routes(inst_gen,RCL_routes),"Computed distance doesn't match route cost"
+                    assert abs(RCL_obj-Routing_management.price_routes(inst_gen,RCL_routes,purchase))<0.0001,"Computed distance doesn't match route cost"
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
@@ -1165,7 +1165,7 @@ class Routing():
 
 
         @staticmethod
-        def multiprocess_eval_stoch_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
+        def multiprocess_eval_rand_policy(router,purchase,inst_gen:instance_generator,env, n=30,averages=True,
                                        dynamic_p=False,initial_seed=0,**kwargs):
             freeze_support()
 
@@ -1235,7 +1235,7 @@ class Routing():
                         pending_suppliers.append(i)
                         requirements[i] = req
 
-                return pending_suppliers, requirements
+                return pending_suppliers,requirements
             # purchase is given for products
             else:
                 return list(purchase.keys()), purchase
