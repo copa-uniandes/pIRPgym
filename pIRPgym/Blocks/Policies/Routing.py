@@ -1326,7 +1326,7 @@ class MemoryAgent(Routing):
         self.routes = list()
         self.routes_num=routes_num
 
-    def update_route_list(self,routes):
+    def update_route_pool(self,routes):
         sorted_routes = sorted(routes,key=lambda route:route[1])
 
         # New solution
@@ -1336,7 +1336,7 @@ class MemoryAgent(Routing):
                 self.routes.append(routes)
             
 
-    def fit_existing_route(self):
+    def fit_purchase_to_existing_route(self):
         pass          
     
     

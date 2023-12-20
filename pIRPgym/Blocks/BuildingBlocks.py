@@ -141,14 +141,7 @@ class Routing_management():
                 if sum(aux_flags)==1e6*len(routes):
                     break
         
-        return total_missing,reactive_missing,extra_cost
-
-            
-
-
-
-
-        
+        return total_missing,reactive_missing,extra_cost     
         
 
 class Inventory_management():
