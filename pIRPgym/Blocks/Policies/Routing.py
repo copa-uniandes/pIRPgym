@@ -380,7 +380,7 @@ class Routing():
                     if new_FO < incumbent:
                         incumbent = deepcopy(new_FO)
                         best_individual = [deepcopy(new_individual),deepcopy(new_FO),(deepcopy(new_distances),deepcopy(new_loads)),process_time()-start]
-                        print(f'{round(process_time() - start)} \t{generation} \t{incumbent} \t{len(new_individual)} \t{best_individual[0]}')
+                        # print(f'{round(process_time() - start)} \t{generation} \t{incumbent} \t{len(new_individual)} \t{best_individual[0]}')
 
                 # Update population
                 Population = New_Population
