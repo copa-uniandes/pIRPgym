@@ -72,7 +72,7 @@ while not done:
 
     ''' Generating solutions '''
     GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                         rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
+                                                                         rd_seed=0,time_limit=120,verbose=False)    # Genetic Algorithm
     CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
                                                                             verbose=False,heuristic_initialization=5,
                                                                             return_num_cols=True,RCL_alpha=0.6) 
