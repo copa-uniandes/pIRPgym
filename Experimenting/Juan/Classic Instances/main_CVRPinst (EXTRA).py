@@ -73,8 +73,8 @@ POPULATION_SIZES = [250,750,1000,2500]
 ELITE_PROPORTIONS = [0.05,0.2,0.3]
 MUTATION_RATES = [0.25,0.5,0.75]
 
-head = f'\n \t \t \t'
-for i in range(1,37): head+=f'{i}\t'
+head = f'\n \t'
+for i in range(1,37): head+=f'{i}   '
 print(head)
 
 for inst_set,inst_list in instances.items():
@@ -83,7 +83,7 @@ for inst_set,inst_list in instances.items():
     if inst_set == 'Uchoa':
         RCL_alphas = [0.01,0.05,0.2,0.35]
     for instance in inst_list:
-        sstr = f'{instance}\t' 
+        sstr = f'{instance[:6]}\t' 
         print(sstr,end='\r')
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
@@ -101,7 +101,7 @@ for inst_set,inst_list in instances.items():
                                                                                             Elite_prop=e_prop,mutation_rate=m_rate)   
                     save_pickle(inst_set,f'GA_{pop_size}_{e_prop}_{m_rate}',instance,[GA_routes,GA_obj,GA_info,GA_time])
                 
-                    sstr += '✅\t'
+                    sstr += '✅   '
                     if (pop_size,e_prop,m_rate)!=(POPULATION_SIZES[-1],ELITE_PROPORTIONS[-1],MUTATION_RATES[-1]):
                         print(sstr,end='\r')
                     else:
