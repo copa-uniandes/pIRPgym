@@ -66,7 +66,7 @@ instances['Uchoa'].sort();instances['Uchoa'] = instances['Uchoa'][1:] + [instanc
 
 ################################## Policy Evaluation ##################################
 ''' Parameters '''
-verbose = True
+verbose = False
 show_gap = True
 
 POPULATION_SIZES = [250,750,1000,2500]
@@ -92,11 +92,11 @@ for inst_set,inst_list in instances.items():
             for e_prop in ELITE_PROPORTIONS:
                 for m_rate in MUTATION_RATES:
                 
-                    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.HybridGenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
                                                                                             time_limit=300,Popoulation_size=pop_size,
                                                                                             Elite_prop=e_prop,mutation_rate=m_rate)   
                     save_pickle(inst_set,f'GA_{pop_size}_{e_prop}_{m_rate}',instance,[GA_routes,GA_obj,GA_info,GA_time])
-        print(f'✅ {inst_set} - {instance}')
+                    print(f'✅ {inst_set} - {instance}')
 
     
 
