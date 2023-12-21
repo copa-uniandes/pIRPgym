@@ -4,9 +4,7 @@ import sys
 from time import process_time
 import numpy as np;from numpy import random
 
-import verbose_module as verb
-
-sys.path.append('../../.')
+sys.path.append('../../../.')
 import pIRPgym
 
 
@@ -26,7 +24,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':15,'K':13,'T':7,'Q':750,
+env_config = {'M':15,'K':15,'T':7,'Q':750,
               'S':6,'LA_horizon':4,
              'd_max':2500,'hist_window':60}
 env_config['F'] = env_config['M']
@@ -65,7 +63,7 @@ state = env.reset(inst_gen,return_state=True)
 
 done = False
 
-FlowerAgent = pIRPgym.Routing.MemoryAgent(solution_num=10)
+FlowerAgent = pIRPgym.FlowerAgent(solution_num=10)
 
 while not done:
     ''' Purchase '''
@@ -73,7 +71,7 @@ while not done:
     total_purchase = sum(purchase.values())    
 
     ''' Generating solutions '''
-    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
                                                                          rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
     CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
                                                                             verbose=False,heuristic_initialization=5,
@@ -92,6 +90,7 @@ while not done:
     ''' Compound action'''
     action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
 
+    print('✅')
 
 
 
@@ -129,10 +128,11 @@ while not done:
 
 
 
-# [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
-purchase = pIRPgym.Purchasing.avg_purchase_all(inst_gen,env)
-demand_compliance = pIRPgym.Inventory.det_FIFO(purchase,inst_gen,env)
-_,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
+
+# # [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
+# purchase = pIRPgym.Purchasing.avg_purchase_all(inst_gen,env)
+# demand_compliance = pIRPgym.Inventory.det_FIFO(purchase,inst_gen,env)
+# _,requirements = pIRPgym.Routing.consolidate_purchase(purchase,inst_gen,env.t)
 
 #%%
 
