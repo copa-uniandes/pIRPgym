@@ -309,19 +309,17 @@ class Routing():
         ''' Genetic Algorithm '''
         @staticmethod
         def GeneticAlgorithm(purchase:dict,inst_gen:instance_generator,t:int,return_top:int or bool=False,
-                                  rd_seed:int=0,time_limit:float=30,verbose:bool=False):            
+                             time_limit:float=30,Population_size:int=1000,Elite_prop:float=0.25,
+                             mutation_rate:float=0.5,verbose:bool=False,rd_seed=None):            
             start = process_time()
-            seed(rd_seed)
+            if seed!=None:
+                seed(rd_seed)
             pending_sup,requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             # Parameters
-            Population_size:int = 2000
             Population_iter:range = range(Population_size)
             training_time:float = 3
-            Elite_size:int = int(Population_size*0.25)
-
-            mutation_rate:float = 1
-            crossover_rate:float = 1 - mutation_rate
+            Elite_size:int = int(Population_size*Elite_prop)
             
 
             if verbose: print('Generating population')
