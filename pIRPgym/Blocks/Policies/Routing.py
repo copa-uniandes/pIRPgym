@@ -1317,7 +1317,7 @@ class RoutingAgent(Routing):
         return sum(inst_gen.c[0,i]*2 for i in requirements.keys())
 
 
-class MemoryAgent(Routing):
+class FlowerAgent(Routing):
 
     def __init__(self,solution_num:int=100):
         self.routes_num=solution_num

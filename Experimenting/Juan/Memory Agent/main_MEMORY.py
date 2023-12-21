@@ -65,7 +65,7 @@ state = env.reset(inst_gen,return_state=True)
 
 done = False
 
-MemoryAgent = pIRPgym.Routing.MemoryAgent(solution_num=10)
+FlowerAgent = pIRPgym.Routing.MemoryAgent(solution_num=10)
 
 while not done:
     ''' Purchase '''
@@ -82,17 +82,17 @@ while not done:
     ''' Update flower pool '''
     GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
                                                                                                      discriminate_missing=False)
-    MemoryAgent.update_flower_pool(GA_routes,GA_obj,GA_tot_mis/total_purchase,GA_rea_mis/total_purchase)
+    FlowerAgent.update_flower_pool(GA_routes,GA_obj,GA_tot_mis/total_purchase,GA_rea_mis/total_purchase)
 
     CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
                                                                                                      discriminate_missing=False)
-    MemoryAgent.update_flower_pool(CG_routes,CG_obj,CG_tot_mis/total_purchase,CG_rea_mis/total_purchase)
+    FlowerAgent.update_flower_pool(CG_routes,CG_obj,CG_tot_mis/total_purchase,CG_rea_mis/total_purchase)
 
 
     ''' Compound action'''
     action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
 
-    
+
 
 
 
