@@ -73,8 +73,9 @@ POPULATION_SIZES = [250,750,1000,2500]
 ELITE_PROPORTIONS = [0.05,0.2,0.3]
 MUTATION_RATES = [0.25,0.5,0.75]
 
-head = f'\t \t \t'
+head = f'\n \t \t \t'
 for i in range(1,37): head+=f'{i}\t'
+print(head)
 
 for inst_set,inst_list in instances.items():
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
