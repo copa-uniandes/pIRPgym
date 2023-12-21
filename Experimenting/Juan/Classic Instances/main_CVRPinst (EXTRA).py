@@ -70,7 +70,7 @@ verbose = False
 show_gap = True
 
 POPULATION_SIZES = [250,750,1000,2500]
-ELITE_PROPORTIONS = [0.05,0.2,0.3]
+ELITE_PROPORTIONS = [0.05,0.15,0.3]
 MUTATION_RATES = [0.25,0.5,0.75]
 
 head = f'\n \t'
@@ -101,7 +101,7 @@ for inst_set,inst_list in instances.items():
                                                                                             Elite_prop=e_prop,mutation_rate=m_rate)   
                     save_pickle(inst_set,f'{pop_size}_{e_prop}_{m_rate}',instance,[GA_routes,GA_obj,GA_info,GA_time])
                 
-                    sstr += '✅   '
+                    sstr += '✅  '
                     if (pop_size,e_prop,m_rate)!=(POPULATION_SIZES[-1],ELITE_PROPORTIONS[-1],MUTATION_RATES[-1]):
                         print(sstr,end='\r')
                     else:
