@@ -394,8 +394,8 @@ class Routing():
                 print('\n')
 
             if not return_top:
-                print('\n')
-                print(best_individual[0])
+                # print('\n')
+                # print(best_individual[0])
                 return *best_individual,None
             else:
                 combined = list(zip(Distances, Population))                 # Combine 'Distances' and 'Population' into tuples
