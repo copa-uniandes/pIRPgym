@@ -26,7 +26,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':15,'K':13,'T':4,'Q':750,
+env_config = {'M':15,'K':13,'T':7,'Q':750,
               'S':6,'LA_horizon':4,
              'd_max':2500,'hist_window':60}
 env_config['F'] = env_config['M']

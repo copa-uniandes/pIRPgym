@@ -26,7 +26,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':15,'K':13,'T':4,'Q':750,
+env_config = {'M':15,'K':13,'T':7,'Q':750,
               'S':6,'LA_horizon':4,
              'd_max':2500,'hist_window':60}
 env_config['F'] = env_config['M']
@@ -37,12 +37,12 @@ inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
 
 ##########################################    Random Instance    ##########################################
 # Random Instance
-q_params = {'dist': 'c_uniform', 'r_f_params': (6,20)}          # Offer
-p_params = {'dist': 'd_uniform', 'r_f_params': (20,61)}
+q_params = {'dist':'c_uniform','r_f_params':(6,20)}          # Offer
+p_params = {'dist':'d_uniform','r_f_params':(20,61)}
 
-d_params = {'dist': 'log-normal', 'r_f_params': (3,1)}          # Demand
+d_params = {'dist':'log-normal','r_f_params':(3,1)}          # Demand
 
-h_params = {'dist': 'd_uniform', 'r_f_params': (20,61)}         # Holding costs
+h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
 
 stoch_rd_seed = 1       # Random seeds
 det_rd_seed = 1
@@ -60,11 +60,73 @@ inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_par
 
 # Environment
 # Creating environment object
-routing = True
-inventory = True
-perishability = 'ages'
-env = pIRPgym.steroid_IRP(routing, inventory, perishability)
+env = pIRPgym.steroid_IRP(True,True,True)
 state = env.reset(inst_gen,return_state=True)
+
+done = False
+
+MemoryAgent = pIRPgym.Routing.MemoryAgent(solution_num=10)
+
+while not done:
+    ''' Purchase '''
+    [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+    total_purchase = sum(purchase.values())    
+
+    ''' Generating solutions '''
+    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                                                                         rd_seed=0,time_limit=120,verbose=True)    # Genetic Algorithm
+    CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
+                                                                            verbose=False,heuristic_initialization=5,
+                                                                            return_num_cols=True,RCL_alpha=0.6) 
+
+    ''' Update flower pool '''
+    GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
+                                                                                                     discriminate_missing=False)
+    MemoryAgent.update_flower_pool(GA_routes,GA_obj,GA_tot_mis/total_purchase,GA_rea_mis/total_purchase)
+
+    CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
+                                                                                                     discriminate_missing=False)
+    MemoryAgent.update_flower_pool(CG_routes,CG_obj,CG_tot_mis/total_purchase,CG_rea_mis/total_purchase)
+
+
+    ''' Compound action'''
+    action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # [purchase,demand_compliance], la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)    
@@ -118,154 +180,6 @@ total_missing,reactive_missing,extra_cost = pIRPgym.Routing_management.evaluate_
 #%%
 
 
-RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-                                                            multiprocess_eval_stoch_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                        purchase,inst_gen,env,n=15,
-                                                                                        averages=True,dynamic_p=False,
-                                                                                        time_limit=15,RCL_alphas=[0.05,0.1,0.25,0.4],
-                                                                                        adaptative=True)
-
-
-
-
-
-#%%
-def order_crossover_route(route1, route2):
-    """
-    Performs Order Crossover (OX) on two routes to produce two offspring routes.
-    The first offspring route is created by copying a segment from the first route and filling
-    the rest from the second route while maintaining order. The second offspring route is formed
-    from the nodes not included in the first offspring route.
-
-    Parameters:
-    route1 (list): The first route (sequence of nodes).
-    route2 (list): The second route (sequence of nodes).
-
-    Returns:
-    tuple of lists: The two offspring routes.
-    """
-    size = len(route1)
-    start, end = sorted(np.random.choice(range(size), 2, replace=False))
-
-    # Create first offspring route
-    child_route1 = [None]*size
-    child_route1[start:end+1] = route1[start:end+1]
-
-    route2_filtered = [node for node in route2 if node not in child_route1[start:end+1]]
-    route2_filtered_iter = iter(route2_filtered * (size // len(route2_filtered) + 1))
-    child_route1 = [next(route2_filtered_iter) if node is None else node for node in child_route1]
-
-    # Create second offspring route with remaining nodes
-    child_route2 = [None]*size
-    remaining_nodes = [node for node in route1 if node not in child_route1]
-    child_route2[start:end+1] = remaining_nodes[:end-start+1]
-
-    remaining_nodes = remaining_nodes[end-start+1:] + [node for node in route2 if node not in child_route1 and node not in remaining_nodes]
-    child_route2 = [remaining_nodes.pop(0) if node is None else node for node in child_route2]
-
-    return child_route1, child_route2
-
-
-
-def _initial_crossover_and_feasibility_check(parent1,parent2,inst_gen,requirements):
-    """
-    Performs crossover on two individuals (sets of routes) to produce feasible offspring routes.
-    It also checks for and handles duplicate nodes and infeasible routes.
-
-    Parameters:
-    parent1 (list of lists): The first individual (set of routes).
-    parent2 (list of lists): The second individual (set of routes).
-    inst_gen: Instance generator containing distance information.
-    requirements (dict): Dictionary of load requirements for each node.
-
-    Returns:
-    tuple: A list of feasible routes and a list of missing nodes.
-    """
-    offspring_routes = []
-    missing_nodes = []
-
-    def is_route_feasible(route, inst_gen, requirements):
-        total_distance, total_load = 0, 0
-        for i in range(len(route) - 1):
-            total_distance += inst_gen.c[(route[i], route[i + 1])]
-            total_load += requirements[route[i]]
-        return total_distance <= inst_gen.d_max and total_load <= inst_gen.Q
-
-    def make_route_feasible(route, inst_gen, requirements):
-        while not is_route_feasible(route, inst_gen, requirements):
-            removed_node = random.choice(route)
-            route.remove(removed_node)
-            missing_nodes.append(removed_node)
-
-    # Perform crossover and store offspring routes
-    for i in range(max(len(parent1), len(parent2))):
-        route1 = parent1[i % len(parent1)] if i < len(parent1) else None
-        route2 = parent2[-(i % len(parent2)) - 1] if i < len(parent2) else None
-
-        if route1 and route2:
-            child_route1, child_route2 = order_crossover_route(route1, route2)
-            offspring_routes.extend([child_route1, child_route2])
-        elif route1 or route2:
-            offspring_routes.append(route1 or route2)
-
-    # Check for duplicate nodes and feasibility
-    for route in offspring_routes:
-        # Remove duplicate nodes
-        seen = set()
-        duplicates = [node for node in route if node in seen or seen.add(node)]
-        route[:] = [node for node in route if node not in seen]
-        missing_nodes.extend(duplicates)
-
-        # Make route feasible
-        make_route_feasible(route, inst_gen, requirements)
-
-    return offspring_routes, missing_nodes
-
-
-def crossover_individuals(parent1,parent2,inst_gen,requirements):
-    """
-    Performs crossover on two individuals (sets of routes) and produces two offspring individuals.
-    Routes are assigned to the offspring based on the suitability, which is determined by the 
-    uniqueness of their nodes.
-
-    Parameters:
-    parent1 (list of lists): The first individual (set of routes).
-    parent2 (list of lists): The second individual (set of routes).
-    inst_gen: Instance generator containing distance information.
-    requirements (dict): Dictionary of load requirements for each node.
-
-    Returns:
-    tuple: Two offspring individuals (sets of routes).
-    """
-    offspring_routes, missing_nodes = _initial_crossover_and_feasibility_check(
-        parent1, parent2, inst_gen, requirements)
-    offspring1, offspring2 = [], []
-
-    # Randomly assign the first two routes to each offspring
-    random.shuffle(offspring_routes)
-    offspring1.append(offspring_routes.pop(0))
-    offspring2.append(offspring_routes.pop(0))
-
-    # Function to calculate suitability of a route for an offspring
-    def calculate_suitability(route, offspring):
-        unique_nodes = len([node for node in route if node not in offspring])
-        return unique_nodes / len(route) if route else 0
-
-    # Assign remaining routes based on suitability
-    for route in offspring_routes:
-        suitability_for_offspring1 = calculate_suitability(route, offspring1)
-        suitability_for_offspring2 = calculate_suitability(route, offspring2)
-
-        if suitability_for_offspring1 > suitability_for_offspring2:
-            chosen_offspring = offspring1
-        else:
-            chosen_offspring = offspring2
-
-        # Remove nodes that are already in the chosen offspring
-        route = [node for node in route if node not in chosen_offspring]
-        chosen_offspring.append(route)
-
-    return offspring1, offspring2
 
 
 

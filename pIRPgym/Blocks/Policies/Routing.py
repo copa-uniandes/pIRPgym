@@ -1318,21 +1318,34 @@ class RoutingAgent(Routing):
 
 
 class MemoryAgent(Routing):
-    def __init__(self,routes_num:int=100):
-        self.routes = list()
-        self.routes_num=routes_num
 
-    def update_route_pool(self,routes):
+    def __init__(self,solution_num:int=100):
+        self.routes_num=solution_num
+
+        self.routes = list()
+        self.metrics = list()
+        self.n_table = list()
+
+
+    def update_flower_pool(self,routes,cost,total_SL,reactive_SL):
         sorted_routes = sorted(routes,key=lambda route:route[1])
 
         # New solution
         if sorted_routes not in self.routes:
             # Enough space
             if len(self.routes)<self.routes_num:
-                self.routes.append(routes)
-            
+                self.routes.append(sorted_routes)
+                self.metrics.append((cost,total_SL,reactive_SL))
+                self.n_table.append(1)
+        
+        # Already existing 
+        else:
+            index = self.routes.index(sorted_routes)
+            self.metrics[index][1] += (1/self.n_table[index]) * (total_SL-self.metrics[index[1]])
+            self.metrics[index][2] += (1/self.n_table[index]) * (reactive_SL-self.metrics[index[2]])
+            self.n_table+=1
 
-    def fit_purchase_to_existing_route(self):
+    def fit_purchase_to_existing_flower(self):
         pass          
     
     
