@@ -360,14 +360,12 @@ class Routing():
                     ###################
                     # Operators
                     ###################
-                    if random() <= mutation_rate:
-                        new_individual,new_distances,evolved = Routing.GA.mutation(Population[individual_i],
-                                                                            Distances[individual_i],inst_gen)
-                        new_FO = sum(new_distances) 
-                        new_loads = Loads[individual_i]
-                        mutated = True
-                    else:
-                        pass
+                    new_individual,new_distances,evolved = Routing.GA.mutation(Population[individual_i],
+                                                                        Distances[individual_i],inst_gen,mutation_rate)
+                    new_FO = sum(new_distances) 
+                    new_loads = Loads[individual_i]
+                    mutated = True
+
                     
                     # No operation is performed
                     if not mutated: 
@@ -519,12 +517,12 @@ class Routing():
 
 
             @staticmethod
-            def mutation(individual:list,distances:float,inst_gen:instance_generator)->list:
+            def mutation(individual:list,distances:float,inst_gen:instance_generator,mutation_rate:float)->list:
                 pos = randint(0,len(individual))
                 if len(individual[pos])<=3: 
                     return individual,distances,False
                 
-                if random() <= 0.5:
+                if random() <= mutation_rate:
                     individual[pos],distances[pos],mutated = Routing.GA.swap_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max,inst_gen=inst_gen)
                 else:
                     individual[pos],distances[pos],mutated = Routing.GA.two_opt_mutation(individual[pos],distances[pos],inst_gen.c,d_max=inst_gen.d_max)
