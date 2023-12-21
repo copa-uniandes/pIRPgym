@@ -142,7 +142,7 @@ class Routing_management():
                 if sum(aux_flags)==1e6*len(routes):
                     break
         
-         if discriminate_missing:
+        if discriminate_missing:
             return total_missing,reactive_missing,extra_cost
         else:
             return sum([i for i in total_missing.values()]),sum([i for i in reactive_missing.values()]),extra_cost
