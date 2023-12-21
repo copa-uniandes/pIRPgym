@@ -96,7 +96,7 @@ for inst_set,inst_list in instances.items():
                                                                                             time_limit=300,Population_size=pop_size,
                                                                                             Elite_prop=e_prop,mutation_rate=m_rate)   
                     save_pickle(inst_set,f'GA_{pop_size}_{e_prop}_{m_rate}',instance,[GA_routes,GA_obj,GA_info,GA_time])
-                    print(f'✅ {inst_set} - {instance}')
+        print(f'✅ {inst_set} - {instance}')
 
     
 
