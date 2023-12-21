@@ -1341,8 +1341,8 @@ class FlowerAgent(Routing):
         # Already existing 
         else:
             index = self.routes.index(sorted_routes)
-            self.metrics[index][1] += (1/self.n_table[index]) * (total_SL-self.metrics[index[1]])
-            self.metrics[index][2] += (1/self.n_table[index]) * (reactive_SL-self.metrics[index[2]])
+            self.metrics[index][1] += (1/self.n_table[index]) * (total_SL-self.metrics[index][1])
+            self.metrics[index][2] += (1/self.n_table[index]) * (reactive_SL-self.metrics[index][2])
             self.n_table+=1
 
     def fit_purchase_to_existing_flower(self):

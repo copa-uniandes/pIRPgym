@@ -99,7 +99,7 @@ for inst_set,inst_list in instances.items():
                     GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
                                                                                             time_limit=300,Population_size=pop_size,
                                                                                             Elite_prop=e_prop,mutation_rate=m_rate)   
-                    save_pickle(inst_set,f'GA_{pop_size}_{e_prop}_{m_rate}',instance,[GA_routes,GA_obj,GA_info,GA_time])
+                    save_pickle(inst_set,f'{pop_size}_{e_prop}_{m_rate}',instance,[GA_routes,GA_obj,GA_info,GA_time])
                 
                     sstr += '✅   '
                     if (pop_size,e_prop,m_rate)!=(POPULATION_SIZES[-1],ELITE_PROPORTIONS[-1],MUTATION_RATES[-1]):
