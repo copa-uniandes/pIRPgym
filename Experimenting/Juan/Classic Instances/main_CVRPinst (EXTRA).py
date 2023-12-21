@@ -26,7 +26,7 @@ policies['Golden'] = policies1[:-1]
 policies['Uchoa'] = policies1
 
 def save_pickle(inst_set,policy,instance,performance):
-    with open(experiments_path+f'{inst_set}/{policy}/{instance[:-4]}.pkl','wb') as file:
+    with open(experiments_path+f'{inst_set}/GA/{policy}/{instance[:-4]}.pkl','wb') as file:
         # Use pickle.dump to serialize and save the dictionary to the file
         pickle.dump(performance,file)
 
