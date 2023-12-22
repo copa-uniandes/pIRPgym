@@ -362,7 +362,8 @@ class Inventory():
             
             ''' Service Level requirement constraints '''
             for p in P:
-                m.addConstr(gu.quicksum(gu.quicksum(v[p,o,t,s] for o in range(inst_gen.O_k[p]+1) for t in T)/sum(inst_gen.s_paths_d[env.t][t,s][p] for t in T) for s in S) >= inst_gen.theta*len(S))
+                for t in T:
+                    m.addConstr(gu.quicksum(gu.quicksum(v[p,o,t,s] for o in range(inst_gen.O_k[p]+1))/inst_gen.s_paths_d[env.t][t,s][p] for s in S) >= inst_gen.theta*len(S))
 
             ''' Expected costs '''
             purch_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.W_p[env.t][i,p]*q[i,p,t,s] for p in P for t in T for s in S for i in inst_gen.M_kt[p,env.t + t])/len(S)
@@ -520,7 +521,7 @@ class Inventory():
 
         ''' Find cost-efficient solution '''
         m1, (zz, xx, yy, qq, II, vv, bb, ZZ), costs, (transp_impact, storage_impact, waste_impact) = Inventory.IRP.build_model(state, env, inst_gen)
-        m1.addConstr(transp_impact[e] + storage_impact[e] + waste_impact[e] <= z_e)
+        m1.addConstr(transp_impact[e] + storage_impact[e] + waste_impact[e] <= round(z_e,4)+1e-4)
         m1.setObjective(gu.quicksum(c for c in costs))
         m1.update(); m1.optimize()
 
@@ -563,7 +564,7 @@ class Inventory():
 
         ''' Find cost-efficient solution '''
         m1, (zz, xx, yy, qq, II, vv, bb, ZZ), costs1, (transp_impact, storage_impact, waste_impact) = Inventory.IRP.build_model(state, env, inst_gen)
-        m1.addConstr(gu.quicksum(c for c in costs1) <= z_c)
+        m1.addConstr(gu.quicksum(c for c in costs1) <= round(z_c,2)+1e-2)
         m1.setObjective(transp_impact[e] + storage_impact[e] + waste_impact[e])
         m1.update(); m1.optimize()
 
@@ -573,7 +574,7 @@ class Inventory():
             Inventory.IRP.verbose.print_costs_performance(costs, inst_gen.hold_cost)
             Inventory.IRP.verbose.print_environmental_performance(transp_impact, storage_impact, waste_impact, inst_gen.E)
 
-        print(f"\t\te", *[f"{(round(sum(im[ee].getValue() for im in impacts),4),round((transp_impact[ee].getValue()+storage_impact[ee].getValue()+waste_impact[ee].getValue(),4)))}" for ee in ["climate","water","land","fossil"]], sep="\t")
+        #print(f"\t\t",*[f"{(round(sum(im[ee].getValue() for im in impacts),4),round(transp_impact[ee].getValue()+storage_impact[ee].getValue()+waste_impact[ee].getValue(),4))}" for ee in ["climate","water","land","fossil"]], sep="\t")
         
         if not action:
 

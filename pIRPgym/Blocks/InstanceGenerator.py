@@ -138,7 +138,7 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
-        ages = [3,3,6,6,5,4,4]
+        ages = [3,6,5,3,6,4,4]
         if len(self.Products) <= 7: self.O_k = dict(zip(self.Products,ages[:len(self.Products)]))
         else: self.O_k = {k:3 for k in self.Products}
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
