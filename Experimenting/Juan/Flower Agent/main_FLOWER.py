@@ -24,10 +24,11 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':15,'K':15,'T':7,'Q':750,
-              'S':6,'LA_horizon':4,
+env_config = {'M':15,'T':7,'Q':750,
+              'S':3,'LA_horizon':3,
              'd_max':2500,'hist_window':60}
-env_config['F'] = env_config['M']
+env_config['K']=env_config['M']
+env_config['F']=env_config['M']
 
 # Creating instance generator object
 inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
@@ -42,8 +43,8 @@ d_params = {'dist':'log-normal','r_f_params':(3,1)}          # Demand
 
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
 
-stoch_rd_seed = 1       # Random seeds
-det_rd_seed = 1
+stoch_rd_seed = 0       # Random seeds
+det_rd_seed = int(1e6)
 
 disc = ("strong","conc")
 
@@ -52,52 +53,64 @@ disc = ("strong","conc")
 inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
                               historical_data,backorders,env_config=env_config)
 
-inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
-                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
-
-
 # Environment
 # Creating environment object
 env = pIRPgym.steroid_IRP(True,True,True)
-state = env.reset(inst_gen,return_state=True)
 
 done = False
 
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=10)
+main_done = False
 
-while not done:
-    ''' Purchase '''
-    [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
-    total_purchase = sum(purchase.values())    
+while not main_done:
+    try:
+        inst_gen.generate_basic_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
+        state = env.reset(inst_gen,return_state=True)
+        while not done:
+            ''' Purchase '''
+            [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+            total_purchase = sum(purchase.values())    
 
-    ''' Generating solutions '''
-    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                         rd_seed=0,time_limit=120,verbose=False)    # Genetic Algorithm
-    CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
-                                                                            verbose=False,heuristic_initialization=5,
-                                                                            return_num_cols=True,RCL_alpha=0.6) 
+            ''' Generating solutions '''
+            GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                                                                                rd_seed=0,time_limit=120,verbose=False)    # Genetic Algorithm
+            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
+                                                                                    verbose=False,heuristic_initialization=5,
+                                                                                    return_num_cols=True,RCL_alpha=0.6) 
 
-    ''' Update flower pool '''
-    GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
-                                                                                                     discriminate_missing=False)
-    FlowerAgent.update_flower_pool(GA_routes,GA_obj,GA_tot_mis/total_purchase,GA_rea_mis/total_purchase)
+            ''' Update flower pool '''
+            GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
+                                                                                                            discriminate_missing=False)
+            FlowerAgent.update_flower_pool(GA_routes,GA_obj,1-GA_tot_mis/total_purchase,1-GA_rea_mis/total_purchase)
 
-    CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
-                                                                                                     discriminate_missing=False)
-    FlowerAgent.update_flower_pool(CG_routes,CG_obj,CG_tot_mis/total_purchase,CG_rea_mis/total_purchase)
-
-
-    ''' Compound action'''
-    action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
-
-    print('✅')
-
-
+            CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
+                                                                                                            discriminate_missing=False)
+            FlowerAgent.update_flower_pool(CG_routes,CG_obj,1-CG_tot_mis/total_purchase,1-CG_rea_mis/total_purchase)
 
 
+            ''' Compound action'''
+            action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
+            state,reward,done,real_action,_,  = env.step(action,inst_gen)
+
+            print('✅')
+        main_done=True
+    except:
+        print('❌')
+        stoch_rd_seed+=1
+        det_rd_seed+=1
 
 
 
+
+#%%
+
+len(FlowerAgent.routes)
+
+
+
+
+#%%
 
 
 

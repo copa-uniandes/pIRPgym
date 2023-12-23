@@ -100,10 +100,9 @@ class Inventory():
                         m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) >= min_q*w[i,t,s], f'Vehicle capacity {i,t,s}')
 
             '''' NON-ANTICIPATIVITY CONSTRAINTS '''
-            for k in K:
-
-                for i in inst_gen.M_kt[k,env.t]:
-                    m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i,k,s}')
+            # for k in K:
+            #     for i in inst_gen.M_kt[k,env.t]:
+            #         m.addConstr(z[i,k,0,s] == gu.quicksum(z[i,k,0,ss] for ss in S)/len(S), f'Anticipativity purchase {i,k,s}')
 
         ''' Service Level control constraint '''
         for k in K:
@@ -206,7 +205,7 @@ class Inventory():
 
             la_decisions = [I0, zz, bb, yy]
 
-            return action, la_decisions
+            return action,la_decisions
 
         else:
             

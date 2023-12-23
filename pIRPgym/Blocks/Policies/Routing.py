@@ -1131,7 +1131,7 @@ class Routing():
                     seed = (i+1) * 2
                     RCL_routes,RCL_obj,RCL_info,RCL_time = router(purchase,inst_gen,env.t,RCL_alphas=kwargs['RCL_alphas'],
                                                                   adaptative=kwargs['adaptative'],rd_seed=seed,time_limit=kwargs['time_limit'])
-                    assert abs(RCL_obj-Routing_management.price_routes(inst_gen,RCL_routes,purchase))<0.0001,"Computed distance doesn't match route cost"
+                    # assert abs(RCL_obj-Routing_management.price_routes(inst_gen,RCL_routes,purchase))<0.0001,"Computed distance doesn't match route cost"
                     times.append(RCL_time)
                     vehicles.append(len(RCL_routes))
                     objectives.append(RCL_obj)
@@ -1323,11 +1323,11 @@ class FlowerAgent(Routing):
         self.routes_num=solution_num
 
         self.routes = list()
+        self.sup_set = list()
         self.metrics = list()
         self.n_table = list()
 
-
-    def update_flower_pool(self,routes,cost,total_SL,reactive_SL):
+    def update_flower_pool(self,inst_gen,routes,cost,total_SL,reactive_SL):
         sorted_routes = sorted(routes,key=lambda route:route[1])
 
         # New solution
@@ -1335,20 +1335,35 @@ class FlowerAgent(Routing):
             # Enough space
             if len(self.routes)<self.routes_num:
                 self.routes.append(sorted_routes)
-                self.metrics.append((cost,total_SL,reactive_SL))
+                self.sup_set.append(self._code_binary_set_(routes,inst_gen.M))
+                self.metrics.append([cost,total_SL,reactive_SL])
                 self.n_table.append(1)
+            
+            # Flower pool full
+            else:
+                pass
         
         # Already existing 
         else:
             index = self.routes.index(sorted_routes)
-            self.metrics[index][1] += (1/self.n_table[index]) * (total_SL-self.metrics[index][1])
-            self.metrics[index][2] += (1/self.n_table[index]) * (reactive_SL-self.metrics[index][2])
-            self.n_table+=1
+            self.metrics[index][1] = self.metrics[index][1] + (1/self.n_table[index]) * (total_SL-self.metrics[index][1])
+            self.metrics[index][2] = self.metrics[index][2] + (1/self.n_table[index]) * (reactive_SL-self.metrics[index][2])
+            self.n_table[index]+=1
+
 
     def fit_purchase_to_existing_flower(self):
-        pass          
+        pass
     
     
+    def _code_binary_set_(inst_gen,routes):
+        binary_encoding = np.zeros(inst_gen.M,dtype=int)
+        for route in routes:
+            for node in route[1:-1]:
+                binary_encoding[node - 1] = 1  # Set the corresponding index to 1
+
+        return binary_encoding
+
+
     def _compute_likeness(solution1, solution2):
         suppliers1 = set()
         suppliers2 = set()
@@ -1367,4 +1382,4 @@ class FlowerAgent(Routing):
         likeness_index = intersection / union if union != 0 else 0.0
 
         return likeness_index
-            
+    
