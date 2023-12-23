@@ -79,6 +79,7 @@ show_gap = True
 time_limit = 30
 
 for inst_set,inst_list in instances.items():
+    if inst_set=='Li':continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
     RCL_alphas = [0.005,0.01,0.05,0.1]
     if inst_set == 'Uchoa':
