@@ -26,7 +26,7 @@ policies['Golden'] = policies1[:-1]
 policies['Uchoa'] = policies1
 
 def save_pickle(inst_set,policy,instance,performance):
-    with open(experiments_path+f'{inst_set}/GA/{instance[:-4]}_{policy}.pkl','wb') as file:
+    with open(experiments_path+f'{inst_set}/{policy}/{instance[:-4]}.pkl','wb') as file:
         # Use pickle.dump to serialize and save the dictionary to the file
         pickle.dump(performance,file)
 
@@ -69,13 +69,9 @@ instances['Uchoa'].sort();instances['Uchoa'] = instances['Uchoa'][1:] + [instanc
 verbose = False
 show_gap = True
 
-POPULATION_SIZES = [250,750,1000,2500]
-ELITE_PROPORTIONS = [0.05,0.15,0.3]
-MUTATION_RATES = [0.25,0.5,0.75]
-
-head = f'\n \t'
-for i in range(1,37): head+=f'{i}   '
-print(head)
+# POPULATION_SIZES = [250,750,1000,2500]
+# ELITE_PROPORTIONS = [0.05,0.15,0.3]
+# MUTATION_RATES = [0.25,0.5,0.75]
 
 for inst_set,inst_list in instances.items():
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
@@ -83,7 +79,7 @@ for inst_set,inst_list in instances.items():
     if inst_set == 'Uchoa':
         RCL_alphas = [0.01,0.05,0.2,0.35]
     for instance in inst_list:
-        sstr = f'{instance[:6]}\t' 
+        sstr = f'{instance[:6]}\t'
         print(sstr,end='\r')
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
@@ -92,20 +88,13 @@ for inst_set,inst_list in instances.items():
         if verbose: string = verb.routing_instances.print_inst(inst_set,instance,inst_gen.M,benchmark[1],benchmark[0])
 
         ''' Genetic Algorithm '''
-        for pop_size in POPULATION_SIZES:
-            for e_prop in ELITE_PROPORTIONS:
-                for m_rate in MUTATION_RATES:
-                
-                    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                                            time_limit=300,Population_size=pop_size,
-                                                                                            Elite_prop=e_prop,mutation_rate=m_rate)   
-                    save_pickle(inst_set,f'{pop_size}_{e_prop}_{m_rate}',instance,[GA_routes,GA_obj,GA_info,GA_time])
-                
-                    sstr += '✅  '
-                    if (pop_size,e_prop,m_rate)!=(POPULATION_SIZES[-1],ELITE_PROPORTIONS[-1],MUTATION_RATES[-1]):
-                        print(sstr,end='\r')
-                    else:
-                        print(sstr)
+        GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                                                                                time_limit=600,Population_size=2500,
+                                                                                Elite_prop=0.3,mutation_rate=0.25)   
+        save_pickle(inst_set,'GA',instance,[GA_routes,GA_obj,GA_info,GA_time])
+    
+        sstr += '✅  '
+        print(sstr)
     
 
 

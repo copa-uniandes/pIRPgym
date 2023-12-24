@@ -52,15 +52,23 @@ for experiment in Experiments:
         inst_gen = inst_info['inst_gen']
         for t in range(len(inst_info['Requirements'])):
             requirements = inst_info['Requirements'][t]
-            for time_limit in time_limits:
-                CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(   requirements,inst_gen,t,
-                                                                                                    time_limit=time_limit,verbose=False,
-                                                                                                    heuristic_initialization=init_times[time_limit],
-                                                                                                    return_num_cols=True,RCL_alpha=0.9)
-                CG_performance[time_limit].append((CG_routes,CG_obj,CG_info,CG_time,CG_cols))
 
-        for time_limit in time_limits:
-            save_pickle(experiment,replica,f'CGv2_{time_limit}',CG_performance[time_limit])
+
+            ''' Genetic Algorithm '''
+            GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(requirements,inst_gen,t,return_top=False,
+                                                                                    time_limit=600,Population_size=2500,
+                                                                                    Elite_prop=0.3,mutation_rate=0.25) 
+            save_pickle(experiment,replica,'GA',[GA_routes,GA_obj,GA_info,GA_time])
+             
+        #     for time_limit in time_limits:
+        #         CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(   requirements,inst_gen,t,
+        #                                                                                             time_limit=time_limit,verbose=False,
+        #                                                                                             heuristic_initialization=init_times[time_limit],
+        #                                                                                             return_num_cols=True,RCL_alpha=0.9)
+        #         CG_performance[time_limit].append((CG_routes,CG_obj,CG_info,CG_time,CG_cols))
+
+        # for time_limit in time_limits:
+        #     save_pickle(experiment,replica,f'CGv2_{time_limit}',CG_performance[time_limit])
 
         print(f'✅ E{experiment}/R{replica}')
 

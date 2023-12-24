@@ -164,44 +164,45 @@ for experiment in Experiments:
             #                                                                                     adaptative=True)
             #     results_information['RCL'].append((RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)))
             
-            RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
-                                                            evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
-                                                                                        purchase,inst_gen,env,n=15,
-                                                                                        averages=True,dynamic_p=False,
-                                                                                        time_limit=15,RCL_alphas=[0.05,0.1,0.25,0.4],
-                                                                                        adaptative=True)
-            results_information['RCL'].append((RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)))
+            # RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max) = pIRPgym.Routing.\
+            #                                                 evaluate_stochastic_policy( pIRPgym.Routing.RCL_Heuristic,
+            #                                                                             purchase,inst_gen,env,n=15,
+            #                                                                             averages=True,dynamic_p=False,
+            #                                                                             time_limit=15,RCL_alphas=[0.05,0.1,0.25,0.4],
+            #                                                                             adaptative=True)
+            # results_information['RCL'].append((RCL_obj,RCL_veh,RCL_time,(RCL_median,RCL_std,RCL_min,RCL_max)))
 
-            # # Genetic Algorithm
-            # GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-            #                                                                      rd_seed=0,time_limit=120,verbose=False)
-            # results_information['GA'].append((nn_routes,nn_obj,nn_info,nn_time))
+            # Genetic Algorithm
+            GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GenticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                                                                                 rd_seed=0,time_limit=120,verbose=False)
+            results_information['GA'].append((nn_routes,nn_obj,nn_info,nn_time))
 
-            # Column Generation
-            for time_limit in time_limits:
-                CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=time_limit,
-                                                                                            verbose=False,return_num_cols=True)
-                results_information[f'CG_{time_limit}'].append((CG_routes,CG_obj,CG_info,CG_time,CG_cols))
+            # # Column Generation
+            # for time_limit in time_limits:
+            #     CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=time_limit,
+            #                                                                                 verbose=False,return_num_cols=True)
+            #     results_information[f'CG_{time_limit}'].append((CG_routes,CG_obj,CG_info,CG_time,CG_cols))
 
-                for alpha in alphas:
-                    CGi_routes,CGi_obj,CGi_info,CGi_time,CGi_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,
-                                                                                                     time_limit=time_limit,verbose=False,
-                                                                                                     heuristic_initialization=init_times[time_limit],
-                                                                                                     return_num_cols=True,RCL_alpha=alpha)
-                    results_information[f'CG_{time_limit}_{alpha}'].append((CGi_routes,CGi_obj,CGi_info,CGi_time,CGi_cols))
+            #     for alpha in alphas:
+            #         CGi_routes,CGi_obj,CGi_info,CGi_time,CGi_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,
+            #                                                                                          time_limit=time_limit,verbose=False,
+            #                                                                                          heuristic_initialization=init_times[time_limit],
+            #                                                                                          return_num_cols=True,RCL_alpha=alpha)
+            #         results_information[f'CG_{time_limit}_{alpha}'].append((CGi_routes,CGi_obj,CGi_info,CGi_time,CGi_cols))
 
             ''' Compound action'''        
             action = {'routing':nn_routes,'purchase':purchase,'demand_compliance':demand_compliance}
             state,reward,done,real_action,_,  = env.step(action,inst_gen)
         
 
-        save_pickle(experiment,replica,'instance_information',instance_information)
-        save_pickle(experiment,replica,'NN',results_information['NN'])
-        save_pickle(experiment,replica,'RCL',results_information['RCL'])
-        for time_limit in time_limits:
-            save_pickle(experiment,replica,f'CG_{time_limit}',results_information[f'CG_{time_limit}'])
-            for alpha in alphas:
-                save_pickle(experiment,replica,f'CG_{time_limit}_{alpha}',results_information[f'CG_{time_limit}_{alpha}'])
+        # save_pickle(experiment,replica,'instance_information',instance_information)
+        # save_pickle(experiment,replica,'NN',results_information['NN'])
+        # save_pickle(experiment,replica,'RCL',results_information['RCL'])
+        save_pickle(experiment,replica,'GA',results_information['GA'])
+        # for time_limit in time_limits:
+        #     save_pickle(experiment,replica,f'CG_{time_limit}',results_information[f'CG_{time_limit}'])
+        #     for alpha in alphas:
+        #         save_pickle(experiment,replica,f'CG_{time_limit}_{alpha}',results_information[f'CG_{time_limit}_{alpha}'])
 
         print(f'✅ E{experiment}/R{replica}')
 
