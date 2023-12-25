@@ -442,6 +442,9 @@ class Routing():
                 requirements2 = deepcopy(requirements)
                 individual,FO,(distances,loads),_ = Routing.NearestNeighbor(requirements2,inst_gen,t)
                 Population.append(individual);FOs.append(FO);Distances.append(distances);Loads.append(loads)
+                if FO < incumbent:
+                    incumbent = FO
+                    best_individual: list = [individual,FO,(distances,loads),process_time()-start]
 
                 # Generating initial population
                 for ind in Population_iter[:-1]:
