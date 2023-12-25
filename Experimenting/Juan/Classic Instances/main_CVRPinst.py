@@ -79,12 +79,13 @@ show_gap = True
 time_limit = 30
 
 for inst_set,inst_list in instances.items():
-    if inst_set in ['Li','Golden']:continue
+    if inst_set in ['Golden','Uchoa']:continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
     RCL_alphas = [0.005,0.01,0.05,0.1]
     if inst_set == 'Uchoa':
         RCL_alphas = [0.01,0.05,0.2,0.35]
     for instance in inst_list[::-1]:
+        
         # Upload dCVRP instance
         purchase,benchmark = inst_gen.upload_CVRP_instance(inst_set,instance)
         seed(inst_gen.M*2)
