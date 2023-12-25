@@ -62,7 +62,7 @@ instances['Golden'] = [i for i in os.listdir(path+'/pIRPgym/Instances/CVRP Insta
 instances['Uchoa'] = [i for i in os.listdir(path+'pIRPgym/Instances/CVRP Instances/CVRP/Uchoa') if i[-3:]=='vrp']
 instances['Li'].sort();instances['Golden'].sort()
 instances['Uchoa'].sort();instances['Uchoa'] = instances['Uchoa'][1:] + [instances['Uchoa'][0]]
-
+num_instances = sum(len(j) for j in instances.values())
 
 ################################## Policy Evaluation ##################################
 ''' Parameters '''
@@ -74,7 +74,6 @@ show_gap = True
 # MUTATION_RATES = [0.25,0.5,0.75]
 
 for inst_set,inst_list in instances.items():
-    if inst_set in ['Li']:continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
     RCL_alphas = [0.005,0.01,0.05,0.1]
     if inst_set == 'Uchoa':
