@@ -74,11 +74,12 @@ show_gap = True
 # MUTATION_RATES = [0.25,0.5,0.75]
 
 for inst_set,inst_list in instances.items():
+    if inst_set in ['Li','Golden']:continue
     if verbose: verb.routing_instances.print_head(policies[inst_set],inst_set,show_gap)
     RCL_alphas = [0.005,0.01,0.05,0.1]
     if inst_set == 'Uchoa':
         RCL_alphas = [0.01,0.05,0.2,0.35]
-    for instance in inst_list:
+    for instance in inst_list[::-1]:
         sstr = f'{instance[:6]}\t'
         print(sstr,end='\r')
         # Upload dCVRP instance
