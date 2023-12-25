@@ -167,3 +167,73 @@ class offer():
 
         return s_paths_p
     
+
+    class supplier_differentiated_offer():
+        ### Available quantities of products on suppliers
+        @staticmethod
+        def gen_quantities(inst_gen,**kwargs) -> tuple:
+            seed(inst_gen.d_rd_seed + 4)
+            rd_function = randint
+            hist_q = offer.supplier_differentiated_offer.gen_hist_q(inst_gen,rd_function,**kwargs)
+
+            if inst_gen.other_params['look_ahead'] != False and ('q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
+                seed(inst_gen.s_rd_seed + 1)
+                W_q, hist_q = offer.supplier_differentiated_offer.gen_W_q(inst_gen,rd_function,hist_q, **kwargs)
+                s_paths_q = offer.supplier_differentiated_offer.gen_empiric_q_sp(inst_gen,hist_q,W_q)
+                return hist_q, W_q, s_paths_q
+
+            else:
+                W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
+                return hist_q, W_q, None
+
+        # Historic availabilities
+        @staticmethod
+        def gen_hist_q(inst_gen,rd_function,**kwargs) -> dict[dict]:
+            hist_q = {t:dict() for t in inst_gen.Horizon}
+            
+            if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
+                hist_q[0] = {(i,k):[round(rd_function(*kwargs[i]),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
+            else:
+                hist_q[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
+
+            return hist_q
+
+        
+        # Realized (real) availabilities
+        @staticmethod
+        def gen_W_q(inst_gen,rd_function,hist_q,**kwargs) -> tuple:
+            '''
+            W_q: (dict) quantity of k in K offered by supplier i in M on t in T
+            '''
+            W_q = dict()
+            for t in inst_gen.Horizon:
+                W_q[t] = dict()  
+                for i in inst_gen.Suppliers:
+                    for k in inst_gen.Products:
+                        if i in inst_gen.M_kt[k,t]:
+                            W_q[t][(i,k)] = round(rd_function(*kwargs[i]),2)
+                        else:   W_q[t][(i,k)] = 0
+
+                        if t < inst_gen.T - 1:
+                            hist_q[t+1][i,k] = hist_q[t][i,k] + [W_q[t][i,k]]
+
+            return W_q, hist_q
+
+
+        # Availabilitie's sample paths
+        @staticmethod
+        def gen_empiric_q_sp(inst_gen,hist_q,W_q) -> dict[dict]:
+            s_paths_q = dict()
+            for t in inst_gen.Horizon: 
+                s_paths_q[t] = dict()
+                for sample in inst_gen.Samples:
+                    if inst_gen.s_params == False or ('q' not in inst_gen.s_params and '*' not in inst_gen.s_params):
+                        s_paths_q[t][0,sample] = W_q[t]
+                    else:
+                        s_paths_q[t][0,sample] = {(i,k): empiric_distribution_sampling([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,0] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
+
+                    for day in range(1,inst_gen.sp_window_sizes[t]):
+                        s_paths_q[t][day,sample] = {(i,k): empiric_distribution_sampling([hist_q[t][i,k][obs] for obs in range(len(hist_q[t][i,k])) if hist_q[t][i,k][obs] > 0]) if i in inst_gen.M_kt[k,t+day] else 0 for i in inst_gen.Suppliers for k in inst_gen.Products}
+
+            return s_paths_q
+        

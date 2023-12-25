@@ -43,16 +43,20 @@ d_params = {'dist':'log-normal','r_f_params':(3,1)}          # Demand
 
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
 
+
+q_params = {str(i):(6*(1+random.random()-random.random()),20*(1+random.random()-random.random())) for i in range(1,inst_gen.M+1)}          # Offer
+# p_params = {i:(20*(1+random()-random()),61*(1+random()-random())) for i in range(1,inst_gen.M+1)}
+
+
 stoch_rd_seed = 0       # Random seeds
 det_rd_seed = int(1e6)
 
 disc = ("strong","conc")
 
+inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_seed,q_params=q_params,
+                                        p_params=p_params,d_params=d_params,h_params=h_params,discount=disc)
 
-# Creating instance generator object
-inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
-                              historical_data,backorders,env_config=env_config)
-
+#%%
 # Environment
 # Creating environment object
 env = pIRPgym.steroid_IRP(True,True,True)
