@@ -317,7 +317,7 @@ class Routing():
             pending_sup,requirements = Routing.consolidate_purchase(purchase,inst_gen,t)
 
             # Parameters
-            Population_iter:range = range(Population_size)
+            Population_iter:list = [i for i in range(Population_size)]
             training_time:float = 3
             Elite_size:int = int(Population_size*Elite_prop)
             
@@ -325,7 +325,7 @@ class Routing():
             if verbose: print('Generating population')
             Population,FOs,Distances,Loads,incumbent,best_individual,alpha_performance = \
                             Routing.GA.generate_population(inst_gen,start,requirements,Population_iter,
-                                                           training_time,verbose=False)
+                                                           training_time,t,verbose=False)
             
             # Print progress
             if verbose: 
@@ -417,7 +417,7 @@ class Routing():
             ''' Generate initial population '''
             @staticmethod
             def generate_population(inst_gen:instance_generator,start:float,requirements:dict,Population_iter:range,
-                                    training_time:float,verbose:bool):
+                                    training_time:float,t,verbose:bool):
                 # Initalizing data storage
                 Population = list()
                 FOs = list()
@@ -438,8 +438,12 @@ class Routing():
                     alpha_performance = Routing.GA.calibrate_alpha(RCL_alpha_list,alpha_performance,requirements,inst_gen)
                     training_ind += 1
                 
+                individual,FO,(distances,loads),_ = Routing.NearestNeighbor(requirements2,inst_gen,t)
+                # Saving individual
+                Population.append(individual);FOs.append(FO);Distances.append(distances);Loads.append(loads)
+
                 # Generating initial population
-                for ind in Population_iter:
+                for ind in Population_iter[:-1]:
                     requirements2 = deepcopy(requirements)
                     
                     # Choosing alpha

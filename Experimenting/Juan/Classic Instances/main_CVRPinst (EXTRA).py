@@ -93,7 +93,7 @@ for inst_set,inst_list in instances.items():
                                                                                 Elite_prop=0.3,mutation_rate=0.25)   
         save_pickle(inst_set,'GA',instance,[GA_routes,GA_obj,GA_info,GA_time])
     
-        sstr += '✅  '
+        sstr += f'✅  \t{round((GA_obj-benchmark[0])/benchmark[0],2)}'
         print(sstr)
     
 
