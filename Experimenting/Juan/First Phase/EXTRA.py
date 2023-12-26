@@ -43,9 +43,9 @@ init_times = {1:0.1,30:0.5,60:1,300:1,1800:2,3600:2}
 
 
 
-for experiment in Experiments:
+for experiment in Experiments[::-1]:
     if experiment == 1: continue
-    for replica in Replicas:
+    for replica in Replicas[::-1]:
         if experiment == 1 and replica in [1,2]:continue
         CG_performance = {time_limit:list() for time_limit in time_limits}
         with open(experiments_path+f'Experiment {experiment}/Replica {replica}/instance_information.pkl','rb') as file:
