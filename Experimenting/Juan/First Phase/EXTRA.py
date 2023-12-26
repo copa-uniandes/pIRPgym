@@ -47,6 +47,7 @@ for experiment in Experiments[::-1]:
     if experiment == 1: continue
     for replica in Replicas[::-1]:
         if experiment == 1 and replica in [1,2]:continue
+        elif experiment == 5 and replica in [4,5]:continue
         CG_performance = {time_limit:list() for time_limit in time_limits}
         with open(experiments_path+f'Experiment {experiment}/Replica {replica}/instance_information.pkl','rb') as file:
             inst_info = pickle.load(file)
