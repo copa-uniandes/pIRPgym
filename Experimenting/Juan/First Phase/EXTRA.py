@@ -44,7 +44,9 @@ init_times = {1:0.1,30:0.5,60:1,300:1,1800:2,3600:2}
 
 
 for experiment in Experiments:
+    if experiment == 1: continue
     for replica in Replicas:
+        if experiment == 1 and replica in [1,2]:continue
         CG_performance = {time_limit:list() for time_limit in time_limits}
         with open(experiments_path+f'Experiment {experiment}/Replica {replica}/instance_information.pkl','rb') as file:
             inst_info = pickle.load(file)
@@ -57,7 +59,7 @@ for experiment in Experiments:
             ''' Genetic Algorithm '''
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(requirements,inst_gen,t,return_top=False,
                                                                                     time_limit=600,Population_size=2500,
-                                                                                    Elite_prop=0.3,mutation_rate=0.25) 
+                                                                                    Elite_prop=0.3,mutation_rate=0.5)
             save_pickle(experiment,replica,'GA',[GA_routes,GA_obj,GA_info,GA_time])
              
         #     for time_limit in time_limits:
