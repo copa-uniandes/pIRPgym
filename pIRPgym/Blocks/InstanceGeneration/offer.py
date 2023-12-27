@@ -1,4 +1,4 @@
-from numpy.random import seed, random, randint, lognormal
+from numpy.random import seed,random,randint,lognormal
 from .forecasting import empiric_distribution_sampling
 
 class offer():
@@ -168,31 +168,32 @@ class offer():
         return s_paths_p
     
 
-    class supplier_differentiated_offer():
+    class supplier_differentiated():
         ### Available quantities of products on suppliers
         @staticmethod
         def gen_quantities(inst_gen,**kwargs) -> tuple:
             seed(inst_gen.d_rd_seed + 4)
             rd_function = randint
-            hist_q = offer.supplier_differentiated_offer.gen_hist_q(inst_gen,rd_function,**kwargs)
+            q_parameters = offer.supplier_differentiated._generate_availability_parameters(inst_gen)
+            hist_q = offer.supplier_differentiated._gen_hist_q(inst_gen,rd_function,**q_parameters)
 
             if inst_gen.other_params['look_ahead'] != False and ('q' in inst_gen.other_params['look_ahead'] or '*' in inst_gen.other_params['look_ahead']):
                 seed(inst_gen.s_rd_seed + 1)
-                W_q, hist_q = offer.supplier_differentiated_offer.gen_W_q(inst_gen,rd_function,hist_q, **kwargs)
-                s_paths_q = offer.supplier_differentiated_offer.gen_empiric_q_sp(inst_gen,hist_q,W_q)
+                W_q, hist_q = offer.supplier_differentiated._gen_W_q(inst_gen,rd_function,hist_q,**q_parameters)
+                s_paths_q = offer.supplier_differentiated._gen_empiric_q_sp(inst_gen,hist_q,W_q)
                 return hist_q, W_q, s_paths_q
 
             else:
-                W_q, hist_q = offer.gen_W_q(inst_gen, rd_function, hist_q, **kwargs)
+                W_q, hist_q = offer.supplier_differentiated._gen_W_q(inst_gen,rd_function,hist_q,**q_parameters)
                 return hist_q, W_q, None
 
         # Historic availabilities
         @staticmethod
-        def gen_hist_q(inst_gen,rd_function,**kwargs) -> dict[dict]:
+        def _gen_hist_q(inst_gen,rd_function,**kwargs) -> dict[dict]:
             hist_q = {t:dict() for t in inst_gen.Horizon}
             
             if inst_gen.other_params['historical'] != False and ('q' in inst_gen.other_params['historical'] or '*' in inst_gen.other_params['historical']):
-                hist_q[0] = {(i,k):[round(rd_function(*kwargs[i]),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
+                hist_q[0] = {(i,k):[round(rd_function(*kwargs[str(i)]),2) if i in inst_gen.M_kt[k,t] else 0 for t in inst_gen.historical] for i in inst_gen.Suppliers for k in inst_gen.Products}
             else:
                 hist_q[0] = {(i,k):[] for i in inst_gen.Suppliers for k in inst_gen.Products}
 
@@ -201,7 +202,7 @@ class offer():
         
         # Realized (real) availabilities
         @staticmethod
-        def gen_W_q(inst_gen,rd_function,hist_q,**kwargs) -> tuple:
+        def _gen_W_q(inst_gen,rd_function,hist_q,**kwargs) -> tuple:
             '''
             W_q: (dict) quantity of k in K offered by supplier i in M on t in T
             '''
@@ -211,7 +212,7 @@ class offer():
                 for i in inst_gen.Suppliers:
                     for k in inst_gen.Products:
                         if i in inst_gen.M_kt[k,t]:
-                            W_q[t][(i,k)] = round(rd_function(*kwargs[i]),2)
+                            W_q[t][(i,k)] = round(rd_function(*kwargs[str(i)]),2)
                         else:   W_q[t][(i,k)] = 0
 
                         if t < inst_gen.T - 1:
@@ -222,7 +223,7 @@ class offer():
 
         # Availabilitie's sample paths
         @staticmethod
-        def gen_empiric_q_sp(inst_gen,hist_q,W_q) -> dict[dict]:
+        def _gen_empiric_q_sp(inst_gen,hist_q,W_q) -> dict[dict]:
             s_paths_q = dict()
             for t in inst_gen.Horizon: 
                 s_paths_q[t] = dict()
@@ -237,3 +238,13 @@ class offer():
 
             return s_paths_q
         
+        @staticmethod
+        def _generate_availability_parameters(inst_gen):
+            for i in inst_gen.Suppliers:
+                q_parameters = {str(i):(round(6*(1+random()-random())),round(20*(1+random()-random()))) for i in range(1,inst_gen.M+1)}          # Offer
+                for i in range(1,inst_gen.M+1):
+                    if q_parameters[str(i)][0] > q_parameters[str(i)][1]:
+                        q_parameters[str(i)] = (q_parameters[str(i)][1],q_parameters[str(i)][0])
+                    elif q_parameters[str(i)][0] == q_parameters[str(i)][1]:
+                        q_parameters[str(i)] = (q_parameters[str(i)][0],q_parameters[str(i)][1]+randint(1,5))
+            return q_parameters

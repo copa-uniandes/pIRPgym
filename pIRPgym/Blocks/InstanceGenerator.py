@@ -183,16 +183,13 @@ class instance_generator():
         self.s_paths = {t:{} for t in self.Horizon}
 
         self.O_k = {k:randint(3,self.T+1) for k in self.Products}
-        ages = [3,3,6,6,5,4,4]
-        # if len(self.Products) <= 7: self.O_k = dict(zip(self.Products,ages[:len(self.Products)]))
-        # else: self.O_k = {k:3 for k in self.Products}
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
 
         self.i00 = self.gen_initial_inventory(I0)
 
         # Offer
         self.M_kt, self.K_it = offer.gen_availabilities(self)
-        self.hist_q, self.W_q, self.s_paths_q = offer.supplier_differentiated_offer.gen_quantities(self,**kwargs['q_params'])
+        self.hist_q, self.W_q, self.s_paths_q = offer.supplier_differentiated.gen_quantities(self,**kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q
 
         self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self,**kwargs['p_params'])
