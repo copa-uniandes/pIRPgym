@@ -1343,7 +1343,7 @@ class FlowerAgent(Routing):
             # Enough space
             if len(self.routes)<self.routes_num:
                 self.routes.append(sorted_routes)
-                self.sup_set.append(self._code_binary_set_(routes,inst_gen.M))
+                self.sup_set.append(self._code_binary_set_(inst_gen,routes))
                 self.metrics.append([cost,total_SL,reactive_SL])
                 self.n_table.append(1)
             
