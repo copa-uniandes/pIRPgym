@@ -1363,7 +1363,7 @@ class FlowerAgent(Routing):
         pass
     
     
-    def _code_binary_set_(inst_gen,routes):
+    def _code_binary_set_(self,inst_gen,routes):
         binary_encoding = np.zeros(inst_gen.M,dtype=int)
         for route in routes:
             for node in route[1:-1]:

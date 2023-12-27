@@ -181,11 +181,11 @@ class offer():
                 seed(inst_gen.s_rd_seed + 1)
                 W_q, hist_q = offer.supplier_differentiated._gen_W_q(inst_gen,rd_function,hist_q,**q_parameters)
                 s_paths_q = offer.supplier_differentiated._gen_empiric_q_sp(inst_gen,hist_q,W_q)
-                return hist_q, W_q, s_paths_q
+                return hist_q, W_q, s_paths_q,q_parameters
 
             else:
                 W_q, hist_q = offer.supplier_differentiated._gen_W_q(inst_gen,rd_function,hist_q,**q_parameters)
-                return hist_q, W_q, None
+                return hist_q, W_q, None,q_parameters
 
         # Historic availabilities
         @staticmethod

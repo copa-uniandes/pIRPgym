@@ -16,7 +16,7 @@ class Inventory():
     
     
     @staticmethod
-    def Stochastic_Rolling_Horizon(state,env,inst_gen,objs={"costs":1}):
+    def Stochastic_Rolling_Horizon(state,env,inst_gen,objs={"costs":1},fixed_suppliers=None):
 
         # ----------------------------------------
         # MODEL PARAMETERS
@@ -107,6 +107,15 @@ class Inventory():
         ''' Service Level control constraint '''
         for k in K:
             m.addConstr(gu.quicksum(gu.quicksum(y[k,t,o,s] for t in T for o in range(inst_gen.O_k[k] + 1))/sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T) for s in S) >= serv_level*len(inst_gen.Samples))
+
+        ''' Fixed suppliers constraints '''
+        if fixed_suppliers != None:
+            for i in inst_gen.Suppliers:
+                if i in inst_gen.Suppliers:
+                    m.addConstr(gu.quicksum(w[i,0,s])==inst_gen.S,f'Fixed supplier{i,s}')
+                else:
+                    m.addConstr(gu.quicksum(w[i,0,s])==0,f'Fixed supplier{i,s}')
+                    
 
         # ----------------------------------------
         # OBJECTIVE FUNCTION

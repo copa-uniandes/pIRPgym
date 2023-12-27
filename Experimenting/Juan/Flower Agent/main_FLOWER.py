@@ -24,9 +24,10 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':15,'T':7,'Q':750,
+env_config = {'M':5,'T':7,'Q':750,
               'S':3,'LA_horizon':3,
-             'd_max':2500,'hist_window':60}
+             'd_max':2500,'hist_window':60,
+             'theta':0.05}
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 
@@ -44,28 +45,19 @@ d_params = {'dist':'log-normal','r_f_params':(3,1)}          # Demand
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
 
 
-# q_params = {str(i):(round(6*(1+random.random()-random.random())),round(20*(1+random.random()-random.random()))) for i in range(1,inst_gen.M+1)}          # Offer
-# for i in range(1,inst_gen.M+1):
-#     if q_params[str(i)][0] > q_params[str(i)][1]:
-#         q_params[str(i)] = (q_params[str(i)][1],q_params[str(i)][0])
-#     elif q_params[str(i)][0] == q_params[str(i)][1]:
-#         q_params[str(i)] = (q_params[str(i)][0],q_params[str(i)][1]+random.randint(1,5))
-
-# p_params = {i:(20*(1+random()-random()),61*(1+random()-random())) for i in range(1,inst_gen.M+1)}
-
-
 stoch_rd_seed = 0       # Random seeds
 det_rd_seed = int(1e6)
 
 disc = ("strong","conc")
 
-# inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_seed,p_params=p_params,
-#                                                           d_params=d_params,h_params=h_params,discount=disc)
+inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_seed,p_params=p_params,
+                                                          d_params=d_params,h_params=h_params,discount=disc)
 
 
 
 
-#%%
+
+#%% 
 # Environment
 # Creating environment object
 env = pIRPgym.steroid_IRP(True,True,True)
@@ -75,43 +67,45 @@ done = False
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=10)
 main_done = False
 
-while not main_done:
-    try:
-        inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_seed,p_params=p_params,
-                                                                  d_params=d_params,h_params=h_params,discount=disc)
-        state = env.reset(inst_gen,return_state=True)
-        while not done:
-            ''' Purchase '''
-            [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
-            total_purchase = sum(purchase.values())    
+# while not main_done:
+#     try:
+inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_seed,p_params=p_params,
+                                                            d_params=d_params,h_params=h_params,discount=disc)
+state = env.reset(inst_gen,return_state=True)
+while not done:
+    ''' Purchase '''
+    [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
+    total_purchase = sum(purchase.values())    
 
-            ''' Generating solutions '''
-            GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                                rd_seed=0,time_limit=120,verbose=False)    # Genetic Algorithm
-            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=600,
-                                                                                    verbose=False,heuristic_initialization=5,
-                                                                                    return_num_cols=True,RCL_alpha=0.6) 
+    ''' Generating solutions '''
+    GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
+                                                                        rd_seed=0,time_limit=120,verbose=False)    # Genetic Algorithm
+    CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=300,
+                                                                            verbose=False,heuristic_initialization=5,
+                                                                            return_num_cols=True,RCL_alpha=0.6) 
 
-            ''' Update flower pool '''
-            GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
-                                                                                                            discriminate_missing=False)
-            FlowerAgent.update_flower_pool(GA_routes,GA_obj,1-GA_tot_mis/total_purchase,1-GA_rea_mis/total_purchase)
+    ''' Update flower pool '''
+    GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
+                                                                                                    discriminate_missing=False)
+    GA_SL = 1-GA_tot_mis/total_purchase; GA_reactive_SL = 1-GA_rea_mis/total_purchase
+    FlowerAgent.update_flower_pool(inst_gen,GA_routes,GA_obj,GA_SL,GA_reactive_SL)
 
-            CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
-                                                                                                            discriminate_missing=False)
-            FlowerAgent.update_flower_pool(CG_routes,CG_obj,1-CG_tot_mis/total_purchase,1-CG_rea_mis/total_purchase)
+    CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
+                                                                                                    discriminate_missing=False)
+    CG_SL = 1-CG_tot_mis/total_purchase; CG_reactive_SL = 1-CG_rea_mis/total_purchase
+    FlowerAgent.update_flower_pool(inst_gen,CG_routes,CG_obj,CG_SL,CG_reactive_SL)
 
 
-            ''' Compound action'''
-            action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
-            state,reward,done,real_action,_,  = env.step(action,inst_gen)
+    ''' Compound action'''
+    action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
+    state,reward,done,real_action,_,  = env.step(action,inst_gen)
 
-            print('✅')
-        main_done=True
-    except:
-        print('❌')
-        stoch_rd_seed+=1
-        det_rd_seed+=1
+    print('✅')
+main_done=True
+    # except:
+    #     print('❌')
+    #     stoch_rd_seed+=1
+    #     det_rd_seed+=1
 
 
 

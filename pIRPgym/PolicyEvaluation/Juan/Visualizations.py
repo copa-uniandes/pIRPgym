@@ -94,13 +94,13 @@ class RoutingV():
 
 
     @staticmethod
-    def plot_indicator_evolution(routing_performance,indicator,x_axis:str='Time step',x_values=None):
+    def plot_metric(routing_performance,metric,x_axis:str='Time step',x_values=None):
         """
-        Plot the evolution of a specific indicator for different routing policies.
+        Plot the evolution of a specific metric for different routing policies.
 
         Parameters:
-        - routing_performance (dict): Dictionary containing routing policies and their indicators.
-        - indicator (str): Indicator to plot ('Obj', 'time', 'vehicles', 'reactive_missing', 'extra_cost').
+        - routing_performance (dict): Dictionary containing routing policies and their metrics.
+        - metric (str): Indicator to plot ('Obj', 'time', 'vehicles', 'reactive_missing', 'extra_cost').
         """
         # Set up figure and axis
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -111,24 +111,118 @@ class RoutingV():
 
         # Plot the evolution for each routing policy
         for i, (policy, data) in enumerate(routing_performance.items()):
-            if indicator in data:
+            if metric in data:
                 if x_values == None: 
-                    ax.plot(data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
+                    ax.plot(data[metric],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
                             linestyle='-',markersize=4,linewidth=1)
                 else: 
-                    ax.plot(x_values,data[indicator],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
+                    ax.plot(x_values,data[metric],label=f'{policy}',color=colors[i % len(colors)],marker=markers[i % len(markers)],
                             linestyle='-',markersize=4,linewidth=1)
 
         # Add labels and a legend
         ax.set_xlabel(x_axis, fontsize=12)
-        ax.set_ylabel(indicator, fontsize=12)
-        ax.set_title(f'Routing strategies performance: {indicator}', fontsize=14)
+        ax.set_ylabel(metric, fontsize=12)
+        ax.set_title(f'Routing strategies performance: {metric}', fontsize=14)
         ax.legend(fontsize=10, loc='upper right')
 
         # Add grid for better readability
         ax.grid(True, linestyle='--', alpha=0.5)
 
         # Show the plot
+        plt.show()
+
+    
+    @staticmethod
+    def plot_supplier_subset_distributions(bounds):
+        """
+        Plot boxplots with intervals for suppliers.
+
+        Parameters:
+        - supplier_intervals (dict): Dictionary with supplier intervals.
+
+        Returns:
+        None
+        """
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Extract supplier numbers and intervals
+        suppliers = [int(s) for s in bounds.keys()]
+        intervals = [interval for interval in bounds.values()]
+
+        # Plot brackets for each supplier interval
+        for i, (supplier, interval) in enumerate(zip(suppliers, intervals)):
+            lower, upper = interval
+            ax.plot([i, i], [lower, upper], color='black', linewidth=2)
+            ax.plot([i - 0.2, i + 0.2], [lower, lower], color='black', linewidth=2)
+            ax.plot([i - 0.2, i + 0.2], [upper, upper], color='black', linewidth=2)
+
+        # Set x-axis labels to supplier numbers
+        ax.set_xticks(range(len(suppliers)))
+        ax.set_xticklabels(suppliers)
+
+        
+        # Set labels and title
+        ax.set_xlabel('Supplier')
+        ax.set_ylabel('Interval')
+        ax.set_title('Supplier Intervals')
+
+        # Remove spines
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        # Add grid for better readability
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+        plt.show()
+
+
+    @staticmethod
+    def plot_supplier_availabilities(supplier_distributions):
+        """
+        Plot box plots for supplier distributions.
+
+        Parameters:
+        - supplier_distributions (dict): Dictionary with supplier distributions.
+
+        Returns:
+        None
+        """
+        supplier_distributions = {str(key):value for key,value in supplier_distributions.items() if sum(value)>0}
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Extract supplier numbers and distributions
+        suppliers = [int(s) for s in supplier_distributions.keys()]
+        distributions = [distribution for distribution in supplier_distributions.values()]
+
+        # Plot box plots for each supplier
+        boxprops = dict(linewidth=2, color='black')
+        whiskerprops = dict(linewidth=2, linestyle='--', color='black')
+        capprops = dict(linewidth=2, color='black')
+        medianprops = dict(linewidth=2, linestyle='-', color='red')
+        bp = ax.boxplot(distributions, patch_artist=True, boxprops=boxprops,
+                        whiskerprops=whiskerprops, capprops=capprops, medianprops=medianprops)
+
+        # Custom fill colors for boxes
+        colors = ['lightblue', 'lightgreen', 'lightcoral']
+        for patch, color in zip(bp['boxes'], colors):
+            patch.set_facecolor(color)
+
+        # Set x-axis labels to supplier numbers
+        ax.set_xticklabels(suppliers)
+
+        # Set labels and title
+        ax.set_xlabel('Supplier')
+        ax.set_ylabel('Distribution')
+        ax.set_title('Supplier Distributions')
+
+        # Remove spines
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        # Add grid for better readability
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+
         plt.show()
 
 
@@ -601,7 +695,6 @@ class InventoryV():
 
 
 class InstanceV():
-    
     @staticmethod
     def plot_overlapping_distributions(q_params,d_params,num_samples=100_000,type='hist'):
         if type == 'hist':
