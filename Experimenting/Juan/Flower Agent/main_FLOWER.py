@@ -27,7 +27,7 @@ backorders = 'backorders'
 env_config = {'M':10,'T':20,'Q':750,
               'S':3,'LA_horizon':3,
              'd_max':2500,'hist_window':60,
-             'theta':0.8}
+             'theta':0.7}
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 
@@ -45,8 +45,8 @@ d_params = {'dist':'log-normal','r_f_params':(3,1)}          # Demand
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
 
 
-stoch_rd_seed = 0       # Random seeds
-det_rd_seed = int(1e6)
+stoch_rd_seed = 900       # Random seeds
+det_rd_seed = int(1e7)
 
 disc = ("strong","conc")
 
@@ -63,8 +63,9 @@ inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_s
 env = pIRPgym.steroid_IRP(True,True,True)
 
 done = False
+seeds = []
 
-FlowerAgent = pIRPgym.FlowerAgent(solution_num=10)
+FlowerAgent = pIRPgym.FlowerAgent(solution_num=25)
 main_done = False
 
 while not main_done:
@@ -101,7 +102,9 @@ while not main_done:
             state,reward,done,real_action,_,  = env.step(action,inst_gen)
 
             print('✅')
-        main_done=True
+        seeds.append((stoch_rd_seed,det_rd_seed))
+        print(seeds)
+        # main_done=True
     except:
         print('❌')
         stoch_rd_seed+=1
