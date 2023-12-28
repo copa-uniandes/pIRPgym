@@ -210,46 +210,6 @@ class instance_generator():
         self.coor,self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
         if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
     
-    # # Generates a basic, completely random instance with a given random seed
-    # def generate_basic_random_instance(self,d_rd_seed:int=0,s_rd_seed:int=1,I0:float=0,**kwargs):
-    #     # Random seeds
-    #     self.d_rd_seed = d_rd_seed
-    #     self.s_rd_seed = s_rd_seed
-        
-    #     self.gen_sets()
-
-    #     # Historical and sample paths arrays
-    #     self.hist_data = {t:{} for t in self.historical}
-    #     self.s_paths = {t:{} for t in self.Horizon}
-
-    #     self.O_k = {k:randint(3,self.T+1) for k in self.Products}
-    #     self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
-
-    #     self.i00 = self.gen_initial_inventory(I0)
-
-    #     # Offer
-    #     self.M_kt, self.K_it = offer.gen_availabilities(self)
-    #     self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self, **kwargs['q_params'])
-    #     if self.s_paths_q == None: del self.s_paths_q
-
-    #     self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self, **kwargs['p_params'])
-    #     if self.s_paths_p == None: del self.s_paths_p
-
-    #     # Demand
-    #     self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self, **kwargs['d_params'])
-    #     if self.s_paths_d == None: del self.s_paths_d
-
-    #     # Backorders
-    #     self.prof_margin = costs.gen_profit_margin(self)
-    #     self.back_o_cost = costs.gen_backo_cost(self)
-        
-    #     # Inventory
-    #     self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
-
-    #     # Routing
-    #     self.coor,self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
-    #     self.d_max = max(self.d_max,max([2*value for value in self.c.values()]))
-    #     if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
 
     # Generates a (dummy) instance of CundiBoy
