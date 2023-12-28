@@ -33,16 +33,14 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-env_config = {'M':10,'T':20,'Q':750,
+sizes = [5,10,15,20]
+env_config = {'T':12,'Q':750,
               'S':3,'LA_horizon':3,
              'd_max':2500,'hist_window':60,
              'theta':0.7}
-env_config['K']=env_config['M']
-env_config['F']=env_config['M']
 
-# Creating instance generator object
-inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
-                              historical_data,backorders,env_config=env_config)
+
+
 
 ##########################################    Random Instance    ##########################################
 # Random Instance
@@ -52,10 +50,7 @@ p_params = {'dist':'d_uniform','r_f_params':(20,61)}
 d_params = {'dist':'log-normal','r_f_params':(3,1)}          # Demand
 
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
-
-
-det_rd_seed = 0             # Random seeds
-stoch_rd_seed = 901       
+     
 
 
 disc = ("strong","conc")
@@ -72,7 +67,18 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=25)
 main_done = False
 ep_count = 0
-num_episodes = 30
+num_episodes = 15
+
+# Creating instance generator object
+inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
+                              historical_data,backorders,env_config=env_config)
+
+
+env_config['M']=sizes[0]
+env_config['K']=env_config['M']
+env_config['F']=env_config['M']
+det_rd_seed = env_config['K']             # Random seeds
+stoch_rd_seed = det_rd_seed*10000  
 
 while not main_done:
     stoch_rd_seed+=1
@@ -87,8 +93,8 @@ while not main_done:
 
             ''' Generating solutions '''
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                                rd_seed=0,time_limit=120,verbose=False)    # Genetic Algorithm
-            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=300,
+                                                                                rd_seed=0,time_limit=60,verbose=False)    # Genetic Algorithm
+            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=60,
                                                                                     verbose=False,heuristic_initialization=5,
                                                                                     return_num_cols=True,RCL_alpha=0.6) 
 
@@ -121,8 +127,8 @@ while not main_done:
 
 
 
-with open(experiments_path+f'First Try.pkl','wb') as file:
-        pickle.dump([seeds,inst_gen,FlowerAgent],file)
+with open(experiments_path+f'M{env_config["M"]}.pkl','wb') as file:
+        pickle.dump([env_config['M'],seeds,inst_gen,FlowerAgent],file)
 
 
 #%%
