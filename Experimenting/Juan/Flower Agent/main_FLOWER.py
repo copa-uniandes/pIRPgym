@@ -79,7 +79,7 @@ env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
 stoch_rd_seed = det_rd_seed*10000  
-
+print(f'Size {env_config["M"]}')
 while not main_done:
     stoch_rd_seed+=1
     try:
