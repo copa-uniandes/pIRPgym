@@ -74,11 +74,12 @@ inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
                               historical_data,backorders,env_config=env_config)
 
 
-env_config['M']=sizes[3]
+env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
 stoch_rd_seed = det_rd_seed*10000  
+
 print(f'Size {env_config["M"]}')
 while not main_done:
     stoch_rd_seed+=1
@@ -122,8 +123,7 @@ while not main_done:
         if ep_count == num_episodes: main_done=True
         
     except:
-        pass
-        # print('❌')
+        print('❌')
 
 
 

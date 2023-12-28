@@ -19,6 +19,11 @@ from ...Blocks.pIRPenv import steroid_IRP
 
 
 class RoutingV():
+    colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
+        +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
+        +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
+        +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']
+
     # Sumarizes and compares routing solutions
     @staticmethod
     def DEP_compare_routing_strategies(inst_gen:instance_generator,data:dict):
@@ -106,7 +111,7 @@ class RoutingV():
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Define a list of colors and markers for better visibility
-        colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']
+        colors = RoutingV.colors
         markers = ['o', 's', '^', 'D', '*', 'v', 'p', 'H', 'X']
 
         # Plot the evolution for each routing policy
@@ -133,7 +138,7 @@ class RoutingV():
 
     
     @staticmethod
-    def plot_supplier_subset_distributions(bounds):
+    def plot_supplier_distributions(bounds):
         """
         Plot boxplots with intervals for suppliers.
 
@@ -152,9 +157,9 @@ class RoutingV():
         # Plot brackets for each supplier interval
         for i, (supplier, interval) in enumerate(zip(suppliers, intervals)):
             lower, upper = interval
-            ax.plot([i, i], [lower, upper], color='black', linewidth=2)
-            ax.plot([i - 0.2, i + 0.2], [lower, lower], color='black', linewidth=2)
-            ax.plot([i - 0.2, i + 0.2], [upper, upper], color='black', linewidth=2)
+            ax.plot([i, i], [lower, upper], color=RoutingV.colors[i], linewidth=2)
+            ax.plot([i - 0.2, i + 0.2], [lower, lower], color=RoutingV.colors[i], linewidth=2)
+            ax.plot([i - 0.2, i + 0.2], [upper, upper], color=RoutingV.colors[i], linewidth=2)
 
         # Set x-axis labels to supplier numbers
         ax.set_xticks(range(len(suppliers)))
@@ -163,8 +168,8 @@ class RoutingV():
         
         # Set labels and title
         ax.set_xlabel('Supplier')
-        ax.set_ylabel('Interval')
-        ax.set_title('Supplier Intervals')
+        ax.set_ylabel('Units')
+        ax.set_title('Suppliers Availability Distribution')
 
         # Remove spines
         ax.spines['right'].set_visible(False)
