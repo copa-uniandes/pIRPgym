@@ -60,12 +60,6 @@ stoch_rd_seed = 901
 
 disc = ("strong","conc")
 
-inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_seed,p_params=p_params,
-                                                          d_params=d_params,h_params=h_params,discount=disc)
-
-print(inst_gen.c)
-
-
 
 #%% 
 # Environment
