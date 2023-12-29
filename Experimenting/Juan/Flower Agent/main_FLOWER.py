@@ -34,7 +34,7 @@ historical_data = ['*']
 backorders = 'backorders'
 
 sizes = [5,10,15,20,30]
-env_config = {'T':12,'Q':750,
+env_config = {'T':15,'Q':750,
               'S':3,'LA_horizon':3,
              'd_max':2500,'hist_window':60,
              'theta':0.7}
@@ -64,15 +64,15 @@ env = pIRPgym.steroid_IRP(True,True,True)
 done = False
 seeds = []
 
-FlowerAgent = pIRPgym.FlowerAgent(solution_num=25)
+FlowerAgent = pIRPgym.FlowerAgent(solution_num=50)
 main_done = False
 ep_count = 0
-num_episodes = 10
+num_episodes = 50
 
 
 
 
-env_config['M']=sizes[4]
+env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds

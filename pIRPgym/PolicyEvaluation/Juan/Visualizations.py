@@ -11,6 +11,7 @@ import numpy as np
 import networkx as nx
 from copy import deepcopy
 
+import seaborn as sns
 from sklearn.neighbors import KernelDensity
 
 ### SC classes
@@ -179,6 +180,41 @@ class RoutingV():
         ax.grid(axis='y', linestyle='--', alpha=0.7)
 
         plt.show()
+
+
+    @staticmethod
+    def bar_plot(solution_heights):
+        """
+        Generate a bar plot for service levels across different solutions.
+
+        Parameters:
+        - solution_heights (list): Heights of bars for each solution.
+
+        Returns:
+        None
+        """
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Plot bar plot for each solution
+        for i, height in enumerate(solution_heights):
+            sns.barplot(x=[i], y=[height], label=f'Solution {i}', alpha=0.7, ax=ax)
+
+        # Set labels and title
+        ax.set_xlabel('Solutions')
+        ax.set_ylabel('Number of observations')
+        ax.set_title('Recurrence of Routing Solutions')
+
+        # Remove spines
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        # Add grid for better readability
+        ax.grid(True, linestyle='--', alpha=0.7)
+
+        # Add legend
+        ax.legend(title='Solutions', loc='upper left', bbox_to_anchor=(1, 1))
+
+        plt.show() 
 
 
     @staticmethod
