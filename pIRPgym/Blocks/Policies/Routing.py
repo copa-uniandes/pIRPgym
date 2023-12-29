@@ -1337,7 +1337,7 @@ class FlowerAgent(Routing):
         self.history = list()
         self.n_table = list()
 
-    def update_flower_pool(self,inst_gen,routes,generator,cost,total_SL,reactive_SL):
+    def update_flower_pool(self,inst_gen,routes,generator,cost,total_SL,reactive_SL,price_delta):
         sorted_routes = sorted(routes,key=lambda route:route[1])
 
         # New solution
@@ -1347,8 +1347,8 @@ class FlowerAgent(Routing):
                 self.routes.append(sorted_routes)
                 self.bincod.append(self._code_binary_set_(inst_gen,routes))
                 self.generator.append([generator])
-                self.metrics.append([cost,cost/sum(self.bincod[-1]),total_SL,reactive_SL])
-                self.history.append([[total_SL],[reactive_SL]])
+                self.metrics.append([cost,cost/sum(self.bincod[-1]),total_SL,reactive_SL,price_delta])
+                self.history.append([[total_SL],[reactive_SL],[price_delta]])
                 self.n_table.append(1)
             
             # Flower pool full
@@ -1362,6 +1362,7 @@ class FlowerAgent(Routing):
                 self.generator[index].append(generator)
             self.metrics[index][2] = self.metrics[index][2] + (1/self.n_table[index]) * (total_SL-self.metrics[index][2])
             self.metrics[index][3] = self.metrics[index][3] + (1/self.n_table[index]) * (reactive_SL-self.metrics[index][3])
+            self.metrics[index][4] = self.metrics[index][4] + (1/self.n_table[index]) * (price_delta-self.metrics[index][4])
             self.history[index][0].append(total_SL)
             self.history[index][1].append(reactive_SL)
             self.n_table[index]+=1

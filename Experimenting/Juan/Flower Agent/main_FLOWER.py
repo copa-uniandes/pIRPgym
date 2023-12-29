@@ -34,7 +34,7 @@ historical_data = ['*']
 backorders = 'backorders'
 
 sizes = [5,10,15,20,30]
-env_config = {'T':15,'Q':750,
+env_config = {'T':12,'Q':750,
               'S':3,'LA_horizon':3,
              'd_max':2500,'hist_window':60,
              'theta':0.7}
@@ -67,12 +67,12 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=50)
 main_done = False
 ep_count = 0
-num_episodes = 1000
+num_episodes = 2000
 
 
 
 
-env_config['M']=sizes[1]
+env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
@@ -95,14 +95,14 @@ while not main_done:
             ''' Purchase '''
             [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
             total_purchase = sum(purchase.values())
-            # price_delta = pIRPgym.Routing_management.evaluate_purchase = 
+            price_delta = pIRPgym.Routing_management.evaluate_purchase(inst_gen,purchase,env.t)
 
 
             ''' Generating solutions '''
             # Genetic Algorithm
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
                                                                                 rd_seed=0,time_limit=150,verbose=False)    # Genetic Algorithm
-            # Column Generation
+            # Column Generations
             CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=300,
                                                                                     verbose=False,heuristic_initialization=1,
                                                                                     return_num_cols=True,RCL_alpha=0.6) 
@@ -112,13 +112,13 @@ while not main_done:
             GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
                                                                                                             discriminate_missing=False)
             GA_SL = 1-GA_tot_mis/total_purchase; GA_reactive_SL = 1-GA_rea_mis/total_purchase
-            FlowerAgent.update_flower_pool(inst_gen,GA_routes,generator='GA',cost=GA_obj,total_SL=GA_SL,reactive_SL=GA_reactive_SL)
+            FlowerAgent.update_flower_pool(inst_gen,GA_routes,generator='GA',cost=GA_obj,total_SL=GA_SL,reactive_SL=GA_reactive_SL,price_delta=price_delta)
 
             # Column Generation
             CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
                                                                                                             discriminate_missing=False)
             CG_SL = 1-CG_tot_mis/total_purchase; CG_reactive_SL = 1-CG_rea_mis/total_purchase
-            FlowerAgent.update_flower_pool(inst_gen,CG_routes,generator='CG',cost=CG_obj,total_SL=CG_SL,reactive_SL=CG_reactive_SL)
+            FlowerAgent.update_flower_pool(inst_gen,CG_routes,generator='CG',cost=CG_obj,total_SL=CG_SL,reactive_SL=CG_reactive_SL,price_delta=price_delta)
 
 
             ''' Compound action'''
