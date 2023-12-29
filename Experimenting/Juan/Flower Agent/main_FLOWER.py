@@ -67,7 +67,7 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=50)
 main_done = False
 ep_count = 0
-num_episodes = 100
+num_episodes = 500
 
 
 
@@ -84,7 +84,7 @@ inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
 
 stoch_rd_seed = det_rd_seed*10000  
 
-print(f'Size {env_config["M"]}')
+print(f'Size: {env_config["M"]} - Episodes: {num_episodes}')
 while not main_done:
     stoch_rd_seed+=1
     try:
