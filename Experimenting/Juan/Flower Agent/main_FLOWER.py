@@ -67,7 +67,7 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=50)
 main_done = False
 ep_count = 0
-num_episodes = 500
+num_episodes = 1000
 
 
 
@@ -84,7 +84,7 @@ inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
 
 stoch_rd_seed = det_rd_seed*10000  
 
-print(f'Size: {env_config["M"]} - Episodes: {num_episodes}')
+print(f'Suppliers: {env_config["M"]} - Episodes: {num_episodes}')
 while not main_done:
     stoch_rd_seed+=1
     try:
@@ -95,25 +95,30 @@ while not main_done:
             ''' Purchase '''
             [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
             total_purchase = sum(purchase.values())
-            # price_delta = pIRPgym.
+            # price_delta = pIRPgym.Routing_management.evaluate_purchase = 
+
 
             ''' Generating solutions '''
+            # Genetic Algorithm
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                                rd_seed=0,time_limit=60,verbose=False)    # Genetic Algorithm
-            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=60,
-                                                                                    verbose=False,heuristic_initialization=5,
+                                                                                rd_seed=0,time_limit=150,verbose=False)    # Genetic Algorithm
+            # Column Generation
+            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=300,
+                                                                                    verbose=False,heuristic_initialization=1,
                                                                                     return_num_cols=True,RCL_alpha=0.6) 
 
             ''' Update flower pool '''
+            # Genetic Algorithm
             GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
                                                                                                             discriminate_missing=False)
             GA_SL = 1-GA_tot_mis/total_purchase; GA_reactive_SL = 1-GA_rea_mis/total_purchase
-            FlowerAgent.update_flower_pool(inst_gen,GA_routes,GA_obj,GA_SL,GA_reactive_SL)
+            FlowerAgent.update_flower_pool(inst_gen,GA_routes,generator='GA',cost=GA_obj,total_SL=GA_SL,reactive_SL=GA_reactive_SL)
 
+            # Column Generation
             CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
                                                                                                             discriminate_missing=False)
             CG_SL = 1-CG_tot_mis/total_purchase; CG_reactive_SL = 1-CG_rea_mis/total_purchase
-            FlowerAgent.update_flower_pool(inst_gen,CG_routes,CG_obj,CG_SL,CG_reactive_SL)
+            FlowerAgent.update_flower_pool(inst_gen,CG_routes,generator='CG',cost=CG_obj,total_SL=CG_SL,reactive_SL=CG_reactive_SL)
 
 
             ''' Compound action'''
@@ -130,7 +135,7 @@ while not main_done:
         print('❌')
 
 
-with open(experiments_path+f'M{env_config["M"]}-2.pkl','wb') as file:
+with open(experiments_path+f'M{env_config["M"]}-{num_episodes}.pkl','wb') as file:
         pickle.dump([env_config['M'],seeds,inst_gen,FlowerAgent],file)
 
 

@@ -149,12 +149,16 @@ class Routing_management():
     
 
     def evaluate_purchase(inst_gen,routes:list[list],purchase:dict,t:int):
-        
-        for k in inst_gen.Products:
-            average_cost = Routing_management._compute_average_price(inst_gen,k,t)
+        purchase_price_deviation = 1
+        for route in routes:
+            for i in route:
+                for k in inst_gen.Products:
+                    average_cost = Routing_management._compute_average_price(inst_gen,k,t)
+                    weight = deviation = inst_gen.W_p[t]
+
 
     def _compute_average_price(inst_gen,k,t):
-        costs = [inst_gen.p[i,k] for i in inst_gen.M_kt[t][k,t]]
+        costs = [inst_gen.W_p[t][i,k] for i in inst_gen.M_kt[t][k,t]]
         return sum(costs)/len(costs)
         
         

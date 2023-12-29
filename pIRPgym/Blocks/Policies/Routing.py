@@ -1331,12 +1331,13 @@ class FlowerAgent(Routing):
         self.routes_num=solution_num
 
         self.routes = list()
-        self.sup_set = list()
+        self.bincod = list()
+        self.generator = list()
         self.metrics = list()
         self.history = list()
         self.n_table = list()
 
-    def update_flower_pool(self,inst_gen,routes,cost,total_SL,reactive_SL):
+    def update_flower_pool(self,inst_gen,routes,generator,cost,total_SL,reactive_SL):
         sorted_routes = sorted(routes,key=lambda route:route[1])
 
         # New solution
@@ -1344,8 +1345,9 @@ class FlowerAgent(Routing):
             # Enough space
             if len(self.routes)<self.routes_num:
                 self.routes.append(sorted_routes)
-                self.sup_set.append(self._code_binary_set_(inst_gen,routes))
-                self.metrics.append([cost,total_SL,reactive_SL])
+                self.bincod.append(self._code_binary_set_(inst_gen,routes))
+                self.generator.append([generator])
+                self.metrics.append([cost,cost/sum(self.bincod[-1]),total_SL,reactive_SL])
                 self.history.append([[total_SL],[reactive_SL]])
                 self.n_table.append(1)
             
@@ -1356,8 +1358,10 @@ class FlowerAgent(Routing):
         # Already existing 
         else:
             index = self.routes.index(sorted_routes)
-            self.metrics[index][1] = self.metrics[index][1] + (1/self.n_table[index]) * (total_SL-self.metrics[index][1])
-            self.metrics[index][2] = self.metrics[index][2] + (1/self.n_table[index]) * (reactive_SL-self.metrics[index][2])
+            if generator not in self.generator[index]:
+                self.generator[index].append(generator)
+            self.metrics[index][2] = self.metrics[index][2] + (1/self.n_table[index]) * (total_SL-self.metrics[index][2])
+            self.metrics[index][3] = self.metrics[index][3] + (1/self.n_table[index]) * (reactive_SL-self.metrics[index][3])
             self.history[index][0].append(total_SL)
             self.history[index][1].append(reactive_SL)
             self.n_table[index]+=1

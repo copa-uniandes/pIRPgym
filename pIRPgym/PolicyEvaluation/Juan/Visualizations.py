@@ -198,12 +198,12 @@ class RoutingV():
 
         # Plot bar plot for each solution
         for i, height in enumerate(solution_heights):
-            sns.barplot(x=[i], y=[height], label=f'Solution {i}', alpha=0.7, ax=ax)
+            sns.barplot(x=[i], y=[height], label=f'Flower {i}', alpha=0.7, ax=ax)
 
         # Set labels and title
-        ax.set_xlabel('Solutions')
+        ax.set_xlabel('Flowers')
         ax.set_ylabel('Number of observations')
-        ax.set_title('Recurrence of Routing Solutions')
+        ax.set_title('Recurrence of Flowers')
 
         # Remove spines
         ax.spines['right'].set_visible(False)
@@ -213,12 +213,12 @@ class RoutingV():
         ax.grid(True, linestyle='--', alpha=0.7)
 
         # Add legend
-        ax.legend(title='Solutions', loc='upper left', bbox_to_anchor=(1, 1))
+        ax.legend(title='Flowers', loc='upper left', bbox_to_anchor=(1, 1))
 
         plt.show() 
 
 
-
+    @staticmethod
     def plot_service_levels_scatter(solution_data):
         """
         Plot a scatter plot for two service level types across different solutions.
@@ -238,12 +238,12 @@ class RoutingV():
         # Plot the scatter plot with consistent colors for each solution
         for i, solution in enumerate(solution_data):
             sns.scatterplot(x='Service Level Type 1', y='Service Level Type 2', data=pd.DataFrame([solution], columns=df.columns),
-                            label=f'Solution {i + 1}', s=100, ax=ax)
+                            label=f'Flower {i + 1}', s=100, ax=ax)
 
         # Set labels and title
-        ax.set_xlabel('Service Level')
+        ax.set_xlabel('Fixed Service Level')
         ax.set_ylabel('Dynamic Service Level')
-        ax.set_title('Mean Service Levels Across Solutions')
+        ax.set_title('Mean Service Levels Across Flowers')
 
         # Remove spines
         ax.spines['right'].set_visible(False)
@@ -253,9 +253,10 @@ class RoutingV():
         ax.grid(True, linestyle='--', alpha=0.7)
 
         # Add legend
-        ax.legend(title='Solutions', loc='upper left', bbox_to_anchor=(1, 1))
+        ax.legend(title='Flowers', loc='upper left', bbox_to_anchor=(1, 1))
 
         plt.show()
+
 
     @staticmethod
     def plot_supplier_availabilities(supplier_distributions):
