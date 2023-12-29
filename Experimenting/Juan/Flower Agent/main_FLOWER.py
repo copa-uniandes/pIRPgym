@@ -95,7 +95,7 @@ while not main_done:
             ''' Purchase '''
             [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
             total_purchase = sum(purchase.values())
-            price_delta = pIRPgym.
+            # price_delta = pIRPgym.
 
             ''' Generating solutions '''
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
