@@ -72,7 +72,7 @@ num_episodes = 50
 
 
 
-env_config['M']=sizes[1]
+env_config['M']=sizes[2]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
