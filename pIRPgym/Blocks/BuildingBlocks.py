@@ -156,12 +156,12 @@ class Routing_management():
             deviation = inst_gen.W_p[t][i,k]/average_cost-1
 
             purchase_price_deviation+=deviation/len(purchase.keys())
-            
+
         return purchase_price_deviation
 
 
     def _compute_average_price(inst_gen,k,t):
-        costs = [inst_gen.W_p[t][i,k] for i in inst_gen.M_kt[t][k,t]]
+        costs = [inst_gen.W_p[t][i,k] for i in inst_gen.M_kt[k,t]]
         return sum(costs)/len(costs)
         
         
