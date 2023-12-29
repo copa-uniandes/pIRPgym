@@ -61,7 +61,6 @@ disc = ("strong","conc")
 # Creating environment object
 env = pIRPgym.steroid_IRP(True,True,True)
 
-done = False
 seeds = []
 
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=50)
@@ -72,7 +71,7 @@ num_episodes = 2000
 
 
 
-env_config['M']=sizes[4]
+env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
@@ -91,6 +90,7 @@ while not main_done:
         inst_gen.generate_supplier_differentiated_random_instance(det_rd_seed,stoch_rd_seed,p_params=p_params,
                                                                     d_params=d_params,h_params=h_params,discount=disc)
         state = env.reset(inst_gen,return_state=True)
+        done = False
         while not done:
             ''' Purchase '''
             [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
