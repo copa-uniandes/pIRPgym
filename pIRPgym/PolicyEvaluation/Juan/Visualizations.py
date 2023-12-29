@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib import cm
 import matplotlib.patches as mpatches
+import pandas as pd
 import numpy as np
 import networkx as nx
 from copy import deepcopy
@@ -216,6 +217,45 @@ class RoutingV():
 
         plt.show() 
 
+
+
+    def plot_service_levels_scatter(solution_data):
+        """
+        Plot a scatter plot for two service level types across different solutions.
+
+        Parameters:
+        - solution_data (list of tuples): Each tuple contains the service level values for both types in a solution.
+
+        Returns:
+        None
+        """
+        solution_data = [(obs[1],obs[2]) for obs in solution_data]
+        fig,ax = plt.subplots(figsize=(10, 6))
+
+        # Create a DataFrame for seaborn plotting
+        df = pd.DataFrame(solution_data, columns=['Service Level Type 1', 'Service Level Type 2'])
+
+        # Plot the scatter plot with consistent colors for each solution
+        for i, solution in enumerate(solution_data):
+            sns.scatterplot(x='Service Level Type 1', y='Service Level Type 2', data=pd.DataFrame([solution], columns=df.columns),
+                            label=f'Solution {i + 1}', s=100, ax=ax)
+
+        # Set labels and title
+        ax.set_xlabel('Service Level')
+        ax.set_ylabel('Dynamic Service Level')
+        ax.set_title('Mean Service Levels Across Solutions')
+
+        # Remove spines
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        # Add grid for better readability
+        ax.grid(True, linestyle='--', alpha=0.7)
+
+        # Add legend
+        ax.legend(title='Solutions', loc='upper left', bbox_to_anchor=(1, 1))
+
+        plt.show()
 
     @staticmethod
     def plot_supplier_availabilities(supplier_distributions):

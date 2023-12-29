@@ -146,7 +146,16 @@ class Routing_management():
             return total_missing,reactive_missing,extra_cost
         else:
             return sum([i for i in total_missing.values()]),sum([i for i in reactive_missing.values()]),extra_cost
+    
+
+    def evaluate_purchase(inst_gen,routes:list[list],purchase:dict,t:int):
         
+        for k in inst_gen.Products:
+            average_cost = Routing_management._compute_average_price(inst_gen,k,t)
+
+    def _compute_average_price(inst_gen,k,t):
+        costs = [inst_gen.p[i,k] for i in inst_gen.M_kt[t][k,t]]
+        return sum(costs)/len(costs)
         
         
 

@@ -67,12 +67,12 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=50)
 main_done = False
 ep_count = 0
-num_episodes = 50
+num_episodes = 100
 
 
 
 
-env_config['M']=sizes[3]
+env_config['M']=sizes[1]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
@@ -94,7 +94,8 @@ while not main_done:
         while not done:
             ''' Purchase '''
             [purchase,demand_compliance],la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen)
-            total_purchase = sum(purchase.values())    
+            total_purchase = sum(purchase.values())
+            price_delta = pIRPgym.
 
             ''' Generating solutions '''
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
@@ -129,7 +130,7 @@ while not main_done:
         print('❌')
 
 
-with open(experiments_path+f'M{env_config["M"]}.pkl','wb') as file:
+with open(experiments_path+f'M{env_config["M"]}-2.pkl','wb') as file:
         pickle.dump([env_config['M'],seeds,inst_gen,FlowerAgent],file)
 
 
