@@ -121,7 +121,7 @@ while not main_done:
             state,reward,done,real_action,_,  = env.step(action,inst_gen)
 
             
-        print('✅')
+        print(f'Episode: {ep_count}')
         seeds.append((stoch_rd_seed))
         ep_count += 1
         if ep_count == num_episodes: main_done=True
