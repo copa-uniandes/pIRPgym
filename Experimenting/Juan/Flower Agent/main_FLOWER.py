@@ -67,7 +67,7 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=25)
 main_done = False
 ep_count = 0
-num_episodes = 15
+num_episodes = 30
 
 
 
