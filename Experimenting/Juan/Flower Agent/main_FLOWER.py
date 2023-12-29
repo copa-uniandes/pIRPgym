@@ -69,15 +69,19 @@ main_done = False
 ep_count = 0
 num_episodes = 15
 
-# Creating instance generator object
-inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
-                              historical_data,backorders,env_config=env_config)
+
 
 
 env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
+
+# Creating instance generator object
+inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
+                        historical_data,backorders,env_config=env_config)
+
+
 stoch_rd_seed = det_rd_seed*10000  
 
 print(f'Size {env_config["M"]}')
@@ -118,13 +122,11 @@ while not main_done:
             
         print('✅')
         seeds.append((stoch_rd_seed))
-        print(seeds)
         ep_count += 1
         if ep_count == num_episodes: main_done=True
         
     except:
         print('❌')
-
 
 
 with open(experiments_path+f'M{env_config["M"]}.pkl','wb') as file:
