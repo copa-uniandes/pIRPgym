@@ -1368,8 +1368,14 @@ class FlowerAgent(Routing):
             self.n_table[index]+=1
 
 
-    def fit_purchase_to_existing_flower(self):
-        pass
+    def fit_purchase_to_existing_flower(self,purchase:dict,inst_gen:instance_generator,t:int,n:int):
+        pending_sup,requirements = self.consolidate_purchase(purchase,inst_gen,t)
+        purchase_subset = self._code_binary_set_(inst_gen,[0]+pending_sup+[0])
+        
+        likeness = [self._compute_likeness_index(purchase_subset,i) for i in self.bincod]
+        best_routes = self._get_top_n_positions(likeness,n)
+
+        
     
     
     def _code_binary_set_(self,inst_gen,routes):
@@ -1379,24 +1385,49 @@ class FlowerAgent(Routing):
                 binary_encoding[node - 1] = 1  # Set the corresponding index to 1
 
         return binary_encoding
+    
+    def _compute_likeness_index(purchase_subset,flowersub_set):
+        """
+        Compute the likeness index between two binary encodings.
 
+        Parameters:
+        - binary_encoding1 (numpy array): Binary encoding of the first supplier set.
+        - binary_encoding2 (numpy array): Binary encoding of the second supplier set.
 
-    def _compute_likeness(solution1, solution2):
-        suppliers1 = set()
-        suppliers2 = set()
+        Returns:
+        float: Percentage of suppliers in the first set included in the second set.
+        """
+        if len(purchase_subset) != len(flowersub_set):
+            raise ValueError("Binary encodings must have the same length.")
 
-        # Extract suppliers from the solutions
-        for route in solution1:
-            suppliers1.update(set(route[1:-1]))
+        # Count the number of suppliers in the first set
+        total_suppliers = np.sum(purchase_subset)
 
-        for route in solution2:
-            suppliers2.update(set(route[1:-1]))
+        # Count the number of suppliers in the first set that are also in the second set
+        included_suppliers = np.sum(purchase_subset*flowersub_set)
 
-        # Calculate the Jaccard similarity index
-        intersection = len(suppliers1.intersection(suppliers2))
-        union = len(suppliers1.union(suppliers2))
-
-        likeness_index = intersection / union if union != 0 else 0.0
+        # Calculate the likeness index as a percentage
+        likeness_index = (included_suppliers / total_suppliers) * 100.0
 
         return likeness_index
+    
+    def _get_top_n_positions(likeness,n):
+        """
+        Get the positions of the n highest values in a list.
+
+        Parameters:
+        - likeness_indexes (list): List of likeness indexes.
+        - n (int): Number of top positions to retrieve.
+
+        Returns:
+        list: Positions of the n highest values.
+        """
+        if n <= 0:
+            raise ValueError("Number of top positions (n) must be greater than 0.")
+
+        # Use numpy to get the indices of the n highest values
+        top_indices = np.argsort(likeness)[-n:][::-1]
+
+        return top_indices
+
     

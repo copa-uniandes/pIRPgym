@@ -4,6 +4,7 @@ import sys
 from time import process_time
 import numpy as np;from numpy import random
 import pickle
+import datetime
 
 sys.path.append('../../../.')
 import pIRPgym
@@ -33,7 +34,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-sizes = [5,10,15,20,30]
+sizes = [5,10,15,20,30,40]
 env_config = {'T':12,'Q':750,
               'S':3,'LA_horizon':3,
              'd_max':2500,'hist_window':60,
@@ -71,7 +72,7 @@ num_episodes = 100
 
 
 
-env_config['M']=sizes[4]
+env_config['M']=sizes[5]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
@@ -126,19 +127,16 @@ while not main_done:
             state,reward,done,real_action,_,  = env.step(action,inst_gen)
 
             
-        print(f'Episode: {ep_count}')
+        print(f'Episode: {ep_count} - {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
         seeds.append((stoch_rd_seed))
         ep_count += 1
         if ep_count == num_episodes: main_done=True
         
     except:
-        print('❌')
-
+        pass
 
 with open(experiments_path+f'M{env_config["M"]}-{num_episodes}.pkl','wb') as file:
         pickle.dump([env_config['M'],seeds,inst_gen,FlowerAgent],file)
 
 
-#%%
-
-
+# %%
