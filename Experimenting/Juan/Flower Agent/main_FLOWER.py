@@ -67,12 +67,12 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=50)
 main_done = False
 ep_count = 0
-num_episodes = 100
+num_episodes = 30
 
 
 
 
-env_config['M']=sizes[5]
+env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
@@ -102,10 +102,10 @@ while not main_done:
             ''' Generating solutions '''
             # Genetic Algorithm
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
-                                                                                rd_seed=0,time_limit=150,verbose=False)    # Genetic Algorithm
+                                                                                rd_seed=0,time_limit=60,verbose=False)    # Genetic Algorithm
             # Column Generations
-            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=300,
-                                                                                    verbose=False,heuristic_initialization=1,
+            CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=60,
+                       s                                                             verbose=False,heuristic_initialization=2,
                                                                                     return_num_cols=True,RCL_alpha=0.6) 
 
             ''' Update flower pool '''
@@ -127,7 +127,7 @@ while not main_done:
             state,reward,done,real_action,_,  = env.step(action,inst_gen)
 
             
-        print(f'Episode: {ep_count} - {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+        print(f'Episode: {ep_count} - {datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
         seeds.append((stoch_rd_seed))
         ep_count += 1
         if ep_count == num_episodes: main_done=True
