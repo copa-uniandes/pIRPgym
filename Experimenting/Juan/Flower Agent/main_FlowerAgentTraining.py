@@ -67,12 +67,13 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=200)
 main_done = False
 ep_count = 0
-num_episodes = 50
+num_episodes = 10
+time_limits = {'CG':180,'GA':60}
 
 
 
 
-env_config['M']=sizes[-2]
+env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
@@ -83,6 +84,7 @@ inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
 
 
 stoch_rd_seed = det_rd_seed*10000  
+start = process_time()
 
 print(f'Suppliers: {env_config["M"]} - Episodes: {num_episodes}')
 while not main_done:
@@ -135,8 +137,11 @@ while not main_done:
     except:
         pass
 
+experiment_parameters = {'M':env_config['M'],
+                         'run_time':process_time()-start,
+                         'time_limits':time_limits}
 with open(experiments_path+f'M{env_config["M"]}-{num_episodes}.pkl','wb') as file:
-        pickle.dump([env_config['M'],seeds,inst_gen,FlowerAgent],file)
+        pickle.dump([experiment_parameters,seeds,inst_gen,FlowerAgent],file)
 
 
 # %%

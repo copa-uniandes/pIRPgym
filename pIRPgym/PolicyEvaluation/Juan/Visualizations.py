@@ -220,7 +220,7 @@ class RoutingV():
 
 
     @staticmethod
-    def _contains_subset(binary_encoding, supplier_list):
+    def _contains_subset(binary_encoding,supplier_list):
         """
         Check if a binary encoding contains all the suppliers from a given list.
 
@@ -231,6 +231,7 @@ class RoutingV():
         Returns:
         bool: True if all 1s in the binary encoding are in the supplier list, False otherwise.
         """
+        if supplier_list[0]=='All': return True
         flag = False
         for i,pos in enumerate(supplier_list):
             if binary_encoding[pos-1]==1:
@@ -256,18 +257,18 @@ class RoutingV():
         fig,ax = plt.subplots(figsize=(10, 6))
 
         # Create a DataFrame for seaborn plotting
-        df = pd.DataFrame(solution_data, columns=[indicator1,indicator2])
+        df = pd.DataFrame(solution_data, columns=[indicator1, indicator2])
 
         # Plot the scatter plot with consistent colors for each solution
-        for i,solution in enumerate(solution_data):
+        for i, solution in enumerate(solution_data):
             if RoutingV._contains_subset(bincod[i],suppliers):
-                sns.scatterplot(x=solution[0],y=solution[1],data=pd.DataFrame([solution],columns=df.columns),
-                                label=f'Flower {i + 1}', s=100, ax=ax)
+                sns.scatterplot(x=indicator1, y=indicator2, data=pd.DataFrame([solution], columns=df.columns),
+                            label=f'Flower {i + 1}', s=100, ax=ax)
 
         # Set labels and title
-        ax.set_xlabel('Fixed Service Level')
-        ax.set_ylabel('Dynamic Service Level')
-        ax.set_title('Mean Service Levels Across Flowers')
+        ax.set_xlabel(indicator1)
+        ax.set_ylabel(indicator2)
+        ax.set_title('Performance Indicators Across Flowers')
 
         # Remove spines
         ax.spines['right'].set_visible(False)
@@ -337,6 +338,15 @@ class RoutingV():
 
         plt.show()
 
+
+    @staticmethod
+    def count_generated(generator):
+        CG_num = 0
+        GA_num = 0
+        for i,gens in enumerate(generator):
+            if 'CG' in gens:    CG_num+=1
+            if 'GA' in gens:    GA_num+=1 
+        return CG_num,GA_num
 
     # Plot routes of various routing strategies (comparison)
     @staticmethod
