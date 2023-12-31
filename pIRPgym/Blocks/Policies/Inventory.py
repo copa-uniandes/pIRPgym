@@ -314,7 +314,6 @@ class Inventory():
                         ''' Maximum allowed total purchase at each visited supplier '''
                         m.addConstr(gu.quicksum(q[i,p,t,s] for p in P if i in inst_gen.M_kt[p,env.t + t]) <= inst_gen.Q*z[i,t,s])
                         
-                        #if t >= 1:
                         ''' Minimum required purchase at each visited supplier '''
                         m.addConstr(gu.quicksum(q[i,p,t,s] for p in P if i in inst_gen.M_kt[p,env.t + t]) >= inst_gen.rr*inst_gen.Q*z[i,t,s])
                         
@@ -552,6 +551,7 @@ class Inventory():
     def optimize_costs(e, m, costs, impacts, state, env, inst_gen, verbose = False, action = False):
 
         ''' Minimize individual environmental indicator '''
+        m.setParam("MIPGap",0.01)
         m.setObjective(gu.quicksum(c for c in costs))
         m.update(); m.optimize()
 
