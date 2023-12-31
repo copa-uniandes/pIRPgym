@@ -105,8 +105,8 @@ while not main_done:
                                                                                 rd_seed=0,time_limit=60,verbose=False)    # Genetic Algorithm
             # Column Generations
             CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=60,
-                       s                                                             verbose=False,heuristic_initialization=2,
-                                                                                    return_num_cols=True,RCL_alpha=0.6) 
+                                                                                        verbose=False,heuristic_initialization=2,
+                                                                                        return_num_cols=True,RCL_alpha=0.6) 
 
             ''' Update flower pool '''
             # Genetic Algorithm
