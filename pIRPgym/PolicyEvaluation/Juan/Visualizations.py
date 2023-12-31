@@ -348,6 +348,66 @@ class RoutingV():
             if 'GA' in gens:    GA_num+=1 
         return CG_num,GA_num
 
+
+    @staticmethod
+    def plot_flower_comparison(historics,indicator1,indicator2,flower1,flower2):
+        """
+        Plot the observations of two flowers with mean coordinates highlighted.
+
+        Parameters:
+        - flower1 (tuple): Tuple containing x and y coordinates of the first flower.
+        - flower2 (tuple): Tuple containing x and y coordinates of the second flower.
+
+        Returns:
+        None
+        """
+        pos1,pos2 = RoutingV._get_historics_positions(indicator1,indicator2)
+        flower1 = (historics[flower1][pos1],historics[flower1][pos2])
+        flower2 = (historics[flower2][pos1],historics[flower2][pos2])
+
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Plot observations of the first flower in blue
+        sns.scatterplot(x=flower1[0], y=flower1[1], label='Flower 1', marker='.',color='blue', s=50, alpha=0.7, ax=ax)
+
+        # Plot observations of the second flower in red
+        sns.scatterplot(x=flower2[0], y=flower2[1], label='Flower 2', marker='.',color='red', s=50, alpha=0.7, ax=ax)
+
+        # Calculate mean coordinates for each flower
+        mean_flower1 = (np.mean(flower1[0]), np.mean(flower1[1]))
+        mean_flower2 = (np.mean(flower2[0]), np.mean(flower2[1]))
+
+        # Plot mean coordinates with a bigger marker
+        sns.scatterplot(x=[mean_flower1[0]], y=[mean_flower1[1]],
+                        marker='o', s=150, color='blue', label='F1 Avg. Performance')
+        sns.scatterplot(x=[mean_flower2[0]], y=[mean_flower2[1]],
+                        marker='o', s=150, color='red', label='F2 Avg. Performance')
+
+        # Set labels and title
+        ax.set_xlabel(indicator1)
+        ax.set_ylabel(indicator2)
+        ax.set_title('Flower Comparison')
+
+        # Remove spines
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        # Add grid for better readability
+        ax.grid(True, linestyle='--', alpha=0.5)
+
+        # Add legend
+        ax.legend()
+
+        # Show the plot
+        plt.show()
+
+    @staticmethod
+    def _get_historics_positions(indicator1,indicator2):
+        positions = {'Fixed Service Level':0,'Dynamic Service Level':1,'Price Delta':2}
+        return positions[indicator1],positions[indicator2]
+
+
     # Plot routes of various routing strategies (comparison)
     @staticmethod
     def render_routes_diff_strategies(inst_gen:instance_generator,solutions:list,save:bool=False):

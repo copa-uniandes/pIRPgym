@@ -1365,6 +1365,7 @@ class FlowerAgent(Routing):
             self.metrics[index][4] = self.metrics[index][4] + (1/self.n_table[index]) * (price_delta-self.metrics[index][4])
             self.history[index][0].append(total_SL)
             self.history[index][1].append(reactive_SL)
+            self.history[index][3].append(price_delta)
             self.n_table[index]+=1
 
 
