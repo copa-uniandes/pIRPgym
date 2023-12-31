@@ -369,7 +369,7 @@ class RoutingV():
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Plot observations of the first flower in blue
-        sns.scatterplot(x=flower1[0], y=flower1[1], label='Flower 1', marker='.',color='blue', s=50, alpha=0.7, ax=ax)
+        sns.scatterplot(x=flower1[0], y=flower1[1], label='Flower 1', marker='.',color='purple', s=50, alpha=0.7, ax=ax)
 
         # Plot observations of the second flower in red
         sns.scatterplot(x=flower2[0], y=flower2[1], label='Flower 2', marker='.',color='red', s=50, alpha=0.7, ax=ax)
@@ -380,9 +380,9 @@ class RoutingV():
 
         # Plot mean coordinates with a bigger marker
         sns.scatterplot(x=[mean_flower1[0]], y=[mean_flower1[1]],
-                        marker='o', s=150, color='blue', label='F1 Avg. Performance')
+                        marker='o', s=150, color='purple')#, label='F1 Avg. Performance')
         sns.scatterplot(x=[mean_flower2[0]], y=[mean_flower2[1]],
-                        marker='o', s=150, color='red', label='F2 Avg. Performance')
+                        marker='o', s=150, color='red')#, label='F2 Avg. Performance')
 
         # Set labels and title
         ax.set_xlabel(indicator1)
