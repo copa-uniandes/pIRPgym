@@ -184,7 +184,7 @@ class RoutingV():
 
 
     @staticmethod
-    def bar_plot(solution_heights):
+    def n_plot(n_table:list,bin_cod:list,suppliers:tuple):
         """
         Generate a bar plot for service levels across different solutions.
 
@@ -197,8 +197,9 @@ class RoutingV():
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Plot bar plot for each solution
-        for i, height in enumerate(solution_heights):
-            sns.barplot(x=[i], y=[height], label=f'Flower {i}', alpha=0.7, ax=ax)
+        for i, height in enumerate(n_table):
+            if RoutingV._contains_subset(bin_cod[i],suppliers):
+                sns.barplot(x=[i], y=[height], label=f'Flower {i}', alpha=0.7, ax=ax)
 
         # Set labels and title
         ax.set_xlabel('Flowers')
@@ -219,7 +220,27 @@ class RoutingV():
 
 
     @staticmethod
-    def plot_service_levels_scatter(solution_data):
+    def _contains_subset(binary_encoding, supplier_list):
+        """
+        Check if a binary encoding contains all the suppliers from a given list.
+
+        Parameters:
+        - binary_encoding (numpy array): Binary encoding of suppliers.
+        - supplier_list (list): List of suppliers to check.
+
+        Returns:
+        bool: True if all 1s in the binary encoding are in the supplier list, False otherwise.
+        """
+        flag = False
+        for i,pos in enumerate(supplier_list):
+            if binary_encoding[pos-1]==1:
+                flag = True
+                break
+        return flag
+
+
+    @staticmethod
+    def plot_indicators(metrics,bincod,indicator1,indicator2,suppliers):
         """
         Plot a scatter plot for two service level types across different solutions.
 
@@ -229,16 +250,19 @@ class RoutingV():
         Returns:
         None
         """
-        solution_data = [(obs[1],obs[2]) for obs in solution_data]
+        pos1,pos2 = RoutingV._get_indicator_positions(indicator1,indicator2)
+
+        solution_data = [(obs[pos1],obs[pos2]) for obs in metrics]
         fig,ax = plt.subplots(figsize=(10, 6))
 
         # Create a DataFrame for seaborn plotting
-        df = pd.DataFrame(solution_data, columns=['Service Level Type 1', 'Service Level Type 2'])
+        df = pd.DataFrame(solution_data, columns=[indicator1,indicator2])
 
         # Plot the scatter plot with consistent colors for each solution
-        for i, solution in enumerate(solution_data):
-            sns.scatterplot(x='Service Level Type 1', y='Service Level Type 2', data=pd.DataFrame([solution], columns=df.columns),
-                            label=f'Flower {i + 1}', s=100, ax=ax)
+        for i,solution in enumerate(solution_data):
+            if RoutingV._contains_subset(bincod[i],suppliers):
+                sns.scatterplot(x=solution[0],y=solution[1],data=pd.DataFrame([solution],columns=df.columns),
+                                label=f'Flower {i + 1}', s=100, ax=ax)
 
         # Set labels and title
         ax.set_xlabel('Fixed Service Level')
@@ -256,6 +280,12 @@ class RoutingV():
         ax.legend(title='Flowers', loc='upper left', bbox_to_anchor=(1, 1))
 
         plt.show()
+
+    
+    @staticmethod
+    def _get_indicator_positions(indicator1,indicator2):
+        positions = {'Fixed Service Level':2,'Dynamic Service Level':3,'Cost per Supplier':1,'Price Delta':4}
+        return positions[indicator1],positions[indicator2]
 
 
     @staticmethod
