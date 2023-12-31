@@ -9,12 +9,12 @@ class offer():
         M_kt: (dict) subset of suppliers that offer k in K on t in T
         K_it: (dict) subset of products offered by i in M on t in T
         '''
-        seed(inst_gen.d_rd_seed + 3)
+        seed(inst_gen.d_rd_seed+3)
         M_kt = dict()
         # In each time period, for each product
         for k in inst_gen.Products:
 
-            sup = randint(3, inst_gen.M+1)
+            sup = randint(3,inst_gen.M+1)
             suppliers = list(inst_gen.Suppliers)
             # Random suppliers are removed from subset, regarding {sup}
             for ss in range(inst_gen.M - sup):
