@@ -94,11 +94,13 @@ class instance_generator():
         self.hold_cost = True                           # Whether to include the holding cost in the objectives or not
         self.rr = 0.1                                   # Minimum order quantity per supplier
         self.gamma = 1                                  # Time discounting factor
-        self.E = ["climate","water","land","fossil"]    # Environmental Indicators
+        self.E = ["climate","water","land","fossil","acid","eutroph","ozone"]    # Environmental Indicators
         self.metric_names = {"costs":"Total\nCost","transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
-                             "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion"}
+                             "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion",
+                             "acid":"Acidification", "eutroph":"Eutrophication\nTerrestrial", "ozone":"Photochemical\nOzone Formation"}
         self.metric_units = {"costs":"$","transport cost":"$", "purchase cost":"$", "holding cost":"$", "backorders cost":"$",
-                             "climate":"kg CO2 eq", "water":"m3 depriv.", "land":"Pt.", "fossil":"MJ"}
+                             "climate":"kg CO2 eq", "water":"m3 depriv.", "land":"Pt.", "fossil":"MJ",
+                             "acid":"mol H+ eq", "eutroph":"mol N eq", "ozone":"kg CFC11 eq"}
 
         ### Look-ahead parameters ###
         if look_ahead:    
