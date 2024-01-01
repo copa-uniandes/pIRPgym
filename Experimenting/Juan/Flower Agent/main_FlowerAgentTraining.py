@@ -36,10 +36,10 @@ backorders = 'backorders'
 
 sizes = [5,10,15,20,30,40]
 
-env_config = {'T':12,'Q':750,
+env_config = {'T':8,'Q':1000,
               'S':3,'LA_horizon':3,
-             'd_max':2500,'hist_window':60,
-             'theta':0.7}
+              'd_max':2500,'hist_window':60,
+              'theta':0.7}
 
 
 ##########################################    Random Instance    ##########################################
@@ -47,7 +47,7 @@ env_config = {'T':12,'Q':750,
 # q_params = {'dist':'c_uniform','r_f_params':(6,20)}          # Offer
 p_params = {'dist':'d_uniform','r_f_params':(20,61)}
 
-d_params = {'dist':'log-normal-trunc','r_f_params':(3,1),'break':104.5}         # Demand
+d_params = {'dist':'log-normal-trunc','r_f_params':(3,1),'break':100}         # Demand
 
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
      
@@ -72,7 +72,7 @@ time_limits = {'CG':60,'GA':60}
 
 
 
-env_config['M']=30
+env_config['M']=20
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
