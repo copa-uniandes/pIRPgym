@@ -47,7 +47,7 @@ env_config = {'T':12,'Q':750,
 # q_params = {'dist':'c_uniform','r_f_params':(6,20)}          # Offer
 p_params = {'dist':'d_uniform','r_f_params':(20,61)}
 
-d_params = {'dist':'log-normal','r_f_params':(3,1)}          # Demand
+d_params = {'dist':'log-normal-trunc','r_f_params':(3,1),'break':104.5}         # Demand
 
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
      
