@@ -72,7 +72,7 @@ time_limits = {'CG':60,'GA':60}
 
 
 
-env_config['M']=sizes[-2]
+env_config['M']=sizes[-3]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
