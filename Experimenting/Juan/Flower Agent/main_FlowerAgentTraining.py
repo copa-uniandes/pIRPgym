@@ -42,8 +42,6 @@ env_config = {'T':12,'Q':750,
              'theta':0.7}
 
 
-
-
 ##########################################    Random Instance    ##########################################
 # Random Instance
 # q_params = {'dist':'c_uniform','r_f_params':(6,20)}          # Offer
@@ -74,7 +72,7 @@ time_limits = {'CG':60,'GA':60}
 
 
 
-env_config['M']=sizes[2]
+env_config['M']=sizes[-2]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']             # Random seeds
@@ -87,7 +85,7 @@ inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
 stoch_rd_seed = det_rd_seed*10000  
 start = process_time()
 
-print(f'Suppliers: {env_config["M"]} - Episodes: {num_episodes}')
+print(f'Suppliers: {inst_gen.M} - Episodes: {num_episodes}')
 while not main_done:
     stoch_rd_seed+=1
     try:
@@ -127,22 +125,24 @@ while not main_done:
 
             ''' Compound action'''
             action = {'routing':CG_routes,'purchase':purchase,'demand_compliance':demand_compliance}
-            state,reward,done,real_action,_,  = env.step(action,inst_gen)
+            state,reward,done,real_action,_, = env.step(action,inst_gen)
 
             
         print(f'Episode: {ep_count} - {datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
         seeds.append((stoch_rd_seed))
         ep_count += 1
         if ep_count == num_episodes: main_done=True
-        
+            
     except:
-        pass
+        print(f'❌ \t{env.t}')
+
 
 experiment_parameters = {'M':env_config['M'],
                          'run_time':process_time()-start,
                          'time_limits':time_limits}
-with open(experiments_path+f'M{env_config["M"]}-{num_episodes}.pkl','wb') as file:
+with open(experiments_path+f'M{inst_gen.M}-E{num_episodes}-t{env.T}.pkl','wb') as file:
         pickle.dump([experiment_parameters,seeds,inst_gen,FlowerAgent],file)
 
+# %%
 
 # %%

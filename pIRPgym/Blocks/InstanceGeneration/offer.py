@@ -241,7 +241,7 @@ class offer():
         @staticmethod
         def _generate_availability_parameters(inst_gen):
             for i in inst_gen.Suppliers:
-                q_parameters = {str(i):(round(6+11*random()),round(20+13*random())) for i in range(1,inst_gen.M+1)}          # Offer
+                q_parameters = {str(i):(randint(6,14),randint(20,33)) for i in range(1,inst_gen.M+1)}          # Offer
                 for i in range(1,inst_gen.M+1):
                     if q_parameters[str(i)][0] > q_parameters[str(i)][1]:
                         q_parameters[str(i)] = (q_parameters[str(i)][1],q_parameters[str(i)][0])
