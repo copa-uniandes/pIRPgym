@@ -412,18 +412,8 @@ class Inventory():
         def get_demand_compliance(env, inst_gen, purchase, v, b, P, S):
             demand_compliance = dict()
             for p in P:
+                demand_compliance[p] = sum(sum(v[p,o,0,s].x for o in range(inst_gen.O_k[p]+1))/inst_gen.s_paths_d[env.t][0,s][p] for s in S)/len(S)
                 
-                # If fresh product is available, count the sample paths that used it
-                if sum(purchase[i,p] for i in inst_gen.M_kt[p,env.t]) > 0:
-                    demand_compliance[p,0] = sum([1 for s in S if v[p,0,0,s].X > 0])/len(S)
-                # If no fresh product is available, allow for compliance
-                else:
-                    demand_compliance[p,0] = 1
-
-                for o in range(1,inst_gen.O_k[p]+1):
-                    # Count the sample paths in which needed to comply and used it or didn't need to comply
-                    demand_compliance[p,o] = sum([1 if round(b[p,0,s].x + sum(v[p,oo,0,s].x for oo in range(inst_gen.O_k[p],o,-1)),3) >= round(inst_gen.s_paths_d[env.t][0,s][p],3) else (1 if v[p,o,0,s].X > 0 else 0) for s in S])/len(S)
-            
             return demand_compliance
 
         @staticmethod

@@ -107,10 +107,10 @@ class Inventory_management():
     
 
         @staticmethod
-        def get_real_dem_compl_FIFO(inst_gen, env, real_purchase):
+        def get_real_dem_compl_FIFO(inst_gen, env, real_purchase, demand_compliance):
             real_demand_compliance={}
             for k in inst_gen.Products:
-                left_to_comply = inst_gen.W_d[env.t][k]
+                left_to_comply = inst_gen.W_d[env.t][k]*demand_compliance[k]
                 for o in range(inst_gen.O_k[k],0,-1):
                     real_demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
                     left_to_comply -= real_demand_compliance[k,o]
@@ -120,10 +120,10 @@ class Inventory_management():
             return real_demand_compliance
         
         @staticmethod
-        def get_costs_dem_compl_without_waste(inst_gen, env, real_purchase):
+        def get_costs_dem_compl_without_waste(inst_gen, env, real_purchase, demand_compliance):
             real_demand_compliance={}
             for k in inst_gen.Products:
-                left_to_comply = inst_gen.W_d[env.t][k]
+                left_to_comply = inst_gen.W_d[env.t][k]*demand_compliance[k]
                 for o in range(inst_gen.O_k[k]-1,0,-1):
                     real_demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
                     left_to_comply -= real_demand_compliance[k,o]

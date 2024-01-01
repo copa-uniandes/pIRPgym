@@ -117,8 +117,8 @@ class steroid_IRP():
             
             real_action["purchase"] = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
 
-            if environmental: real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen,self,real_action["purchase"])      
-            else: real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_costs_dem_compl_without_waste(inst_gen, self, real_action["purchase"])
+            if environmental: real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen,self,real_action["purchase"], action["demand_compliance"])      
+            else: real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_costs_dem_compl_without_waste(inst_gen, self, real_action["purchase"], action["demand_compliance"])
 
             if self.config['routing']:
                 real_action["routing"] = action['routing']
