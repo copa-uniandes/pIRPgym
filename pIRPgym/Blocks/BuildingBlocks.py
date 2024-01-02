@@ -110,12 +110,16 @@ class Inventory_management():
         def get_real_dem_compl_FIFO(inst_gen, env, real_purchase, demand_compliance):
             real_demand_compliance={}
             for k in inst_gen.Products:
-                left_to_comply = inst_gen.W_d[env.t][k]*demand_compliance[k]
+
+                q = sum(real_purchase[i,k] for i in inst_gen.Suppliers)
+                init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
+                left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
+
                 for o in range(inst_gen.O_k[k],0,-1):
-                    real_demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
+                    real_demand_compliance[k,o] = np.min((env.state[k,o], left_to_comply))
                     left_to_comply -= real_demand_compliance[k,o]
                 
-                real_demand_compliance[k,0] = min(sum(real_purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
+                real_demand_compliance[k,0] = np.min((q, left_to_comply))
             
             return real_demand_compliance
         
@@ -123,13 +127,17 @@ class Inventory_management():
         def get_costs_dem_compl_without_waste(inst_gen, env, real_purchase, demand_compliance):
             real_demand_compliance={}
             for k in inst_gen.Products:
-                left_to_comply = inst_gen.W_d[env.t][k]*demand_compliance[k]
+
+                q = sum(real_purchase[i,k] for i in inst_gen.Suppliers)
+                init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
+                left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
+
                 for o in range(inst_gen.O_k[k]-1,0,-1):
-                    real_demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
+                    real_demand_compliance[k,o] = np.min((env.state[k,o], left_to_comply))
                     left_to_comply -= real_demand_compliance[k,o]
                 
-                real_demand_compliance[k,0] = min(sum(real_purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
-                real_demand_compliance[k,inst_gen.O_k[k]] = min(env.state[k,inst_gen.O_k[k]], left_to_comply)
+                real_demand_compliance[k,0] = np.min((q, left_to_comply))
+                real_demand_compliance[k,inst_gen.O_k[k]] = np.min((env.state[k,inst_gen.O_k[k]], left_to_comply))
             
             return real_demand_compliance
 

@@ -409,11 +409,12 @@ class Inventory():
             return xx, routes
 
         @staticmethod
-        def get_demand_compliance(env, inst_gen, purchase, v, b, P, S):
+        def get_demand_compliance(env, inst_gen, purchase, v, I, P, S):
             demand_compliance = dict()
             for p in P:
-                demand_compliance[p] = sum(sum(v[p,o,0,s].x for o in range(inst_gen.O_k[p]+1))/inst_gen.s_paths_d[env.t][0,s][p] for s in S)/len(S)
-                
+                demand_compliance[p,"actual"] = sum(sum(v[p,o,0,s].x for o in range(inst_gen.O_k[p]+1))/inst_gen.s_paths_d[env.t][0,s][p] for s in S)/len(S)
+                demand_compliance[p,"potential"] = sum(np.min(( 1, sum(v[p,o,0,s].x+I[p,o,0,s].x for o in range(inst_gen.O_k[p]+1))/inst_gen.s_paths_d[env.t][0,s][p] )) for s in S)/len(S)
+
             return demand_compliance
 
         @staticmethod
@@ -425,7 +426,7 @@ class Inventory():
 
             purchase = {(i,p):q[i,p,0,0].x if i in inst_gen.M_kt[p,env.t] else 0 for i in N for p in P}
             routing = routes[0][0]
-            demand_compliance = Inventory.IRP.get_demand_compliance(env, inst_gen, purchase, v, b, P, S)
+            demand_compliance = Inventory.IRP.get_demand_compliance(env, inst_gen, purchase, v, I, P, S)
 
             action = {'routing':routing,'purchase':purchase,'demand_compliance':demand_compliance}
 
