@@ -34,7 +34,7 @@ historical_data = ['*']
 # Other parameters
 backorders = 'backorders'
 
-sizes = [5,10,15,20,30,40]
+sizes = [5,10,15,20,30,50]
 
 env_config = {'T':7,'Q':1000,
               'S':3,'LA_horizon':3,
@@ -72,7 +72,7 @@ time_limits = {'CG':30,'GA':20}
 
 
 
-env_config['M']=sizes[2]
+env_config['M']=sizes[5]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']**2             # Random seeds
