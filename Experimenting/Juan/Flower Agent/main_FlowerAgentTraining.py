@@ -36,7 +36,7 @@ backorders = 'backorders'
 
 sizes = [5,10,15,20,30,40]
 
-env_config = {'T':8,'Q':1000,
+env_config = {'T':7,'Q':1000,
               'S':3,'LA_horizon':3,
               'd_max':2500,'hist_window':60,
               'theta':0.6}
