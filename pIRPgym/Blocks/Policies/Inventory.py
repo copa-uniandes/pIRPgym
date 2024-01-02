@@ -91,7 +91,8 @@ class Inventory():
                 for k in K:
                     for i in inst_gen.M_kt[k,env.t + t]: 
                         m.addConstr(z[i,k,t,s] <= inst_gen.s_paths_q[env.t][t,s][i,k]*w[i,t,s], f'Purchase at supplier {i,k,t,s}')
-                        
+            
+            
             # for t in T:
             #     for i in M:
             #         m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q*w[i,t,s], f'Vehicle capacity {i,t,s}')

@@ -39,7 +39,7 @@ sizes = [5,10,15,20,30,40]
 env_config = {'T':8,'Q':1000,
               'S':3,'LA_horizon':3,
               'd_max':2500,'hist_window':60,
-              'theta':0.7}
+              'theta':0.6}
 
 
 ##########################################    Random Instance    ##########################################
@@ -67,12 +67,12 @@ FlowerAgent = pIRPgym.FlowerAgent(solution_num=200)
 main_done = False
 ep_count = 0
 num_episodes = 10
-time_limits = {'CG':60,'GA':60}
+time_limits = {'CG':30,'GA':20}
 
 
 
 
-env_config['M']=40
+env_config['M']=sizes[0]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']**2             # Random seeds
@@ -106,8 +106,8 @@ while not main_done:
                                                                                 rd_seed=0,time_limit=time_limits['GA'],verbose=False)    # Genetic Algorithm
             # Column Generations
             CG_routes,CG_obj,CG_info,CG_time,CG_cols = pIRPgym.Routing.ColumnGeneration(purchase,inst_gen,env.t,time_limit=time_limits['CG'],
-                                                                                        verbose=False,heuristic_initialization=2,
-                                                                                        return_num_cols=True,RCL_alpha=0.6) 
+                                                                                        verbose=False,heuristic_initialization=1,
+                                                                                        return_num_cols=True,RCL_alpha=0.8) 
 
             ''' Update flower pool '''
             # Genetic Algorithm
@@ -140,7 +140,7 @@ while not main_done:
 experiment_parameters = {'M':env_config['M'],
                          'run_time':process_time()-start,
                          'time_limits':time_limits}
-with open(experiments_path+f'M{inst_gen.M}-E{num_episodes}-t{env.T}.pkl','wb') as file:
+with open(experiments_path+f'M{inst_gen.M}-E{num_episodes}.pkl','wb') as file:
         pickle.dump([experiment_parameters,seeds,inst_gen,FlowerAgent],file)
 
 # %%
