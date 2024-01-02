@@ -92,12 +92,12 @@ class Inventory():
                     for i in inst_gen.M_kt[k,env.t + t]: 
                         m.addConstr(z[i,k,t,s] <= inst_gen.s_paths_q[env.t][t,s][i,k]*w[i,t,s], f'Purchase at supplier {i,k,t,s}')
                         
-            for t in T:
-                for i in M:
-                    m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q*w[i,t,s], f'Vehicle capacity {i,t,s}')
-                    min_q = min(sum(inst_gen.s_paths_q[env.t][t,s][i,k] for k in inst_gen.Products if i in inst_gen.M_kt[k,env.t+t]),inst_gen.rr*inst_gen.Q)
-                    if t != 0:
-                        m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) >= min_q*w[i,t,s], f'Vehicle capacity {i,t,s}')
+            # for t in T:
+            #     for i in M:
+            #         m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) <= inst_gen.Q*w[i,t,s], f'Vehicle capacity {i,t,s}')
+            #         min_q = min(sum(inst_gen.s_paths_q[env.t][t,s][i,k] for k in inst_gen.Products if i in inst_gen.M_kt[k,env.t+t]),inst_gen.rr*inst_gen.Q)
+            #         if t != 0:
+            #             m.addConstr(gu.quicksum(z[i,k,t,s] for k in K if (i,k,t,s) in z) >= min_q*w[i,t,s], f'Vehicle capacity {i,t,s}')
 
             '''' NON-ANTICIPATIVITY CONSTRAINTS '''
             # for k in K:

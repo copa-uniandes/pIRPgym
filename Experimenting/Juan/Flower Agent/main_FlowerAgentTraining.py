@@ -47,7 +47,7 @@ env_config = {'T':8,'Q':1000,
 # q_params = {'dist':'c_uniform','r_f_params':(6,20)}          # Offer
 p_params = {'dist':'d_uniform','r_f_params':(20,61)}
 
-d_params = {'dist':'log-normal-trunc','r_f_params':(3,1),'break':100}         # Demand
+d_params = {'dist':'log-normal-trunc','r_f_params':(3,1),'break':80}         # Demand
 
 h_params = {'dist':'d_uniform','r_f_params':(20,61)}         # Holding costs
      
@@ -72,10 +72,10 @@ time_limits = {'CG':60,'GA':60}
 
 
 
-env_config['M']=30
+env_config['M']=40
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
-det_rd_seed = env_config['K']             # Random seeds
+det_rd_seed = env_config['K']**2             # Random seeds
 
 # Creating instance generator object
 inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,
@@ -113,13 +113,13 @@ while not main_done:
             # Genetic Algorithm
             GA_tot_mis,GA_rea_mis,GA_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,GA_routes,purchase,
                                                                                                             discriminate_missing=False)
-            GA_SL = 1-GA_tot_mis/total_purchase; GA_reactive_SL = 1-GA_rea_mis/total_purchase
+            GA_SL = 1-(GA_tot_mis/total_purchase); GA_reactive_SL = 1-(GA_rea_mis/total_purchase)
             FlowerAgent.update_flower_pool(inst_gen,GA_routes,generator='GA',cost=GA_obj,total_SL=GA_SL,reactive_SL=GA_reactive_SL,price_delta=price_delta)
 
             # Column Generation
             CG_tot_mis,CG_rea_mis,CG_e_cost = pIRPgym.Routing_management.evaluate_solution_dynamic_potential(inst_gen,env,CG_routes,purchase,
                                                                                                             discriminate_missing=False)
-            CG_SL = 1-CG_tot_mis/total_purchase; CG_reactive_SL = 1-CG_rea_mis/total_purchase
+            CG_SL = 1-(CG_tot_mis/total_purchase); CG_reactive_SL = 1-(CG_rea_mis/total_purchase)
             FlowerAgent.update_flower_pool(inst_gen,CG_routes,generator='CG',cost=CG_obj,total_SL=CG_SL,reactive_SL=CG_reactive_SL,price_delta=price_delta)
 
 
