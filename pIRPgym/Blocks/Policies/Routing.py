@@ -1337,6 +1337,7 @@ class FlowerAgent(Routing):
         self.history = list()
         self.n_table = list()
 
+
     def update_flower_pool(self,inst_gen,routes,generator,cost,total_SL,reactive_SL,price_delta):
         sorted_routes = sorted(routes,key=lambda route:route[1])
 
@@ -1369,16 +1370,48 @@ class FlowerAgent(Routing):
             self.n_table[index]+=1
 
 
-    def fit_purchase_to_existing_flower(self,purchase:dict,inst_gen:instance_generator,t:int,n:int):
+    def fit_purchase_to_flower(self,purchase:dict,inst_gen:instance_generator,t:int,n:float,obj:str='cost')->tuple:
+        start = process_time()
+
         pending_sup,requirements = self.consolidate_purchase(purchase,inst_gen,t)
-        purchase_subset = self._code_binary_set_(inst_gen,[0]+pending_sup+[0])
-        
-        likeness = [self._compute_likeness_index(purchase_subset,i) for i in self.bincod]
-        best_routes = self._get_top_n_positions(likeness,n)
+        purchase_subset = self._code_binary_set_(inst_gen,[[0]+pending_sup+[0]])
+    
+        likeness = []
+        for i in self.bincod:
+            likeness.append(self._compute_likeness_index(purchase_subset,i))
+
+        top_suppliers = self._get_top_n_positions(likeness,n)
+
+        service_level_flower = self._get_flower(obj='avg_service_level',compatible_flowers=top_suppliers)
+        cost_flower = self._get_flower(obj='cost',compatible_flowers=top_suppliers)
+
+        service_level_flower_info = (self.routes[service_level_flower],self.bincod[service_level_flower],self.metrics[service_level_flower])
+        cost_flower_info = (self.routes[cost_flower],self.bincod[cost_flower],self.metrics[cost_flower])
+
+        return service_level_flower_info,cost_flower_info,process_time()-start
+
+
+    def _get_flower(self,obj,compatible_flowers):
+        if obj == 'avg_service_level':
+            # Calculate the average service level for each flower
+            avg_service_levels = [(metric[2] + metric[3]) / 2 for i,metric in enumerate(self.metrics) if i in compatible_flowers]
+
+            # Find the index of the flower with the highest average service level
+            best_index = avg_service_levels.index(max(avg_service_levels))
+        elif obj == 'cost':
+            # Calculate the cost per supplier for each flower
+            cost_per_supplier = [metric[1] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
+
+            # Find the index of the flower with the highest cost per supplier
+            best_index = cost_per_supplier.index(min(cost_per_supplier))
+        else:
+            # Handle other objectives if needed
+            raise ValueError("Invalid objective. Supported objectives: 'avg_service_level' or 'cost'.")
+
+        # Return the best flower based on the chosen objective
+        return compatible_flowers[best_index]
 
         
-    
-    
     def _code_binary_set_(self,inst_gen,routes):
         binary_encoding = np.zeros(inst_gen.M,dtype=int)
         for route in routes:
@@ -1387,7 +1420,8 @@ class FlowerAgent(Routing):
 
         return binary_encoding
     
-    def _compute_likeness_index(purchase_subset,flowersub_set):
+    
+    def _compute_likeness_index(self,purchase_subset,flowersub_set):
         """
         Compute the likeness index between two binary encodings.
 
@@ -1412,7 +1446,8 @@ class FlowerAgent(Routing):
 
         return likeness_index
     
-    def _get_top_n_positions(likeness,n):
+
+    def _get_top_n_positions(self,likeness,n)->np.array:
         """
         Get the positions of the n highest values in a list.
 

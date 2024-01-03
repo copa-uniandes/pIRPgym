@@ -17,6 +17,9 @@ else:
     path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
     experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/Flower Agent/'
 
+# Environment
+env = pIRPgym.steroid_IRP(True,True,True)
+
 
 ###########################################  Instance Generator  ##########################################
 # Instance Generator
@@ -57,9 +60,7 @@ disc = ("strong","conc")
 
 
 #%% 
-# Environment
-# Creating environment object
-env = pIRPgym.steroid_IRP(True,True,True)
+
 
 seeds = []
 
@@ -100,7 +101,7 @@ while not main_done:
             price_delta = pIRPgym.Routing_management.evaluate_purchase(inst_gen,purchase,env.t)
 
 
-            ''' Generating solutions '''
+            ''' Generating routing solutions '''
             # Genetic Algorithm
             GA_routes,GA_obj,GA_info,GA_time,_ = pIRPgym.Routing.GeneticAlgorithm(purchase,inst_gen,env.t,return_top=False,
                                                                                 rd_seed=0,time_limit=time_limits['GA'],verbose=False)    # Genetic Algorithm
