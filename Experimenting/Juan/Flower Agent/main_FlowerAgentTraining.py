@@ -66,13 +66,13 @@ seeds = []
 FlowerAgent = pIRPgym.FlowerAgent(solution_num=200)
 main_done = False
 ep_count = 0
-num_episodes = 10
+num_episodes = 50
 time_limits = {'CG':30,'GA':20}
 
 
 
 
-env_config['M']=sizes[5]
+env_config['M']=sizes[-3]
 env_config['K']=env_config['M']
 env_config['F']=env_config['M']
 det_rd_seed = env_config['K']**2             # Random seeds
@@ -141,7 +141,7 @@ experiment_parameters = {'M':env_config['M'],
                          'run_time':process_time()-start,
                          'time_limits':time_limits}
 with open(experiments_path+f'M{inst_gen.M}-E{num_episodes}.pkl','wb') as file:
-        pickle.dump([experiment_parameters,seeds,inst_gen,FlowerAgent],file)
+        pickle.dump([experiment_parameters,(det_rd_seed,seeds),inst_gen,FlowerAgent],file)
 
 # %%
 
