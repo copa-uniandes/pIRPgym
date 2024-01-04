@@ -70,7 +70,7 @@ for episode in Num_Episodes[::]:
         inst_gen = pIRPgym.instance_generator(look_ahead,stochastic_params,historical_data,backorders,
                                               env_config=env_config)
         
-        results = {'info':(inst_gen,identifiers[episode,size],episode,size),'TP_results':list(),
+        results = {'info':(inst_gen,episode,size),'TP_results':list(),
                    'SL_results':list(),'C_results':list()}
 
         det_rd_seed = hist_inst_gen.d_rd_seed             # Random seeds
