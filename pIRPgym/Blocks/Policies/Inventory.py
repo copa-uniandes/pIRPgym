@@ -109,10 +109,11 @@ class Inventory():
         for k in K:
             m.addConstr(gu.quicksum(gu.quicksum(y[k,t,o,s] for t in T for o in range(inst_gen.O_k[k] + 1))/sum(inst_gen.s_paths_d[env.t][t,s][k] for t in T) for s in S) >= serv_level*len(inst_gen.Samples))
 
+
         ''' Fixed suppliers constraints '''
-        if type(fixed_suppliers) == list:
+        if type(fixed_suppliers) == np.array:
             for i in inst_gen.Suppliers:
-                m.addConstr(gu.quicksum(w[i,0,s] for s in S)==fixed_suppliers[i+1]*inst_gen.S,f'Fixed supplier{i,s}')
+                m.addConstr(gu.quicksum(w[i,0,s] for s in S)==fixed_suppliers[i-1]*inst_gen.S,f'Fixed supplier{i,s}')
 
                     
 
