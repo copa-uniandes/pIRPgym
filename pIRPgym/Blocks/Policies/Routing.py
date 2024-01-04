@@ -1401,8 +1401,8 @@ class FlowerAgent(Routing):
 
     def _get_flower(self,obj,compatible_flowers):
         if obj == 'C':
-            costs= [metric[0] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
-            best_index = cost_per_supplier.index(min(costs))
+            costs=[metric[0] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
+            best_index = costs.index(min(costs))
         elif obj == 'UC':
             cost_per_supplier = [metric[1] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
             best_index = cost_per_supplier.index(min(cost_per_supplier))
