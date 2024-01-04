@@ -112,8 +112,9 @@ class Inventory_management():
             for k in inst_gen.Products:
 
                 q = sum(real_purchase[i,k] for i in inst_gen.Suppliers)
-                init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
-                left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
+                #init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
+                #left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
+                left_to_comply = inst_gen.W_d[env.t][k]
 
                 for o in range(inst_gen.O_k[k],0,-1):
                     real_demand_compliance[k,o] = np.min((env.state[k,o], left_to_comply))
@@ -129,8 +130,9 @@ class Inventory_management():
             for k in inst_gen.Products:
 
                 q = sum(real_purchase[i,k] for i in inst_gen.Suppliers)
-                init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
-                left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
+                #init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
+                #left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
+                left_to_comply = inst_gen.W_d[env.t][k]
 
                 for o in range(inst_gen.O_k[k]-1,0,-1):
                     real_demand_compliance[k,o] = np.min((env.state[k,o], left_to_comply))
