@@ -44,14 +44,12 @@ env_config = {'T':7,'Q':1000,
 
 disc = ("strong","conc")
 
-testing_episodes = 10
+testing_episodes = 30
 
 Num_Episodes = [10,30,50]
 Num_Suppliers = {10:[10,20,30,40,50],
                   30:[5,10,15,20,30],
                   50:[20,30]}
-
-identifiers = {(10,10):0,(10,30):1,(10,50):2,(30,10):3,(30,30):4,(30,50):5,(50,10):6,(50,30):7,(50,50):8}
 
 
 for episode in Num_Episodes[::-1]:
