@@ -54,8 +54,8 @@ Num_Suppliers = {10:[10,20,30,40,50],
 identifiers = {(10,10):0,(10,30):1,(10,50):2,(30,10):3,(30,30):4,(30,50):5,(50,10):6,(50,30):7,(50,50):8}
 
 
-for episode in Num_Episodes:
-    for size in Num_Suppliers:
+for episode in Num_Episodes[::]:
+    for size in Num_Suppliers[episode][::]:
         print(f'EXPERIMENT {identifiers[episode,size]}')
         main_done = False
         ep_count = 0
