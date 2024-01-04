@@ -1370,7 +1370,7 @@ class FlowerAgent(Routing):
             self.n_table[index]+=1
 
 
-    def fit_purchase_to_flower(self,purchase:dict,inst_gen:instance_generator,t:int,n:float,obj:str='cost')->tuple:
+    def fit_purchase_to_flower(self,purchase:dict,inst_gen:instance_generator,t:int,n:float)->tuple:
         start = process_time()
 
         pending_sup,requirements = self.consolidate_purchase(purchase,inst_gen,t)
@@ -1382,28 +1382,39 @@ class FlowerAgent(Routing):
 
         top_suppliers = self._get_top_n_positions(likeness,n)
 
-        service_level_flower = self._get_flower(obj='avg_service_level',compatible_flowers=top_suppliers)
-        cost_flower = self._get_flower(obj='cost',compatible_flowers=top_suppliers)
+        SL_flower = self._get_flower(obj='SL',compatible_flowers=top_suppliers)
+        RSL_flower = self._get_flower(obj='RSL',compatible_flowers=top_suppliers)
+        ASL_flower = self._get_flower(obj='ASL',compatible_flowers=top_suppliers)
 
-        service_level_flower_info = (self.routes[service_level_flower],self.bincod[service_level_flower],self.metrics[service_level_flower])
-        cost_flower_info = (self.routes[cost_flower],self.bincod[cost_flower],self.metrics[cost_flower])
+        C_flower = self._get_flower(obj='C',compatible_flowers=top_suppliers)
+        UC_flower = self._get_flower(obj='UC',compatible_flowers=top_suppliers)
 
-        return service_level_flower_info,cost_flower_info,process_time()-start
+
+        SL_flower_info = (self.routes[SL_flower],self.bincod[SL_flower],self.metrics[SL_flower])
+        RSL_flower_info = (self.routes[RSL_flower],self.bincod[RSL_flower],self.metrics[RSL_flower])
+        ASL_flower_info = (self.routes[ASL_flower],self.bincod[ASL_flower],self.metrics[ASL_flower])
+        C_flower_info = (self.routes[C_flower],self.bincod[C_flower],self.metrics[C_flower])
+        UC_flower_info = (self.routes[UC_flower],self.bincod[UC_flower],self.metrics[UC_flower])
+
+        return SL_flower_info,RSL_flower_info,ASL_flower_info,C_flower_info,UC_flower_info,process_time()-start
 
 
     def _get_flower(self,obj,compatible_flowers):
-        if obj == 'avg_service_level':
-            # Calculate the average service level for each flower
-            avg_service_levels = [(metric[2] + metric[3]) / 2 for i,metric in enumerate(self.metrics) if i in compatible_flowers]
-
-            # Find the index of the flower with the highest average service level
-            best_index = avg_service_levels.index(max(avg_service_levels))
-        elif obj == 'cost':
-            # Calculate the cost per supplier for each flower
-            cost_per_supplier = [metric[1] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
-
-            # Find the index of the flower with the highest cost per supplier
+        if obj == 'C':
+            cost_per_supplier = [metric[0] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
             best_index = cost_per_supplier.index(min(cost_per_supplier))
+        elif obj == 'UC':
+            cost_per_supplier = [metric[1] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
+            best_index = cost_per_supplier.index(min(cost_per_supplier))
+        elif obj == 'SL':
+            SLs = [metric[2] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
+            best_index = SLs.index(max(SLs))
+        if obj == 'RSL':
+            RSLs = [metric[3] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
+            best_index = RSLs.index(max(RSLs))
+        if obj == 'ASL':
+            ASLs = [(metric[2] + metric[3]) / 2 for i,metric in enumerate(self.metrics) if i in compatible_flowers]
+            best_index = ASLs.index(max(ASLs))
         else:
             # Handle other objectives if needed
             raise ValueError("Invalid objective. Supported objectives: 'avg_service_level' or 'cost'.")
