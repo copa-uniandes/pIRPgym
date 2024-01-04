@@ -56,7 +56,7 @@ identifiers = {(10,10):0,(10,30):1,(10,50):2,(30,10):3,(30,30):4,(30,50):5,(50,1
 
 for episode in Num_Episodes[::]:
     for size in Num_Suppliers[episode][::]:
-        print(f'EXPERIMENT {identifiers[episode,size]}')
+        print(f'M{size}-E{episode}')
         main_done = False
         ep_count = 0
         
