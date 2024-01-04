@@ -297,7 +297,7 @@ class Inventory_management():
 
 
         @staticmethod
-        def compute_costs(inst_gen, env, purchase, demand_compliance, s_tprime, perished, aggregated = True):     
+        def compute_costs(inst_gen,env,purchase,demand_compliance,s_tprime,perished,aggregated = True):     
             purchase_cost = {k:sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers) for k in inst_gen.Products}
         
             holding_cost = {k:inst_gen.W_h[env.t][k]*sum(s_tprime[k,o] for o in range(1, inst_gen.O_k[k] + 1)) for k in inst_gen.Products}
