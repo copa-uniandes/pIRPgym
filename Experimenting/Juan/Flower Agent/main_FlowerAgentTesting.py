@@ -52,8 +52,8 @@ Num_Suppliers = {10:[10,20,30,40,50],
                   50:[20,30]}
 
 
-for episode in Num_Episodes[::-1]:
-    for size in Num_Suppliers[episode][::-1]:
+for episode in Num_Episodes[::]:
+    for size in Num_Suppliers[episode][::]:
         print(f'M{size}-E{episode}')
         main_done = False
         ep_count = 0

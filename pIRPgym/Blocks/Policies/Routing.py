@@ -1409,10 +1409,10 @@ class FlowerAgent(Routing):
         elif obj == 'SL':
             SLs = [metric[2] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
             best_index = SLs.index(max(SLs))
-        if obj == 'RSL':
+        elif obj == 'RSL':
             RSLs = [metric[3] for i,metric in enumerate(self.metrics) if i in compatible_flowers]
             best_index = RSLs.index(max(RSLs))
-        if obj == 'ASL':
+        elif obj == 'ASL':
             ASLs = [(metric[2] + metric[3]) / 2 for i,metric in enumerate(self.metrics) if i in compatible_flowers]
             best_index = ASLs.index(max(ASLs))
         else:
