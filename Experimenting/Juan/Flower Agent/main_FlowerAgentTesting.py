@@ -9,13 +9,13 @@ import datetime
 sys.path.append('../../../.')
 import pIRPgym
 
-# computer_name = input("Running experiment on mac? [Y/n]")
-# if computer_name == '': 
-path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
-experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/Flower Agent/'
-# else: 
-    # path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
-    # experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/Flower Agent/'
+computer_name = input("Running experiment on mac? [Y/n]")
+if computer_name == '': 
+    path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/pIRPgym/'
+    experiments_path = '/Users/juanbeta/My Drive/Research/Supply Chain Analytics/Experiments/Flower Agent/'
+else: 
+    path = 'C:/Users/jm.betancourt/Documents/Research/pIRPgym/'
+    experiments_path = 'G:/Mi unidad/Research/Supply Chain Analytics/Experiments/Flower Agent/'
 
 #%%
 # Environment
@@ -84,7 +84,7 @@ for episode in Num_Episodes:
                                                                         d_params=d_params,h_params=h_params,discount=disc)
             state = env.reset(inst_gen,return_state=True)
             done = False
-            
+
             while not done:
                 ''' Two Phases Action '''
                 # Purchasing
