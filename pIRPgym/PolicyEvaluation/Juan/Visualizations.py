@@ -52,7 +52,7 @@ class RoutingV():
 
     # Plot routes
     @staticmethod
-    def render_routes(inst_gen:instance_generator,routes:list,save:bool=False):
+    def render_routes(inst_gen:instance_generator,routes:list,save_fig:bool=False):
         G = nx.MultiDiGraph()
 
         # Nodes
@@ -61,7 +61,7 @@ class RoutingV():
         G.add_nodes_from(node_list)
 
         node_color = ['green']
-        node_color += ['tab:purple' for i in inst_gen.Suppliers]
+        node_color += ['tab:red' for i in inst_gen.Suppliers]
         nodes_to_draw = deepcopy(node_list)  
 
         # Edges
@@ -92,11 +92,48 @@ class RoutingV():
         # pos.update({s: (self.S[s]['x'], self.S[s]['y']) for s in self.Stations})
         # pos['D'] = (self.D['x'], self.D['y'])
 
-        nx.draw_networkx(G,pos=inst_gen.coor, with_labels = True, nodelist = nodes_to_draw, 
-                         node_color = node_color, edge_color = edge_colors, alpha = 0.8, 
-                         font_size = 7, node_size = 200)
-        if save:
-            plt.savefig(inst_gen.path + 'routes.png', dpi = 600)
+        # nx.draw_networkx(G,pos=inst_gen.coor, with_labels = True, nodelist = nodes_to_draw, 
+        #                  node_color = node_color, edge_color = edge_colors, alpha = 0.8, 
+        #                  font_size = 7, node_size = 200)
+        
+
+        nx.draw_networkx(   G,
+                            pos=inst_gen.coor,
+                            with_labels=True,
+                            nodelist=nodes_to_draw,
+                            node_color=node_color,
+                            edge_color=edge_colors,
+                            alpha=0.8,
+                            font_size=8,  # Adjust font size
+                            font_color='black',  # Font color for node labels
+                            font_weight='bold',  # Font weight for node labels
+                            arrowsize=10,  # Size of arrowheads for directed edges
+                            width=1.5,  # Width of edges
+                            edgecolors='black',  # Color of node borders
+                            node_shape='o',  # Node shape (e.g., 'o' for circles)
+                            font_family='arial',  # Font family for node labels
+                        )
+        
+        # Remove top and right spines
+        ax = plt.gca()
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        # Add ticks to the x (bottom) and y (left) axis
+        ax.tick_params(axis='both', which='both', bottom=True, left=True,labelsize=100)
+        
+        
+        ax.set_xticks([0, 200, 400, 600, 800, 1000])
+        ax.set_yticks([0, 200, 400, 600, 800, 1000])
+
+        ax.grid(axis='x', linestyle='--', alpha=0.7)
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+        # Add a title to the graph
+        plt.title("Suppliers' Location Layout", fontsize=12)
+        
+        if save_fig:
+            plt.savefig('./SuppliersLayout.png', dpi = 400)
         plt.show()
 
 
@@ -140,7 +177,7 @@ class RoutingV():
 
     
     @staticmethod
-    def plot_supplier_distributions(bounds):
+    def plot_supplier_distributions(bounds,save_fig:bool=False):
         """
         Plot boxplots with intervals for suppliers.
 
@@ -150,7 +187,7 @@ class RoutingV():
         Returns:
         None
         """
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 8))
 
         # Extract supplier numbers and intervals
         suppliers = [int(s) for s in bounds.keys()]
@@ -171,7 +208,7 @@ class RoutingV():
         # Set labels and title
         ax.set_xlabel('Supplier')
         ax.set_ylabel('Units')
-        ax.set_title('Suppliers Availability Distribution')
+        ax.set_title("Suppliers' Availability Distribution")
 
         # Remove spines
         ax.spines['right'].set_visible(False)
@@ -180,7 +217,12 @@ class RoutingV():
         # Add grid for better readability
         ax.grid(axis='y', linestyle='--', alpha=0.7)
 
-        plt.show()
+        if save_fig:
+            plt.savefig('./SuppliersDistribution',dpi=400)
+        else:            
+            plt.show()
+
+        
 
 
     @staticmethod
