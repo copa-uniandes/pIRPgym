@@ -16,7 +16,7 @@ class Inventory():
     
     
     @staticmethod
-    def Stochastic_Rolling_Horizon(state,env,inst_gen,objs={"costs":1},fixed_suppliers=False):
+    def Stochastic_Rolling_Horizon(state,env,inst_gen,objs={"costs":1},fixed_suppliers=False,routing_cost=False):
 
         # ----------------------------------------
         # MODEL PARAMETERS
@@ -111,7 +111,7 @@ class Inventory():
 
 
         ''' Fixed suppliers constraints '''
-        if type(fixed_suppliers) == np.array:
+        if type(fixed_suppliers) == np.ndarray:
             for i in inst_gen.Suppliers:
                 m.addConstr(gu.quicksum(w[i,0,s] for s in S)==fixed_suppliers[i-1]*inst_gen.S,f'Fixed supplier{i,s}')
 
@@ -123,9 +123,13 @@ class Inventory():
         ''' Expected costs '''
         purch_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.W_p[env.t][i,k]*z[i,k,t,s] for k in K for t in T for s in S for i in inst_gen.M_kt[k,env.t + t])/len(S)
         backo_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.back_o_cost[k]*bo[k,t,s] for k in K for t in T for s in S)/len(S)
-        rout_aprox_cost = gu.quicksum((inst_gen.gamma**t)*C_MIP[i]*w[i,t,s] for i in M for t in T for s in S)/len(S)
         holding_cost = gu.quicksum((inst_gen.gamma**t)*inst_gen.W_h[env.t][k]*ii[k,t,o,s] for k in K for t in T for o in range(inst_gen.O_k[k]) for s in S)/len(S)
-        
+        if routing_cost==False:
+            rout_aprox_cost = gu.quicksum((inst_gen.gamma**t)*C_MIP[i]*w[i,t,s] for i in M for t in T for s in S)/len(S)
+        else:
+            rout_aprox_cost = routing_cost
+
+
         if len(objs) == 1:
             if "costs" in objs:
                 if inst_gen.hold_cost: m.addConstr(v >= purch_cost + backo_cost + rout_aprox_cost + holding_cost)

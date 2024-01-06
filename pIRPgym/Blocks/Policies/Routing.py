@@ -1385,7 +1385,6 @@ class FlowerAgent(Routing):
         SL_flower = self._get_flower(obj='SL',compatible_flowers=top_suppliers)
         RSL_flower = self._get_flower(obj='RSL',compatible_flowers=top_suppliers)
         ASL_flower = self._get_flower(obj='ASL',compatible_flowers=top_suppliers)
-
         C_flower = self._get_flower(obj='C',compatible_flowers=top_suppliers)
         UC_flower = self._get_flower(obj='UC',compatible_flowers=top_suppliers)
 

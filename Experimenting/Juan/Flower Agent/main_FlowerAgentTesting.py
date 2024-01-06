@@ -46,14 +46,14 @@ disc = ("strong","conc")
 
 testing_episodes = 30
 
-Num_Episodes = [10,30,50]
+Num_Episodes = [30,50]
 Num_Suppliers = {10:[10,20,30,40,50],
                   30:[5,10,15,20,30],
                   50:[20,30]}
 
 
-for episode in Num_Episodes[::]:
-    for size in Num_Suppliers[episode][::]:
+for episode in Num_Episodes:
+    for size in Num_Suppliers[episode]:
         print(f'M{size}-E{episode}')
         main_done = False
         ep_count = 0
@@ -99,27 +99,32 @@ for episode in Num_Episodes[::]:
                     SL_flower_info,RSL_flower_info,ASL_flower_info,C_flower_info,UC_flower_info,solution_time = FlowerAgent.fit_purchase_to_flower(purchase,inst_gen,env.t,n=5)
 
                     # Fixed Service Level 
-                    [SL_purchase,SL_demand_compliance],SL_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=SL_flower_info[1])
+                    [SL_purchase,SL_demand_compliance],SL_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=SL_flower_info[1],
+                                                                                                                routing_cost=SL_flower_info[2][0])
                     SL_purchase_cost = sum({k:sum(SL_purchase[i,k] * inst_gen.W_p[env.t][i,k] for i in inst_gen.Suppliers) for k in inst_gen.Products}.values())
                     total_SL_purchase = sum(SL_purchase.values())
                     
                     # Reactive Service Level 
-                    [RSL_purchase,RSL_demand_compliance],RSL_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=RSL_flower_info[1])
+                    [RSL_purchase,RSL_demand_compliance],RSL_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=RSL_flower_info[1],
+                                                                                                                routing_cost=RSL_flower_info[2][0])
                     RSL_purchase_cost = sum({k:sum(RSL_purchase[i,k] * inst_gen.W_p[env.t][i,k] for i in inst_gen.Suppliers) for k in inst_gen.Products}.values())
                     total_RSL_purchase = sum(RSL_purchase.values())
                     
                     # Average Service Level 
-                    [ASL_purchase,ASL_demand_compliance],ASL_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=ASL_flower_info[1])
+                    [ASL_purchase,ASL_demand_compliance],ASL_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=ASL_flower_info[1],
+                                                                                                                routing_cost=ASL_flower_info[2][0])
                     ASL_purchase_cost = sum({k:sum(ASL_purchase[i,k] * inst_gen.W_p[env.t][i,k] for i in inst_gen.Suppliers) for k in inst_gen.Products}.values())
                     total_ASL_purchase = sum(ASL_purchase.values())
 
                     # Total Cost
-                    [C_purchase,C_demand_compliance],C_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=C_flower_info[1])
+                    [C_purchase,C_demand_compliance],C_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=C_flower_info[1],
+                                                                                                                routing_cost=C_flower_info[2][0])
                     C_purchase_cost = sum({k:sum(C_purchase[i,k] * inst_gen.W_p[env.t][i,k] for i in inst_gen.Suppliers) for k in inst_gen.Products}.values())
                     total_C_purchase = sum(C_purchase.values())
                     
                     # Unitary Cost
-                    [UC_purchase,UC_demand_compliance],UC_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=UC_flower_info[1])
+                    [UC_purchase,UC_demand_compliance],UC_la_dec = pIRPgym.Inventory.Stochastic_Rolling_Horizon(state,env,inst_gen,fixed_suppliers=UC_flower_info[1],
+                                                                                                                routing_cost=UC_flower_info[2][0])
                     UC_purchase_cost = sum({k:sum(UC_purchase[i,k] * inst_gen.W_p[env.t][i,k] for i in inst_gen.Suppliers) for k in inst_gen.Products}.values())
                     total_UC_purchase = sum(UC_purchase.values())
 
@@ -181,5 +186,5 @@ for episode in Num_Episodes[::]:
             except Exception as e:
                 print(f'❌ \t{env.t} \t{e}')
         
-        with open(experiments_path+f'Testing/M{size}-E{episode}.pkl','wb') as file:
+        with open(experiments_path+f'Testing/Final Phase/M{size}-E{episode}.pkl','wb') as file:
                 pickle.dump(results,file)

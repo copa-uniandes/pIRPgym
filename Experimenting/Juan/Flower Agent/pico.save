@@ -1,0 +1,35 @@
+import os
+
+root_directory = '/path/to/your/root/directory'
+
+# Iterate through Experiment directories
+for exp_dir in os.listdir(root_directory):
+    exp_path = os.path.join(root_directory, exp_dir)
+
+    # Check if it's a directory
+    if os.path.isdir(exp_path):
+        # Iterate through Replica directories
+        for replica_dir in os.listdir(exp_path):
+            replica_path = os.path.join(exp_path, replica_dir)
+
+            # Check if it's a directory
+            if os.path.isdir(replica_path):
+                # Iterate through time folders (1, 30, 60, 300, 1800, 3600)
+                for time_folder in os.listdir(replica_path):
+                    time_path = os.path.join(replica_path, time_folder)
+
+                    # Check if it's a directory
+                    if os.path.isdir(time_path):
+                        # Iterate through files starting with 'CG'
+                        for filename in os.listdir(time_path):
+                            if filename.startswith('CG'):
+                                # Get the new filename
+                                new_filename = f'CG_{time_folder}_{filename[2:]}'
+                                file_path = os.path.join(time_path, filename)
+                                new_file_path = os.path.join(time_path, new_filename)
+
+                                # Rename the file
+                                os.rename(file_path, new_file_path)
+
+print("File renaming completed.")
+

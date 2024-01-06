@@ -86,7 +86,7 @@ class RoutingV():
         colors = ['red','orange','blue','green','tab:purple']
         for edge in edges:
             color = colors[orders[edge]]
-            edge_colors.append(color)
+            edge_colors.append('blue')
 
         # pos = {c: (self.C[c]['x'], self.C[c]['y']) for c in self.Costumers}
         # pos.update({s: (self.S[s]['x'], self.S[s]['y']) for s in self.Stations})
@@ -152,6 +152,7 @@ class RoutingV():
         # Define a list of colors and markers for better visibility
         colors = RoutingV.colors
         markers = ['o', 's', '^', 'D', '*', 'v', 'p', 'H', 'X']
+        translator = {}
 
         # Plot the evolution for each routing policy
         for i, (policy, data) in enumerate(routing_performance.items()):
@@ -274,10 +275,10 @@ class RoutingV():
         bool: True if all 1s in the binary encoding are in the supplier list, False otherwise.
         """
         if supplier_list[0]=='All': return True
-        flag = False
+        flag = True
         for i,pos in enumerate(supplier_list):
-            if binary_encoding[pos-1]==1:
-                flag = True
+            if binary_encoding[pos-1]==0:
+                flag = False
                 break
         return flag
 
@@ -385,10 +386,12 @@ class RoutingV():
     def count_generated(generator):
         CG_num = 0
         GA_num = 0
+        both_num = 0
         for i,gens in enumerate(generator):
             if 'CG' in gens:    CG_num+=1
             if 'GA' in gens:    GA_num+=1 
-        return CG_num,GA_num
+            if 'CG' in gens and 'GA' in gens:   both_num += 1
+        return CG_num,GA_num,both_num
 
 
     @staticmethod
