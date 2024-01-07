@@ -130,7 +130,7 @@ class RoutingV():
         ax.grid(axis='y', linestyle='--', alpha=0.7)
 
         # Add a title to the graph
-        plt.title("Suppliers' Location Layout", fontsize=12)
+        plt.title("Flower 43", fontsize=12)
         
         if save_fig:
             plt.savefig('./SuppliersLayout.png', dpi = 400)
@@ -165,13 +165,25 @@ class RoutingV():
                             linestyle='-',markersize=4,linewidth=1)
 
         # Add labels and a legend
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
         ax.set_xlabel(x_axis, fontsize=12)
-        ax.set_ylabel(metric, fontsize=12)
-        ax.set_title(f'Routing strategies performance: {metric}', fontsize=14)
-        ax.legend(fontsize=10, loc='upper right')
+        
+        # ax.set_ylabel(metric, fontsize=12)
+        # ax.set_title('Effectiveness of Initialization Configurations', fontsize=14)
+        # ax.legend(fontsize=10, loc='upper right')
+
+        ax.set_ylabel('gap',fontsize=12)
+        ax.set_title('Gap of Alpha Configurations', fontsize=14)
+        legend_labels = ['NN','CG','0.1','0.2','0.4','0.6','0.8']
+        ax.legend(legend_labels,fontsize=10,loc='upper right')
+        
 
         # Add grid for better readability
         ax.grid(True, linestyle='--', alpha=0.5)
+
+        plt.savefig('./metric.png', dpi = 400)
 
         # Show the plot
         plt.show()
@@ -259,6 +271,8 @@ class RoutingV():
         # Add legend
         ax.legend(title='Flowers', loc='upper left', bbox_to_anchor=(1, 1))
 
+        plt.savefig('./n_table.png', dpi = 600)
+
         plt.show() 
 
 
@@ -300,13 +314,13 @@ class RoutingV():
         fig,ax = plt.subplots(figsize=(10, 6))
 
         # Create a DataFrame for seaborn plotting
-        df = pd.DataFrame(solution_data, columns=[indicator1, indicator2])
+        df = pd.DataFrame(solution_data,columns=[indicator1,indicator2])
 
         # Plot the scatter plot with consistent colors for each solution
         for i, solution in enumerate(solution_data):
             if RoutingV._contains_subset(bincod[i],suppliers):
                 sns.scatterplot(x=indicator1, y=indicator2, data=pd.DataFrame([solution], columns=df.columns),
-                            label=f'Flower {i + 1}', s=100, ax=ax)
+                            label=f'Flower {i}', s=150, ax=ax)
 
         # Set labels and title
         ax.set_xlabel(indicator1)

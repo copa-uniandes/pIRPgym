@@ -46,7 +46,7 @@ disc = ("strong","conc")
 
 testing_episodes = 30
 
-Num_Episodes = [30,50]
+Num_Episodes = [10,30,50]
 Num_Suppliers = {10:[10,20,30,40,50],
                   30:[5,10,15,20,30],
                   50:[20,30]}
