@@ -512,6 +512,8 @@ class Inventory():
         ''' Find cost-efficient solution '''
         m1, (zz, xx, yy, qq, II, vv, bb, ZZ), costs, (transp_impact, storage_impact, waste_impact) = Inventory.IRP.build_model(state, env, inst_gen)
         m1.addConstr(transp_impact[e] + storage_impact[e] + waste_impact[e] <= round(z_e,4)+1e-4)
+        m1.setParam("MIPGap",0.01)
+        m1.setParam("MIPFocus",3)
         m1.setObjective(gu.quicksum(c for c in costs))
         m1.update(); m1.optimize()
 
@@ -542,7 +544,7 @@ class Inventory():
     def optimize_costs(e, m, costs, impacts, state, env, inst_gen, verbose = False, action = False):
 
         ''' Minimize individual environmental indicator '''
-        m.setParam("MIPGap",0.01)
+        m.setParam("MIPGap",0.05)
         m.setObjective(gu.quicksum(c for c in costs))
         m.update(); m.optimize()
 
@@ -556,6 +558,8 @@ class Inventory():
         ''' Find cost-efficient solution '''
         m1, (zz, xx, yy, qq, II, vv, bb, ZZ), costs1, (transp_impact, storage_impact, waste_impact) = Inventory.IRP.build_model(state, env, inst_gen)
         m1.addConstr(gu.quicksum(c for c in costs1) <= round(z_c,2)+1e-2)
+        m1.setParam("MIPFocus",3)
+        m1.setParam("MIPGap",0.01)
         m1.setObjective(transp_impact[e] + storage_impact[e] + waste_impact[e])
         m1.update(); m1.optimize()
 
