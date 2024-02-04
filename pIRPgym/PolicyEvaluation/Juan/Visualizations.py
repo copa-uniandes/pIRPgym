@@ -21,10 +21,14 @@ from ...Blocks.pIRPenv import steroid_IRP
 
 
 class RoutingV():
-    colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
-        +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
-        +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
-        +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']
+    # colors = ['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
+    #     +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
+    #     +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']\
+    #     +['purple', 'red', 'blue', 'green', 'orange', 'cyan', 'magenta','black','brown']
+    colors = ['#1f77b4', '#2ca02c', '#d62728','#9467bd',
+              '#8c564b', '#7f7f7f', '#17becf','bcbd22','#e377c2','#ff7f0e',]
+    colors += colors+colors+colors+colors
+
 
     # Sumarizes and compares routing solutions
     @staticmethod
@@ -168,16 +172,19 @@ class RoutingV():
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
-        ax.set_xlabel(x_axis, fontsize=12)
+        ax.set_xlabel('Instance Size Intervals', fontsize=12)
         
-        # ax.set_ylabel(metric, fontsize=12)
-        # ax.set_title('Effectiveness of Initialization Configurations', fontsize=14)
-        # ax.legend(fontsize=10, loc='upper right')
+        ax.set_xticks([i for i in range(10)])
+        ax.set_xticklabels([str(i) for i in range(100,1001,100)])
+        
+        ax.set_ylabel(metric, fontsize=12)
+        ax.set_title('Policies Performance on CVRP instance set', fontsize=14)
+        ax.legend(fontsize=10, loc='upper right')
 
-        ax.set_ylabel('gap',fontsize=12)
-        ax.set_title('Gap of Alpha Configurations', fontsize=14)
-        legend_labels = ['NN','CG','0.1','0.2','0.4','0.6','0.8']
-        ax.legend(legend_labels,fontsize=10,loc='upper right')
+        # ax.set_ylabel('gap',fontsize=12)
+        # ax.set_title('Gap of Alpha Configurations', fontsize=14)
+        # legend_labels = ['NN','CG','0.1','0.6','0.8']
+        # ax.legend(legend_labels,fontsize=10,loc='upper right')
         
 
         # Add grid for better readability
@@ -209,9 +216,9 @@ class RoutingV():
         # Plot brackets for each supplier interval
         for i, (supplier, interval) in enumerate(zip(suppliers, intervals)):
             lower, upper = interval
-            ax.plot([i, i], [lower, upper], color=RoutingV.colors[i], linewidth=2)
-            ax.plot([i - 0.2, i + 0.2], [lower, lower], color=RoutingV.colors[i], linewidth=2)
-            ax.plot([i - 0.2, i + 0.2], [upper, upper], color=RoutingV.colors[i], linewidth=2)
+            ax.plot([i, i], [lower, upper], color='red', linewidth=2)
+            ax.plot([i - 0.2, i + 0.2], [lower, lower], color='red', linewidth=2)
+            ax.plot([i - 0.2, i + 0.2], [upper, upper], color='red', linewidth=2)
 
         # Set x-axis labels to supplier numbers
         ax.set_xticks(range(len(suppliers)))
