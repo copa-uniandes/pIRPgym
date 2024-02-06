@@ -180,15 +180,39 @@ class Inventory_management():
     
 
         @staticmethod
-        def get_real_dem_compl_FIFO(inst_gen, env, real_purchase):
+        def get_real_dem_compl_FIFO(inst_gen, env, real_purchase, demand_compliance):
             real_demand_compliance={}
             for k in inst_gen.Products:
+
+                q = sum(real_purchase[i,k] for i in inst_gen.Suppliers)
+                #init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
+                #left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
                 left_to_comply = inst_gen.W_d[env.t][k]
+
                 for o in range(inst_gen.O_k[k],0,-1):
-                    real_demand_compliance[k,o] = min(env.state[k,o], left_to_comply)
+                    real_demand_compliance[k,o] = np.min((env.state[k,o], left_to_comply))
                     left_to_comply -= real_demand_compliance[k,o]
                 
-                real_demand_compliance[k,0] = min(sum(real_purchase[i,k] for i in inst_gen.Suppliers), left_to_comply)
+                real_demand_compliance[k,0] = np.min((q, left_to_comply))
+            
+            return real_demand_compliance
+        
+        @staticmethod
+        def get_costs_dem_compl_without_waste(inst_gen, env, real_purchase, demand_compliance):
+            real_demand_compliance={}
+            for k in inst_gen.Products:
+
+                q = sum(real_purchase[i,k] for i in inst_gen.Suppliers)
+                #init_inv = sum(env.state[k,o] for o in range(1, inst_gen.O_k[k]+1))
+                #left_to_comply = np.min((inst_gen.W_d[env.t][k], (q+init_inv)*demand_compliance[k,"actual"]/demand_compliance[k,"potential"]))
+                left_to_comply = inst_gen.W_d[env.t][k]
+
+                for o in range(inst_gen.O_k[k]-1,0,-1):
+                    real_demand_compliance[k,o] = np.min((env.state[k,o], left_to_comply))
+                    left_to_comply -= real_demand_compliance[k,o]
+                
+                real_demand_compliance[k,0] = np.min((q, left_to_comply))
+                real_demand_compliance[k,inst_gen.O_k[k]] = np.min((env.state[k,inst_gen.O_k[k]], left_to_comply))
             
             return real_demand_compliance
 
@@ -297,14 +321,18 @@ class Inventory_management():
 
 
         @staticmethod
+<<<<<<< HEAD
         def compute_costs(inst_gen,env,purchase,demand_compliance,s_tprime,perished,aggregated = True):     
+=======
+        def compute_costs(inst_gen, env, purchase, s_tprime, backorders, aggregated = True):
+
+>>>>>>> Ari
             purchase_cost = {k:sum(purchase[i,k] * inst_gen.W_p[env.t][i,k]   for i in inst_gen.Suppliers) for k in inst_gen.Products}
-        
             holding_cost = {k:inst_gen.W_h[env.t][k]*sum(s_tprime[k,o] for o in range(1, inst_gen.O_k[k] + 1)) for k in inst_gen.Products}
 
             backorders_cost = 0
             if inst_gen.other_params['backorders'] == 'backorders':
-                 backorders_cost = {k:inst_gen.back_o_cost[k]*max(inst_gen.W_d[env.t][k] - sum(demand_compliance[k,o] for o in range(inst_gen.O_k[k]+1)),0) for k in inst_gen.Products}
+                backorders_cost = {k:inst_gen.back_o_cost[k]*backorders[k] for k in inst_gen.Products}
             else:
                 backorders_cost = {k:inst_gen.back_l_cost*s_tprime[k,'B'] for k in inst_gen.Products}
 
@@ -343,7 +371,7 @@ class Inventory_management():
 class Environmental_management():
 
     @staticmethod
-    def compute_environmental_impact(inst_gen,purchase,routing,inventory, aggregated = True):
+    def compute_environmental_impact(inst_gen,purchase,routing,inventory,perished, aggregated = True):
         
         impact = dict(); K = inst_gen.Products[:7]
         for e in inst_gen.E:
@@ -352,13 +380,15 @@ class Environmental_management():
 
                 transport = 0
                 for r in routing:
-                    for i in range(1,len(r)-1):
-                        if purchase[r[i],k] > 0:
-                            transport += sum(inst_gen.c_LCA[e][k][r[j],r[j+1]] for j in range(i,len(r)-2))*purchase[r[i],k]
+                    arcs = [(r[i],r[i+1]) for i in range(len(r)-1)]
+                    for ix in range(1,len(arcs)):
+                        cumulative_purch = sum(purchase[arcs[ii][0],k] for ii in range(1,ix+1) for k in K)
+                        transport += inst_gen.c_LCA[e][k][arcs[ix]]*cumulative_purch
                 
                 storage = sum(inst_gen.h_LCA[e][k]*inventory[k,o] for o in range(1, inst_gen.O_k[k] + 1))
-                
-                impact[e][k] = transport + storage
+                waste = inst_gen.waste_LCA[e][k]*perished[k]
+
+                impact[e][k] = transport + storage + waste
             
             if aggregated:
                 impact[e] = sum(impact[e].values())

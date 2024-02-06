@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.random import seed, randint
 import os
+import pandas as pd
 
 class locations():
 
@@ -10,20 +11,18 @@ class locations():
         size_grid = 1000
         coor = {i:(randint(0, size_grid+1), randint(0, size_grid+1)) for i in V}
         return coor, V
-    
 
     @staticmethod
     def euclidean_distance(coor: dict, V: list):
         # Transportation cost between nodes i and j, estimated using euclidean distance
-        return {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in V for j in V if i!=j}
-    
+        return {(i,j):round(np.sqrt((coor[i][0]-coor[j][0])**2 + (coor[i][1]-coor[j][1])**2)) for i in V for j in V if i!=j}    
 
     @staticmethod
-    def euclidean_dist_costs(V: list, d_rd_seed):
+    def euclidean_dist_costs(V: list, d_rd_seed, sustainability = False):
         seed(d_rd_seed + 6)
-        coor, _ = locations.generate_grid(V)
+        if sustainability: coor, _ = locations.upload_solomon_instance(V)
+        else: coor, _ = locations.generate_grid(V)
         return coor, locations.euclidean_distance(coor, _)
-    
 
     benchmarks = {'Golden_1':(5623.47,9),'Golden_2':(8404.61,10),'Golden_3':(10997.8,9),'Golden_4':(13588.6,10),
                   'Golden_5':(6460.98,5),'Golden_6':(8400.33,7), 'Golden_7':(10102.7,8),'Golden_8':(11635.3,10),
@@ -66,6 +65,17 @@ class locations():
                   'X-n876-k59':(99299,59),'X-n895-k37':(53860,37),'X-n916-k207':(329179,207),
                   'X-n936-k151':(132715,151),'X-n957-k87':(85465,87),'X-n979-k58':(118976,58),
                   'X-n1001-k43':(72355,43)}
+
+    @staticmethod
+    def upload_solomon_instance(V):
+
+        script_path = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.abspath(os.path.join(script_path, "..", "..", "Instances/Data/Solomon/R101.txt"))
+
+        df = pd.read_csv(path, sep="\t", index_col = [0])
+        coor = {i:(df.loc[i,"COORX"], df.loc[i,"COORY"]) for i in V}
+
+        return coor, V
 
     # Uploading 
     @staticmethod

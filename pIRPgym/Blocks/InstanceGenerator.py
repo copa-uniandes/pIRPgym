@@ -94,11 +94,13 @@ class instance_generator():
         self.hold_cost = True                           # Whether to include the holding cost in the objectives or not
         self.rr = 0.1                                   # Minimum order quantity per supplier
         self.gamma = 1                                  # Time discounting factor
-        self.E = ["climate","water","land","fossil"]    # Environmental Indicators
+        self.E = ["climate","water","land","fossil","acid","eutroph","ozone"]    # Environmental Indicators
         self.metric_names = {"costs":"Total\nCost","transport cost":"Transportation\nCost", "purchase cost":"Purchasing\nCost", "holding cost":"Holding\nCost", "backorders cost":"Backorders\nCost",
-                             "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion"}
+                             "climate":"Climate\nChange", "water":"Water\nUse", "land":"Land\nUse", "fossil":"Fossil Fuel\nDepletion",
+                             "acid":"Acidification", "eutroph":"Eutrophication\nTerrestrial", "ozone":"Photochemical\nOzone Formation"}
         self.metric_units = {"costs":"$","transport cost":"$", "purchase cost":"$", "holding cost":"$", "backorders cost":"$",
-                             "climate":"kg CO2 eq", "water":"m3 depriv.", "land":"Pt.", "fossil":"MJ"}
+                             "climate":"kg CO2 eq", "water":"m3 depriv.", "land":"Pt.", "fossil":"MJ",
+                             "acid":"mol H+ eq", "eutroph":"mol N eq", "ozone":"kg CFC11 eq"}
 
         ### Look-ahead parameters ###
         if look_ahead:    
@@ -138,35 +140,36 @@ class instance_generator():
         self.hist_data = {t:{} for t in self.historical}
         self.s_paths = {t:{} for t in self.Horizon}
 
-        #self.O_k = {k:randint(3,self.T+1) for k in self.Products}
-        ages = [3,3,6,6,5,4,4]
+        ages = [3,6,5,3,6,4,4]
         if len(self.Products) <= 7: self.O_k = dict(zip(self.Products,ages[:len(self.Products)]))
         else: self.O_k = {k:3 for k in self.Products}
         self.Ages = {k:[i for i in range(1, self.O_k[k] + 1)] for k in self.Products}
 
         self.i00 = self.gen_initial_inventory(I0)
 
-        # Offer
+        # Routing
+        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed, self.sustainability)
+
+        # Supply
         self.M_kt, self.K_it = offer.gen_availabilities(self)
         self.hist_q, self.W_q, self.s_paths_q = offer.gen_quantities(self,**kwargs['q_params'])
         if self.s_paths_q == None: del self.s_paths_q
 
+        # Purchase
         self.hist_p, self.W_p, self.s_paths_p = offer.gen_prices(self,**kwargs['p_params'])
         if self.s_paths_p == None: del self.s_paths_p
-
-        # Demand
-        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
-        if self.s_paths_d == None: del self.s_paths_d
-        
-        # Backorders
-        self.prof_margin = costs.gen_profit_margin(self)
-        self.back_o_cost = costs.gen_backo_cost(self)
 
         # Inventory
         self.hist_h, self.W_h = costs.gen_h_cost(self, **kwargs['h_params'])
 
-        # Routing
-        self.coor, self.c = locations.euclidean_dist_costs(self.V, self.d_rd_seed)
+        # Backorders
+        self.prof_margin = costs.gen_profit_margin(self); self.back_o_cost = costs.gen_backo_cost(self)
+
+        # Demand
+        self.hist_d, self.W_d, self.s_paths_d = demand.gen_demand(self,**kwargs['d_params'])
+        if self.s_paths_d == None: del self.s_paths_d
+
+        # Environmental Indicators
         if self.sustainability: self.c_LCA, self.h_LCA, self.waste_LCA = indicators.get_environmental_indicators(self)
 
 
@@ -187,7 +190,7 @@ class instance_generator():
 
         self.i00 = self.gen_initial_inventory(I0)
 
-        # Offer
+        # Supply
         self.M_kt, self.K_it = offer.gen_availabilities(self)
         self.hist_q,self.W_q,self.s_paths_q,self.q_parameters = offer.supplier_differentiated.gen_quantities(self)
         if self.s_paths_q == None: del self.s_paths_q
@@ -277,7 +280,7 @@ class instance_generator():
 
     # Auxiliary method: Generate iterables of sets
     def gen_sets(self):
-        self.Suppliers:list = list(range(1,self.M + 1));  self.V = [0]+self.Suppliers
+        self.Suppliers:list = list(range(1,self.M + 1));  self.V = [0]+self.Suppliers; self.A = [(i,j) for i in self.V for j in self.V if i != j]
         self.Products:list = list(range(1,self.K+1))
         self.Vehicles: range = range(self.F)
         self.Horizon: range = range(self.T)

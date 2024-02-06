@@ -15,4 +15,19 @@ class Compromise_Programming():
         for e in inst_gen.E:
             env.norm_matrix[e]["best"] = env.payoff_matrix[e][e]
             env.norm_matrix[e]["worst"] = np.max([env.payoff_matrix[ee][e] for ee in inst_gen.E+["costs"]])
+    
+    @staticmethod
+    def normalize_objectives_IRP(inst_gen, env, verbose=False):
+
+        ''' Get payoff matrix '''
+        m, variables, costs, impacts = Inventory.IRP.build_model(env.state, env, inst_gen)
+        #env.payoff_matrix["costs"] = Inventory.Stochastic_RH_IRP(env.state,env,inst_gen, verbose=verbose)
+        for e in inst_gen.E:
+            env.payoff_matrix[e] = Inventory.optimize_environmental_indicator(e, m, impacts, env.state, env, inst_gen, verbose = verbose)
+        
+        ''' Get normalization bounds '''
+        for e in inst_gen.E+["costs"]:
+            env.norm_matrix[e]["best"] = env.payoff_matrix[e][e]
+            env.norm_matrix[e]["worst"] = np.max([env.payoff_matrix[ee][e] for ee in inst_gen.E+["costs"]])
+
         

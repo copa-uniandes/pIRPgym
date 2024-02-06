@@ -62,7 +62,9 @@ class demand():
         while True:
             rd = round(rd_function(*kwargs['r_f_params']),2)
             if rd <= kwargs['break']: break
-                
+        
+        if 'offset' in kwargs: rd += kwargs['offset']
+
         return rd
 
 

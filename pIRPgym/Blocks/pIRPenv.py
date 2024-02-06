@@ -90,7 +90,7 @@ class steroid_IRP():
 
 
     # Step 
-    def step(self,action:dict,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False, aggregated:bool = True):
+    def step(self,action:dict,inst_gen:instance_generator,validate_action:bool = False, warnings:bool = False, aggregated:bool = True, environmental:bool = False, verbose:bool = False):
         '''
         
         '''
@@ -112,11 +112,13 @@ class steroid_IRP():
         if inst_gen.s_params != False:
             '''
             When some parameters are stochastic, the chosen action might not be feasible. Therefore, an aditional intra-step 
-            computation must be made and andjustments on the action might be necessary
+            computation must be made and adjustments on the action might be necessary
             '''
             
             real_action["purchase"] = {(i,k): min(action['purchase'][i,k], inst_gen.W_q[self.t][i,k]) for i in inst_gen.Suppliers for k in inst_gen.Products}
-            real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen,self,real_action["purchase"])      
+
+            if environmental: real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_real_dem_compl_FIFO(inst_gen,self,real_action["purchase"], action["demand_compliance"])      
+            else: real_action["demand_compliance"] = Inventory_management.perish_per_age_inv.get_costs_dem_compl_without_waste(inst_gen, self, real_action["purchase"], action["demand_compliance"])
 
             if self.config['routing']:
                 real_action["routing"] = action['routing']
@@ -133,6 +135,7 @@ class steroid_IRP():
 
         s_tprime, back_orders, perished = Inventory_management.perish_per_age_inv.update_inventory(inst_gen, self, real_action["purchase"], real_action["demand_compliance"], warnings)
         
+        
         # -----------------------------
         # Rewards Computing
         # -----------------------------
@@ -141,10 +144,10 @@ class steroid_IRP():
         if self.config['routing']:
             reward['transport cost'] = Routing_management.price_routes(inst_gen,real_action["routing"],real_action["purchase"],aggregated = aggregated)
         if self.config['inventory']:
-            reward['purchase cost'], reward['holding cost'], reward['backorders cost'] = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_action["purchase"], real_action["demand_compliance"], s_tprime, perished, aggregated = aggregated)
+            reward['purchase cost'], reward['holding cost'], reward['backorders cost'] = Inventory_management.perish_per_age_inv.compute_costs(inst_gen, self, real_action["purchase"], s_tprime, back_orders, aggregated = aggregated)
             if inst_gen.sustainability:
-                reward.update(Environmental_management.compute_environmental_impact(inst_gen, real_action["purchase"], real_action["routing"], s_tprime, aggregated = aggregated))
-
+                reward.update(Environmental_management.compute_environmental_impact(inst_gen, real_action["purchase"], real_action["routing"], s_tprime, perished, aggregated = aggregated))
+        
         # -----------------------------
         # Time step
         # -----------------------------
